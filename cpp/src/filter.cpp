@@ -1,21 +1,22 @@
+#include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdio>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/unsupported/Eigen/CXX11/Tensor>
 #include <eigen3/unsupported/Eigen/MatrixFunctions>
-#include <algorithm>
 #include <fstream>
 #include <iostream>
-#include <string>
-#include <array>
 #include <nlohmann/json.hpp>
+#include <string>
 
 using json = nlohmann::json;
 
 using Eigen::MatrixXd;
 using Eigen::Tensor;
 
-void mm() {
+void mm()
+{
     MatrixXd m(2, 2);
     m(0, 0) = 3;
     m(1, 0) = 2.5;
@@ -24,7 +25,8 @@ void mm() {
     std::cout << m << std::endl;
 }
 
-std::tuple<MatrixXd, MatrixXd, MatrixXd>  let_matricies_appear_magically() {
+std::tuple<MatrixXd, MatrixXd, MatrixXd> let_matricies_appear_magically()
+{
     // Hard coded sub A = [1, Ts; 0, 1]
     MatrixXd A(2, 2);
     // A(0, 0) = 0;
@@ -44,14 +46,16 @@ std::tuple<MatrixXd, MatrixXd, MatrixXd>  let_matricies_appear_magically() {
     G(0, 0) = 0;
     G(1, 0) = 1;
 
-    return {A, C, G};
+    return { A, C, G };
 }
 
-std::tuple<Tensor<double, 3>, int, std::vector<double>, std::vector<bool>> load_data(std::string path, int joint_counts, int max_frames = -1) {
+std::tuple<Tensor<double, 3>, int, std::vector<double>, std::vector<bool>>
+load_data(std::string path, int joint_counts, int max_frames = -1)
+{
     /**
-     * Load data and calculate measurement noise
-     * Returns loaded joints, and variance
-     */
+   * Load data and calculate measurement noise
+   * Returns loaded joints, and variance
+   */
     std::ifstream file(path);
     json data = json::parse(file);
     int n_frames = data["frames"].size();
@@ -85,10 +89,11 @@ std::tuple<Tensor<double, 3>, int, std::vector<double>, std::vector<bool>> load_
 
     joints = joints / 1000.0;
 
-    return {joints, n_frames, timestamps, is_null};
+    return { joints, n_frames, timestamps, is_null };
 }
-MatrixXd get_measurement_error(Tensor<double, 3> joints, int joint_counts, int frame_start, int frame_end) {
-
+MatrixXd get_measurement_error(Tensor<double, 3> joints, int joint_counts,
+    int frame_start, int frame_end)
+{
     MatrixXd var(joint_counts, 3);
     Eigen::array<Eigen::Index, 3> offsets;
     Eigen::array<Eigen::Index, 3> extents;
@@ -96,44 +101,45 @@ MatrixXd get_measurement_error(Tensor<double, 3> joints, int joint_counts, int f
     Tensor<double, 0> sum_t;
     for (int i = 0; i < joint_counts; ++i) {
         for (int j = 0; j < 2; ++j) {
-            offsets = {frame_start, i, j};
-            extents = {(frame_end-frame_start)+1, 1, 1};
+            offsets = { frame_start, i, j };
+            extents = { (frame_end - frame_start) + 1, 1, 1 };
             mean_t = joints.slice(offsets, extents).mean();
             sum_t = (joints.slice(offsets, extents) - mean_t(0)).pow(2).sum();
-            var(i, j) = sum_t(0) / (frame_end-frame_start);
+            var(i, j) = sum_t(0) / (frame_end - frame_start);
         }
         int j = 2;
-        offsets = {frame_start, i, j};
-        extents = {(frame_end-frame_start)+1, 1, 1};
+        offsets = { frame_start, i, j };
+        extents = { (frame_end - frame_start) + 1, 1, 1 };
         mean_t = joints.slice(offsets, extents).mean();
         sum_t = (joints.slice(offsets, extents) - mean_t(0)).pow(2).sum();
-        var(i, j) = (sum_t(0) / (frame_end-frame_start) / 10);  // treat 'z' as less important
+        var(i, j) = (sum_t(0) / (frame_end - frame_start) / 10); // treat 'z' as less important
     }
     return var;
 }
 
-
-void tensor() {
+void tensor()
+{
     Tensor<double, 3> tensor(4, 10, 3);
     tensor(0, 0, 0) = 1;
     tensor(1, 0, 0) = 2;
     tensor(2, 0, 0) = 3;
     tensor(3, 0, 0) = 4;
-    Eigen::array<Eigen::Index, 3> offsets = {0, 0, 0};
-    Eigen::array<Eigen::Index, 3> extents = {4, 1, 1};
+    Eigen::array<Eigen::Index, 3> offsets = { 0, 0, 0 };
+    Eigen::array<Eigen::Index, 3> extents = { 4, 1, 1 };
     std::cout << "A" << std::endl;
     std::cout << tensor.slice(offsets, extents).mean() << std::endl;
     std::cout << "B" << std::endl;
-    offsets = {0, 0, 0};
-    extents = {1, 1, 3};
+    offsets = { 0, 0, 0 };
+    extents = { 1, 1, 3 };
     std::cout << tensor.slice(offsets, extents) << std::endl;
 }
 
-void filter() {
+void filter()
+{
     /**
-     * what to do:
-     * where were the formulas:
-     */
+   * what to do:
+   * where were the formulas:
+   */
     double time_diff = 0.4;
 }
 
@@ -142,20 +148,20 @@ void filter() {
  * could do it specific for 3d
  * could also do it just for any value
  *
- * If we are not generic then we can set Adn and the rest of the matrices to a fixed value
- * if we want to be generic this would be a bit trickier
+ * If we are not generic then we can set Adn and the rest of the matrices to a
+ * fixed value if we want to be generic this would be a bit trickier
  *
- * Maybe Generic class wich takes the stuff and actual clas fo rour case where we set the stuff in the constructor
- * could also do it just for any value
+ * Maybe Generic class wich takes the stuff and actual clas fo rour case where
+ * we set the stuff in the constructor could also do it just for any value
  *
  * Basically the gated 3d case just sets 3 GenericFilters for each var and then
  * steps with the 3d thing
  *
  *
  * Intgeration things might be the stuff that a specific class needs to
- * implement, because I do not want to have to implement symbolic integration 
+ * implement, because I do not want to have to implement symbolic integration
  */
-template<typename Value>
+template <typename Value>
 class GenericFilter1D {
     Value value;
     MatrixXd corrected_state; // 2x1
@@ -163,7 +169,7 @@ class GenericFilter1D {
     MatrixXd Ad;
     MatrixXd B;
     MatrixXd G;
-    MatrixXd Q;  // Q(k) = Var(z(k))
+    MatrixXd Q; // Q(k) = Var(z(k))
 
     MatrixXd C;
     MatrixXd CT;
@@ -172,19 +178,13 @@ class GenericFilter1D {
     Value system_noise;
     Value threshold;
 
-    public:
-    GenericFilter1D () {};
+public:
+    GenericFilter1D() {};
 
-    GenericFilter1D (
-        MatrixXd ad,
-        MatrixXd b,
-        MatrixXd c,
-        MatrixXd g,
-        MatrixXd q,
-        Value m_measurement_noise,
-        Value m_system_noise,
-        Value m_threshold
-    ) {
+    GenericFilter1D(MatrixXd ad, MatrixXd b, MatrixXd c, MatrixXd g, MatrixXd q,
+        Value m_measurement_noise, Value m_system_noise,
+        Value m_threshold)
+    {
         Ad = ad;
         B = b;
         C = c;
@@ -197,7 +197,8 @@ class GenericFilter1D {
         CT = C.transpose();
     };
 
-    void init(MatrixXd initial_state, MatrixXd initial_errors) {
+    void init(MatrixXd initial_state, MatrixXd initial_errors)
+    {
         // how do they look and where do they come from
         // look:
         // think was 2x1
@@ -207,8 +208,8 @@ class GenericFilter1D {
         corrected_errors = initial_errors;
     }
 
-    Value step(Value value, Value time_diff) {
-
+    Value step(Value value, Value time_diff)
+    {
         // Hard coded sub A = [1, Ts; 0, 1]
         MatrixXd Adn = Ad.replicate(1, 1);
         Adn(0, 1) = time_diff;
@@ -231,7 +232,7 @@ class GenericFilter1D {
         Value innovation_norm = innovation / sigma_value;
 
         MatrixXd measurement_noise_matrix(1, 1);
-        measurement_noise_matrix(0,  0) = measurement_noise;
+        measurement_noise_matrix(0, 0) = measurement_noise;
         if (innovation_norm < threshold) {
             MatrixXd tmp = C * predicted_errors * CT + measurement_noise_matrix;
             auto pseudo_inv = tmp.completeOrthogonalDecomposition().pseudoInverse();
@@ -247,77 +248,71 @@ class GenericFilter1D {
     }
 };
 
-template<typename Value> 
+template <typename Value>
 class Point {
-    public:
+public:
     Value x;
     Value y;
     Value z;
 
-    Point() {
-        x=0;
-        y=0;
-        z=0;
+    Point()
+    {
+        x = 0;
+        y = 0;
+        z = 0;
     }
-    Point(Value m_x, Value m_y, Value m_z) : x(m_x), y(m_y), z(m_z) {}
-    
-    template<typename U> 
+    Point(Value m_x, Value m_y, Value m_z)
+        : x(m_x)
+        , y(m_y)
+        , z(m_z)
+    {
+    }
+
+    template <typename U>
     friend std::ostream& operator<<(std::ostream& out, const Point<U>& point);
 };
 
-template<typename Value> 
+template <typename Value>
 std::ostream& operator<<(std::ostream& out, const Point<Value>& point)
 {
-    // Since operator<< is a friend of the Point class, we can access Point's members directly.
-    out << "Point(" << point.x << ", " << point.y << ", " << point.z << ')'; // actual output done here
+    // Since operator<< is a friend of the Point class, we can access Point's
+    // members directly.
+    out << "Point(" << point.x << ", " << point.y << ", " << point.z
+        << ')'; // actual output done here
 
     return out;
 }
 
-template<typename Value> 
+template <typename Value>
 class PointFilter3D {
     GenericFilter1D<Value> x_filter;
     GenericFilter1D<Value> y_filter;
     GenericFilter1D<Value> z_filter;
 
-    
-    public:
-
-    PointFilter3D(Point<Value> measurement_noise, Point<Value> system_noise, Value threshold) {
+public:
+    PointFilter3D(Point<Value> measurement_noise, Point<Value> system_noise,
+        Value threshold)
+    {
         auto [ad, c, g] = let_matricies_appear_magically();
-        x_filter = GenericFilter1D<Value>(
-            ad,
-            ad,  // FIXME: we do not care
-            c,
-            g,
-            g,  // FIXME: we do not care
-            measurement_noise.x,
-            system_noise.x,
-            threshold
-        );
-        y_filter  = GenericFilter1D<Value>(
-            ad,
-            ad,  // FIXME: we do not care
-            c,
-            g,
-            g,  // FIXME: we do not care
-            measurement_noise.y,
-            system_noise.y,
-            threshold
-        );
-        z_filter  = GenericFilter1D<Value>(
-            ad,
-            ad,  // FIXME: we do not care
-            c,
-            g,
-            g,  // FIXME: we do not care
-            measurement_noise.z,
-            system_noise.z,
-            threshold
-        );
+        x_filter = GenericFilter1D<Value>(ad,
+            ad, // FIXME: we do not care
+            c, g,
+            g, // FIXME: we do not care
+            measurement_noise.x, system_noise.x, threshold);
+        y_filter = GenericFilter1D<Value>(ad,
+            ad, // FIXME: we do not care
+            c, g,
+            g, // FIXME: we do not care
+            measurement_noise.y, system_noise.y, threshold);
+        z_filter = GenericFilter1D<Value>(ad,
+            ad, // FIXME: we do not care
+            c, g,
+            g, // FIXME: we do not care
+            measurement_noise.z, system_noise.z, threshold);
     }
 
-    void init(Point<Value> initial_point) {
+    void init(Point<Value> initial_point)
+    {
         auto initial_errors = MatrixXd(2, 2);
         initial_errors(0, 0) = 1;
         initial_errors(0, 1) = 0;
@@ -340,7 +335,8 @@ class PointFilter3D {
         z_filter.init(initial_state_z, initial_errors);
     }
 
-    Point<Value> step(Point<Value> value, Value time_diff) {
+    Point<Value> step(Point<Value> value, Value time_diff)
+    {
         Point<Value> result;
         result.x = x_filter.step(value.x, time_diff);
         result.y = y_filter.step(value.y, time_diff);
@@ -351,8 +347,7 @@ class PointFilter3D {
     // How to include confidence level
 };
 
-
-template<typename Value> 
+template <typename Value>
 class SkeletonFilter {
     size_t n_joints;
     bool initialized = false;
@@ -360,25 +355,23 @@ class SkeletonFilter {
 
     std::vector<PointFilter3D<Value>> joint_filters;
 
-    public:
+public:
+    int joint_count() { return n_joints; }
 
-    int joint_count() {
-        return n_joints;
-    }
-
-    SkeletonFilter(
-        std::vector<Point<Value>> measurement_noises,
-        std::vector<Point<Value>> system_noises,
-        int m_n_joints,
-        Value threshold
-    ) : n_joints(m_n_joints) {
+    SkeletonFilter(std::vector<Point<Value>> measurement_noises,
+        std::vector<Point<Value>> system_noises, int m_n_joints,
+        Value threshold)
+        : n_joints(m_n_joints)
+    {
         for (int i = 0; i < m_n_joints; ++i) {
-            auto filter = PointFilter3D<Value>(measurement_noises[i], system_noises[i], threshold);
+            auto filter = PointFilter3D<Value>(measurement_noises[i],
+                system_noises[i], threshold);
             joint_filters.push_back(filter);
         }
     }
 
-    void init(std::vector<Point<Value>> inital_points, Value initial_time) {
+    void init(std::vector<Point<Value>> inital_points, Value initial_time)
+    {
         if (initialized) {
             return;
         }
@@ -389,11 +382,11 @@ class SkeletonFilter {
         initialized = true;
     }
 
-    bool is_initialized() {
-        return initialized;
-    }
+    bool is_initialized() { return initialized; }
 
-    std::vector<Point<Value>> step(std::vector<Point<Value>> values, Value new_time) {
+    std::vector<Point<Value>> step(std::vector<Point<Value>> values,
+        Value new_time)
+    {
         std::vector<Point<Value>> results;
         auto time_diff = new_time - last_time;
         // FIXME: Not nice using a 0..n_joints loop and push_back at the same time
@@ -404,21 +397,19 @@ class SkeletonFilter {
     }
 };
 
-template<typename Value> 
+template <typename Value>
 class SkeletonFilterBuilder {
-    
     std::string noise_data_path;
     int joint_count;
     std::vector<Point<Value>> measurement_noises;
     std::vector<Point<Value>> system_noises;
     Value threshold;
 
-    public:
-    SkeletonFilterBuilder(
-        std::string m_noise_data_path,
-        int m_joint_count,
-        Value m_threshold
-    ) : joint_count(m_joint_count) {
+public:
+    SkeletonFilterBuilder(std::string m_noise_data_path, int m_joint_count,
+        Value m_threshold)
+        : joint_count(m_joint_count)
+    {
         noise_data_path = m_noise_data_path;
         threshold = m_threshold;
 
@@ -435,28 +426,24 @@ class SkeletonFilterBuilder {
         std::vector<Point<Value>> m_measurement_noises;
         std::vector<Point<Value>> m_system_noises;
         for (int joint = 0; joint < joint_count; ++joint) {
-            m_measurement_noises.push_back(Point<Value>(
-                measurement_noise_for_all_joints(joint, 0),
-                measurement_noise_for_all_joints(joint, 1),
-                measurement_noise_for_all_joints(joint, 2)
-            ));
-            m_system_noises.push_back(Point<Value>(
-                system_noise_x,
-                system_noise_x,
-                system_noise_x
-            ));
+            m_measurement_noises.push_back(
+                Point<Value>(measurement_noise_for_all_joints(joint, 0),
+                    measurement_noise_for_all_joints(joint, 1),
+                    measurement_noise_for_all_joints(joint, 2)));
+            m_system_noises.push_back(
+                Point<Value>(system_noise_x, system_noise_x, system_noise_x));
         }
 
         measurement_noises = m_measurement_noises;
         system_noises = m_system_noises;
     }
 
-    SkeletonFilter<Value> build() {
-        return SkeletonFilter<Value>(measurement_noises, system_noises, joint_count, threshold);
+    SkeletonFilter<Value> build()
+    {
+        return SkeletonFilter<Value>(measurement_noises, system_noises, joint_count,
+            threshold);
     }
 };
-
-
 
 int main()
 {
@@ -468,7 +455,7 @@ int main()
     std::string data_path("../matlab/sts_NFOV_UNBINNED_720P_30fps.json");
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
 
-    if (std::find(is_null.begin(), is_null.end(), true) != is_null.end() ) {
+    if (std::find(is_null.begin(), is_null.end(), true) != is_null.end()) {
         std::cout << "found null" << std::endl;
     }
 
@@ -504,9 +491,8 @@ int main()
     int d = std::fmax(A.rows(), A.cols());
 
     // Here is the integration step
-    // Gd = simplify(int(expm(Ts*A)*G)); % fuer reale Abtastung (Abtast-Halte-Glied)
-    // auto Gd = Ad * G;
-    // We have to hard code the integration
+    // Gd = simplify(int(expm(Ts*A)*G)); % fuer reale Abtastung
+    // (Abtast-Halte-Glied) auto Gd = Ad * G; We have to hard code the integration
     // Where A = 1 => do integration, where 0 = 1
     // G = [T^2 / 2, T]
     G(0, 0) = std::pow(time_diff, 2) / 2;
@@ -527,7 +513,6 @@ int main()
 
     auto m_threshold = 2;
 
-        
     auto sqrt_var = var.array().sqrt();
     auto measurement_noise_for_all_joints = 10 * sqrt_var;
 
@@ -537,23 +522,17 @@ int main()
     std::vector<Point<double>> system_noises;
     std::vector<Point<double>> initial_points;
     for (int joint = 0; joint < joint_count; ++joint) {
-        measurement_noises.push_back(Point<double>(
-            measurement_noise_for_all_joints(joint, 0),
-            measurement_noise_for_all_joints(joint, 1),
-            measurement_noise_for_all_joints(joint, 2)
-        ));
-        system_noises.push_back(Point<double>(
-            system_noise_x,
-            system_noise_x,
-            system_noise_x
-        ));
+        measurement_noises.push_back(
+            Point<double>(measurement_noise_for_all_joints(joint, 0),
+                measurement_noise_for_all_joints(joint, 1),
+                measurement_noise_for_all_joints(joint, 2)));
+        system_noises.push_back(
+            Point<double>(system_noise_x, system_noise_x, system_noise_x));
         initial_points.push_back(Point<double>(
-            joints(0, joint, 0),
-            joints(0, joint, 1),
-            joints(0, joint, 2)
-        ));
+            joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
     }
-    SkeletonFilter<double> skeleton_filter(measurement_noises, system_noises, 32, m_threshold);
+    SkeletonFilter<double> skeleton_filter(measurement_noises, system_noises, 32,
+        m_threshold);
     skeleton_filter.init(initial_points, timestamps[0]);
 
     std::vector<std::vector<Point<double>>> filtered_values;
@@ -561,10 +540,7 @@ int main()
     std::vector<Point<double>> initial_joints;
     for (int joint = 0; joint < joint_count; ++joint) {
         initial_joints.push_back(Point<double>(
-            joints(0, joint, 0),
-            joints(0, joint, 1),
-            joints(0, joint, 2)
-        ));
+            joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
     }
     filtered_values.push_back(initial_joints);
 
@@ -573,15 +549,13 @@ int main()
     for (int frame_idx = 1; frame_idx < max_frame; ++frame_idx) {
         if (is_null[frame_idx])
             continue;
-        //double time_diff = timestamps[frame_idx] - timestamps[frame_idx-1];
+        // double time_diff = timestamps[frame_idx] - timestamps[frame_idx-1];
 
         std::vector<Point<double>> current_joint_positions;
         for (int joint = 0; joint < joint_count; ++joint) {
             current_joint_positions.push_back(Point<double>(
-                joints(frame_idx, joint, 0),
-                joints(frame_idx, joint, 1),
-                joints(frame_idx, joint, 2)
-            ));
+                joints(frame_idx, joint, 0), joints(frame_idx, joint, 1),
+                joints(frame_idx, joint, 2)));
         }
 
         auto values = skeleton_filter.step(current_joint_positions, timestamps[frame_idx]);
@@ -604,18 +578,10 @@ int main()
         auto c = C;
         auto g = G;
         auto q = G; // Won't be used anyway
-        auto m_measurement_noise = measurement_noise_for_all_joints(joint, axis);  // focus on x axis
+        auto m_measurement_noise = measurement_noise_for_all_joints(joint, axis); // focus on x axis
 
-        GenericFilter1D<double> filter(
-            ad,
-            b,
-            c,
-            g,
-            q,
-            m_measurement_noise,
-            system_noise_x,
-            m_threshold
-        );
+        GenericFilter1D<double> filter(ad, b, c, g, q, m_measurement_noise,
+            system_noise_x, m_threshold);
         auto initial_state = MatrixXd(2, 1);
         initial_state(0, 0) = joints(0, joint, axis);
         initial_state(1, 0) = 0;
@@ -625,7 +591,6 @@ int main()
         initial_errors(1, 0) = 0;
         initial_errors(1, 1) = 1;
         filter.init(initial_state, initial_errors);
-
 
         int max_frame = n_frames;
         // We start with an offset of 1
@@ -637,7 +602,7 @@ int main()
         for (int frame_idx = 1; frame_idx < max_frame; ++frame_idx) {
             if (is_null[frame_idx])
                 continue;
-            double time_diff = timestamps[frame_idx] - timestamps[frame_idx-1];
+            double time_diff = timestamps[frame_idx] - timestamps[frame_idx - 1];
             auto value = filter.step(joints(frame_idx, joint, axis), time_diff);
             filtered_values.push_back(value);
         }
