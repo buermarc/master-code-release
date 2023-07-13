@@ -1,4 +1,5 @@
 CPP_FILES := $(shell find ./src -name '*.cpp')
+FILES := $(shell find ./src -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.c')
 
 all: include/eigen build/filter
 
@@ -13,3 +14,7 @@ build/filter: build $(CPP_FILES)
 
 build:
 	mkdir build
+
+format:
+	echo ${FILES}
+	clang-format -i --style=WebKit ${FILES}
