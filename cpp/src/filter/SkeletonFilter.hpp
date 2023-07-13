@@ -2,9 +2,9 @@
 #include <cstddef>
 #include <vector>
 
-#include "Utils.hpp"
 #include "Point.hpp"
 #include "PointFilter3D.hpp"
+#include "Utils.hpp"
 
 template <typename Value>
 class SkeletonFilter {

@@ -18,8 +18,6 @@ using json = nlohmann::json;
 using Eigen::MatrixXd;
 using Eigen::Tensor;
 
-
-
 int main()
 {
     std::string var_path("../matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
@@ -225,4 +223,3 @@ void mm()
     std::cout << m << std::endl;
 }
 */
-
