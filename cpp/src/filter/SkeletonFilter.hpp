@@ -2,9 +2,13 @@
 #include <cstddef>
 #include <vector>
 
+#include <eigen3/Eigen/Dense>
+
 #include "Point.hpp"
 #include "PointFilter3D.hpp"
 #include "Utils.hpp"
+
+using Eigen::MatrixXd;
 
 template <typename Value>
 class SkeletonFilter {
@@ -53,6 +57,19 @@ public:
             results.push_back(joint_filters[i].step(values[i], time_diff));
         }
         return results;
+    }
+
+    Point<Value> calculate_com(
+        std::vector<Point<Value>> filtered_positions,
+        MatrixXd MM) // MM[1x32]
+    {
+        Point<Value> com(0.0, 0.0, 0.0);
+        for (int joint = 0; joint < this->joint_count(); ++joint) {
+            com.x += filtered_positions[joint].x * MM(0, joint);
+            com.y += filtered_positions[joint].y * MM(0, joint);
+            com.z += filtered_positions[joint].z * MM(0, joint);
+        }
+        return com;
     }
 };
 
