@@ -1,6 +1,7 @@
 #pragma once
 #include <eigen3/Eigen/Dense>
 #include <eigen3/unsupported/Eigen/MatrixFunctions>
+#include <tuple>
 
 #include "GenericFilter1D.hpp"
 #include "Point.hpp"
@@ -81,13 +82,14 @@ public:
         z_filter.init(initial_state_z, initial_errors);
     }
 
-    Point<Value> step(Point<Value> value, Value time_diff)
+    std::tuple<Point<Value>, Point<Value>> step(Point<Value> value, Value time_diff)
     {
-        Point<Value> result;
-        result.x = x_filter.step(value.x, time_diff);
-        result.y = y_filter.step(value.y, time_diff);
-        result.z = z_filter.step(value.z, time_diff);
-        return result;
+        Point<Value> position;
+        Point<Value> velocity;
+        std::tie(position.x, velocity.x) = x_filter.step(value.x, time_diff);
+        std::tie(position.y, velocity.y) = y_filter.step(value.y, time_diff);
+        std::tie(position.z, velocity.z) = z_filter.step(value.z, time_diff);
+        return std::make_tuple(position, velocity);
     }
     // Consider a point an outlier if any of the axis are outliers
     // How to include confidence level

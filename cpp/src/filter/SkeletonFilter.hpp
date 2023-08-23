@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <tuple>
 #include <vector>
 
 #include <eigen3/Eigen/Dense>
@@ -47,16 +48,19 @@ public:
 
     bool is_initialized() { return initialized; }
 
-    std::vector<Point<Value>> step(std::vector<Point<Value>> values,
+    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values,
         Value new_time)
     {
-        std::vector<Point<Value>> results;
+        std::vector<Point<Value>> positions;
+        std::vector<Point<Value>> velocities;
         auto time_diff = new_time - last_time;
         // FIXME: Not nice using a 0..n_joints loop and push_back at the same time
         for (int i = 0; i < n_joints; ++i) {
-            results.push_back(joint_filters[i].step(values[i], time_diff));
+            auto [position, velocity] = joint_filters[i].step(values[i], time_diff);
+            positions.push_back(position);
+            velocities.push_back(velocity);
         }
-        return results;
+        return std::make_tuple(positions, velocities);
     }
 
     Point<Value> calculate_com(
@@ -70,6 +74,21 @@ public:
             com.z += filtered_positions[joint].z * MM(0, joint);
         }
         return com;
+    }
+
+    Point<Value> calculate_x_com(
+        Point<Value> com,
+        Point<Value> com_dot,
+        Value l // length of inverted pendelum
+    )
+    {
+        Value g = 9.81; // m/s
+        Value w_0 = g / l;
+        Point<Value> x_com(0.0, 0.0, 0.0);
+        x_com.x = com.x + (com_dot.x / w_0);
+        x_com.y = com.y + (com_dot.y / w_0);
+        x_com.z = com.z + (com_dot.z / w_0);
+        return x_com;
     }
 };
 

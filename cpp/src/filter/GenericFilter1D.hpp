@@ -69,7 +69,7 @@ public:
         corrected_errors = initial_errors;
     }
 
-    Value step(Value value, Value time_diff)
+    std::tuple<Value, Value> step(Value value, Value time_diff)
     {
         // Hard coded sub A = [1, Ts; 0, 1]
         MatrixXd Adn = Ad.replicate(1, 1);
@@ -105,6 +105,6 @@ public:
             corrected_state = predicted_state;
             corrected_errors = predicted_errors;
         }
-        return corrected_state(0, 0);
+        return std::make_tuple(corrected_state(0, 0), corrected_state(0, 1));
     }
 };
