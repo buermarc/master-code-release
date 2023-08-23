@@ -12,6 +12,7 @@
 
 #include "filter/SkeletonFilter.hpp"
 #include "filter/Utils.hpp"
+#include "filter/com.hpp"
 
 using json = nlohmann::json;
 
@@ -20,6 +21,8 @@ using Eigen::Tensor;
 
 int main()
 {
+    std::cout << get_azure_kinect_com_matrix() << std::endl;
+    return 0;
     std::string var_path("../matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
     int joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
