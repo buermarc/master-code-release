@@ -1,2 +1,5 @@
+.clangd
 include
 build
+*.pdf
+*.csv
