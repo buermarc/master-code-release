@@ -83,24 +83,34 @@ int filter_data_with_constrained_skeleton_filter()
 
     // Write header
     file << "Frame";
-    for (int i = 0; i < 32; ++i) {
+    int end = 32;
+    for (int i = 0; i < end - 1; ++i) {
+        file << "Joint_" << i << "_x,";
+        file << "Joint_" << i << "_y,";
+        file << "Joint_" << i << "_z,";
+    }
+    {
+        int i = end - 1;
         file << ",Joint_" << i << "_x";
         file << ",Joint_" << i << "_y";
         file << ",Joint_" << i << "_z";
     }
     file << "\r\n";
 
-    // Write header
-    int i = 0;
+    // Write elements
     for (auto joints : filtered_values) {
-        file << i;
+        bool first = true;
         for (auto joint : joints) {
-            file << ", " << joint.x;
+            if (first) {
+                file << joint.x;
+                first = false;
+            } else {
+                file << ", " << joint.x;
+            }
             file << ", " << joint.y;
             file << ", " << joint.z;
         }
         file << "\r\n";
-        ++i;
     }
     file << "\r\n";
     file << std::endl;
