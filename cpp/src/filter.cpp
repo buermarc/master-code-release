@@ -1,18 +1,18 @@
+#include <Eigen/Dense>
 #include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdio>
-#include <eigen3/Eigen/Dense>
-#include <eigen3/unsupported/Eigen/CXX11/Tensor>
-#include <eigen3/unsupported/Eigen/MatrixFunctions>
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <string>
+#include <unsupported/Eigen/CXX11/Tensor>
+#include <unsupported/Eigen/MatrixFunctions>
 
-#include "filter/SkeletonFilter.hpp"
-#include "filter/Utils.hpp"
-#include "filter/com.hpp"
+#include <filter/SkeletonFilter.hpp>
+#include <filter/Utils.hpp>
+#include <filter/com.hpp>
 
 using json = nlohmann::json;
 
@@ -134,7 +134,7 @@ int main()
                 joints(frame_idx, joint, 2)));
         }
 
-        auto values = skeleton_filter.step(current_joint_positions, timestamps[frame_idx]);
+        auto [values, _] = skeleton_filter.step(current_joint_positions, timestamps[frame_idx]);
         // std::cout << values[0] << std::endl;
         filtered_values.push_back(values);
     }
@@ -179,7 +179,7 @@ int main()
             if (is_null[frame_idx])
                 continue;
             double time_diff = timestamps[frame_idx] - timestamps[frame_idx - 1];
-            auto value = filter.step(joints(frame_idx, joint, axis), time_diff);
+            auto [value, _] = filter.step(joints(frame_idx, joint, axis), time_diff);
             filtered_values.push_back(value);
         }
 

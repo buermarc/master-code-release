@@ -1,10 +1,13 @@
 #pragma once
 
+#include <fstream>
 #include <iostream>
+#include <set>
+#include <vector>
 
-#include <eigen3/Eigen/Dense>
-#include <eigen3/unsupported/Eigen/CXX11/Tensor>
-#include <eigen3/unsupported/Eigen/MatrixFunctions>
+#include <Eigen/Dense>
+#include <unsupported/Eigen/CXX11/Tensor>
+#include <unsupported/Eigen/MatrixFunctions>
 
 #include <string>
 
@@ -81,4 +84,30 @@ MatrixXd get_measurement_error(Tensor<double, 3> joints, int joint_counts,
         var(i, j) = (sum_t(0) / (frame_end - frame_start) / 10); // treat 'z' as less important
     }
     return var;
+}
+
+template <typename E, typename X>
+void unroll(const std::vector<E>& v, std::set<X>& out)
+{
+    out.insert(v.begin(), v.end());
+}
+
+template <typename E, typename X>
+void unroll(const std::vector<E>& v, std::vector<X>& out)
+{
+    out.insert(out.end(), v.begin(), v.end());
+}
+
+template <typename V, typename X>
+void unroll(const std::vector<std::vector<V>>& v, std::vector<X>& out)
+{
+    for (const auto& e : v)
+        unroll(e, out);
+}
+
+template <typename V, typename X>
+void unroll(const std::vector<std::vector<V>>& v, std::set<X>& out)
+{
+    for (const auto& e : v)
+        unroll(e, out);
 }

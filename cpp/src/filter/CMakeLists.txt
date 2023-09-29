@@ -1,0 +1,11 @@
+add_library(
+    filter 
+    INTERFACE
+    com.hpp
+    ConstrainedSkeletonFilter.hpp
+    GenericFilter1D.hpp
+    PointFilter3D.hpp
+    Point.hpp
+    SkeletonFilter.hpp
+    Utils.hpp
+)

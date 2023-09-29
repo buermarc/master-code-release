@@ -1,6 +1,6 @@
 #pragma once
-#include <eigen3/Eigen/Dense>
-#include <eigen3/Eigen/src/Core/Matrix.h>
+#include <Eigen/Dense>
+#include <Eigen/src/Core/Matrix.h>
 #include <iostream>
 
 using Eigen::MatrixXd;
@@ -83,17 +83,13 @@ void _one_origin_one_joint(
     MM(0, origin_joint) += normalized_mass * (1 - normalized_com_position);
 }
 
-MatrixXd get_azure_kinect_com_matrix(SEX sex)
+MatrixXd get_azure_kinect_com_matrix(SEX sex = AVERAGE)
 {
     MatrixXd MM(1, 32);
 
     for (int i = 0; i < 32; ++i) {
         MM(0, i) = 0; // Initialize with zero
     }
-
-    std::cout << "sex :" << sex << std::endl;
-    std::cout << "sex male: " << MALE << std::endl;
-    std::cout << "sex female: " << FEMALE << std::endl;
 
     switch (sex) {
     case MALE:

@@ -1,7 +1,7 @@
 #pragma once
-#include <eigen3/Eigen/Dense>
-#include <eigen3/unsupported/Eigen/MatrixFunctions>
+#include <Eigen/Dense>
 #include <tuple>
+#include <unsupported/Eigen/MatrixFunctions>
 
 #include "GenericFilter1D.hpp"
 #include "Point.hpp"
@@ -37,6 +37,27 @@ class PointFilter3D {
     GenericFilter1D<Value> z_filter;
 
 public:
+    static PointFilter3D<Value> default_init(int joint, MatrixXd measurement_errors)
+    {
+        Point<Value> measurement_noise;
+        Point<Value> system_noise;
+        Value threshold = 2;
+        measurement_noise.x = std::sqrt(measurement_errors(joint, 0)) * 10;
+        measurement_noise.y = std::sqrt(measurement_errors(joint, 1)) * 10;
+        measurement_noise.x = std::sqrt(measurement_errors(joint, 2)) * 10;
+
+        Value factor_system_noise = 1.0 / 3;
+        Value vmax = 10.0 * factor_system_noise;
+        Value sigma_system_noise = vmax / 3;
+        system_noise.x = std::pow(sigma_system_noise, 2);
+        system_noise.y = system_noise.x;
+        system_noise.z = system_noise.x;
+        return PointFilter3D<Value>(
+            measurement_noise,
+            system_noise,
+            threshold);
+    }
+
     PointFilter3D(Point<Value> measurement_noise, Point<Value> system_noise,
         Value threshold)
     {

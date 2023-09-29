@@ -1,6 +1,6 @@
 #pragma once
-#include <eigen3/Eigen/Dense>
-#include <eigen3/unsupported/Eigen/MatrixFunctions>
+#include <Eigen/Dense>
+#include <unsupported/Eigen/MatrixFunctions>
 
 using Eigen::MatrixXd;
 

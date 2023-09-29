@@ -3,7 +3,7 @@
 #include <tuple>
 #include <vector>
 
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 
 #include "Point.hpp"
 #include "PointFilter3D.hpp"
