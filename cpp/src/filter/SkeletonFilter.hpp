@@ -60,6 +60,7 @@ public:
             positions.push_back(position);
             velocities.push_back(velocity);
         }
+        last_time = new_time;
         return std::make_tuple(positions, velocities);
     }
 

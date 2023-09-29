@@ -87,24 +87,28 @@ public:
         MatrixXd predicted_errors = Adn * corrected_errors * AdnT + Gdn * system_noise * GdnT;
 
         auto comb = C * predicted_state;
-        Value innovation = value - (C * predicted_state).array()(0);
-        Value innovation_covariance = (C * Adn * predicted_errors * AdnT * CT).array()(0) + (C * system_noise * CT).array()(0) + measurement_noise;
+        Value innovation = value - (C * predicted_state).array()(0);  // residual
+        Value innovation_covariance = (C * predicted_errors * CT).array()(0) + measurement_noise;
         Value sigma_value = std::sqrt(innovation_covariance);
         Value innovation_norm = innovation / sigma_value;
 
         MatrixXd measurement_noise_matrix(1, 1);
         measurement_noise_matrix(0, 0) = measurement_noise;
         if (innovation_norm < threshold) {
+            // We are recalculating tmp but that is fine as it still a bit
+            // different as we are using matrices here
             MatrixXd tmp = C * predicted_errors * CT + measurement_noise_matrix;
+            // TODO: if we have just one value we could also just use a simple
+            // inversion instead of a pseudo inverse
             auto pseudo_inv = tmp.completeOrthogonalDecomposition().pseudoInverse();
             MatrixXd K_value = predicted_errors * CT * pseudo_inv;
-            corrected_state = predicted_state + K_value * (value - (C * predicted_state).array()(0));
+            corrected_state = predicted_state + K_value * innovation;
             auto eye = MatrixXd::Identity(2, 2);
             corrected_errors = (eye - K_value * C) * predicted_errors;
         } else {
             corrected_state = predicted_state;
             corrected_errors = predicted_errors;
         }
-        return std::make_tuple(corrected_state(0, 0), corrected_state(0, 1));
+        return std::make_tuple(corrected_state(0, 0), corrected_state(1, 0));
     }
 };

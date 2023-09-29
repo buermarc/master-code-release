@@ -6,6 +6,8 @@
 #include "GenericFilter1D.hpp"
 #include "Point.hpp"
 
+using Eigen::MatrixXd;
+
 std::tuple<MatrixXd, MatrixXd, MatrixXd> let_matricies_appear_magically()
 {
     // Hard coded sub A = [1, Ts; 0, 1]

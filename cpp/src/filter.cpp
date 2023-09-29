@@ -1,6 +1,7 @@
 #include <Eigen/Dense>
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <cstdio>
 #include <fstream>
@@ -10,6 +11,7 @@
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <unsupported/Eigen/MatrixFunctions>
 
+#include <filter/ConstrainedSkeletonFilter.hpp>
 #include <filter/SkeletonFilter.hpp>
 #include <filter/Utils.hpp>
 #include <filter/com.hpp>
@@ -19,7 +21,93 @@ using json = nlohmann::json;
 using Eigen::MatrixXd;
 using Eigen::Tensor;
 
-int main()
+int filter_data_with_constrained_skeleton_filter()
+{
+    std::string var_path("../matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
+    int joint_count = 32;
+    auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
+    auto var = get_measurement_error(var_joints, joint_count, 209, 339);
+
+    std::string data_path("../matlab/sts_NFOV_UNBINNED_720P_30fps.json");
+    auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
+
+    if (std::find(is_null.begin(), is_null.end(), true) != is_null.end()) {
+        std::cout << "found null" << std::endl;
+    }
+
+    std::vector<Point<double>> initial_points;
+    for (int joint = 0; joint < joint_count; ++joint) {
+        initial_points.push_back(Point<double>(
+            joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
+    }
+    ConstrainedSkeletonFilter<double> filter(32, var);
+    filter.init(initial_points, timestamps[0]);
+
+    std::vector<std::vector<Point<double>>> filtered_values;
+    // Add initial value
+    std::vector<Point<double>> initial_joints;
+    for (int joint = 0; joint < joint_count; ++joint) {
+        initial_joints.push_back(Point<double>(
+            joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
+    }
+    filtered_values.push_back(initial_joints);
+
+    int max_frame = n_frames;
+    std::cout << "n_frames " << n_frames << std::endl;
+    for (int frame_idx = 1; frame_idx < max_frame; ++frame_idx) {
+        if (is_null[frame_idx])
+            continue;
+        // double time_diff = timestamps[frame_idx] - timestamps[frame_idx-1];
+
+        std::vector<Point<double>> current_joint_positions;
+        for (int joint = 0; joint < joint_count; ++joint) {
+            current_joint_positions.push_back(Point<double>(
+                joints(frame_idx, joint, 0), joints(frame_idx, joint, 1),
+                joints(frame_idx, joint, 2)));
+        }
+
+        auto start = std::chrono::high_resolution_clock::now();
+        auto [values, _] = filter.step(current_joint_positions, timestamps[frame_idx]);
+        auto stop = std::chrono::high_resolution_clock::now();
+
+        std::chrono::duration<double, std::milli> time = stop - start;
+        std::cout << time.count() << "ms\n";
+        // std::cout << values[0] << std::endl;
+        std::cout << current_joint_positions[0].x - values[0].x << std::endl;
+        filtered_values.push_back(values);
+    }
+
+    // Write out filtere values into csv
+    std::ofstream file;
+    file.open("out.csv");
+
+    // Write header
+    file << "Frame";
+    for (int i = 0; i < 32; ++i) {
+        file << ",Joint_" << i << "_x";
+        file << ",Joint_" << i << "_y";
+        file << ",Joint_" << i << "_z";
+    }
+    file << "\r\n";
+
+    // Write header
+    int i = 0;
+    for (auto joints : filtered_values) {
+        file << i;
+        for (auto joint : joints) {
+            file << ", " << joint.x;
+            file << ", " << joint.y;
+            file << ", " << joint.z;
+        }
+        file << "\r\n";
+        ++i;
+    }
+    file << "\r\n";
+    file << std::endl;
+    return 0;
+}
+
+int filter_data_with_skeleton_filter()
 {
     std::cout << get_azure_kinect_com_matrix() << std::endl;
     return 0;
@@ -226,3 +314,8 @@ void mm()
     std::cout << m << std::endl;
 }
 */
+
+int main()
+{
+    filter_data_with_constrained_skeleton_filter();
+}
