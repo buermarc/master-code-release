@@ -82,7 +82,6 @@ int filter_data_with_constrained_skeleton_filter()
     file.open("out.csv");
 
     // Write header
-    file << "Frame";
     int end = 32;
     for (int i = 0; i < end - 1; ++i) {
         file << "Joint_" << i << "_x,";
@@ -91,11 +90,11 @@ int filter_data_with_constrained_skeleton_filter()
     }
     {
         int i = end - 1;
-        file << ",Joint_" << i << "_x";
+        file << "Joint_" << i << "_x";
         file << ",Joint_" << i << "_y";
         file << ",Joint_" << i << "_z";
     }
-    file << "\r\n";
+    file << "\n";
 
     // Write elements
     for (auto joints : filtered_values) {
@@ -110,9 +109,9 @@ int filter_data_with_constrained_skeleton_filter()
             file << ", " << joint.y;
             file << ", " << joint.z;
         }
-        file << "\r\n";
+        file << "\n";
     }
-    file << "\r\n";
+    // file << "\r\n";
     file << std::endl;
     return 0;
 }
