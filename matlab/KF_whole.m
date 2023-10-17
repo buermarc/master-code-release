@@ -1,4 +1,4 @@
-% This script:
+%This script:
 % - computes joint positions and velocities from raw Kinect data using a Kalman Filter with a gating approach
 % - computes joint positions and velocities from raw Kinect data using a Kalman Filter including distance contraints on velocity level for legs (hip, knee, ankle) and arms (shoulder, elbow and wrist) 
 % References: 
@@ -821,182 +821,207 @@ for i = 1:size(jind,1) % for each chain
     end
 end
 
-%% Compare individually KF filtered, KF with constraints and non-filtered data
+matrix = zeros(32 * 3, length(joints));
+
 for j = 1:32
-    figure
-    subplot(3,2,1)
-    hold on
-    plot(tstamp,body.NF.joints(:,j,1))
-    plot(tstamp,body.KF.joint{j}.coord{1}.xc(1,:),'r','LineWidth',1)
-    plot(tstamp,body.KFC.joint{j}.coord{1}.xc(1,:),'g','LineWidth',1)
-    hold off
-    legend('unfiltered','KF with gating','KF with constraints')
-    title(['Coord x (lateral) of joint ' joint_names{j}])
-    ylabel('x (m)')
-    xlabel('time (s)')
-    box on
-    
-    subplot(3,2,2)
-    hold on
-    plot(tstamp,body.NF.vjoints(:,j,1))
-    plot(tstamp,body.KF.joint{j}.coord{1}.xc(2,:),'r','LineWidth',1)
-    plot(tstamp,body.KFC.joint{j}.coord{1}.xc(2,:),'g','LineWidth',1)
-    hold off
-    legend('unfiltered','KF with gating','KF with constraints')
-    title(['Velocity x of joint ' joint_names{j}])
-    ylabel('vx (m/s)')
-    xlabel('time (s)')
-    box on
-    
-    subplot(3,2,3)
-    hold on
-    plot(tstamp,body.NF.joints(:,j,2))
-    plot(tstamp,body.KF.joint{j}.coord{2}.xc(1,:),'r','LineWidth',1)
-    plot(tstamp,body.KFC.joint{j}.coord{2}.xc(1,:),'g','LineWidth',1)
-    hold off
-    legend('unfiltered','KF with gating','KF with constraints')
-    title(['Coord y (vertical) of joint ' joint_names{j}])
-    ylabel('y (m)')
-    xlabel('time (s)')
-    box on
-    
-    subplot(3,2,4)
-    hold on
-    plot(tstamp,body.NF.vjoints(:,j,2))
-    plot(tstamp,body.KF.joint{j}.coord{2}.xc(2,:),'r','LineWidth',1)
-    plot(tstamp,body.KFC.joint{j}.coord{2}.xc(2,:),'g','LineWidth',1)
-    hold off
-    legend('unfiltered','KF with gating','KF with constraints')
-    title(['Velocity y of joint ' joint_names{j}])
-    ylabel('vy (m/s)')
-    xlabel('time (s)')
-    box on
-    
-    subplot(3,2,5)
-    hold on
-    plot(tstamp,body.NF.joints(:,j,3))
-    plot(tstamp,body.KF.joint{j}.coord{3}.xc(1,:),'r','LineWidth',1)
-    plot(tstamp,body.KFC.joint{j}.coord{3}.xc(1,:),'g','LineWidth',1)
-    hold off
-    legend('unfiltered','KF with gating','KF with constraints')
-    title(['Coord z (depth) of joint ' joint_names{j}])
-    ylabel('z (m)')
-    xlabel('time (s)')
-    box on
-    
-    subplot(3,2,6)
-    hold on
-    plot(tstamp,body.NF.vjoints(:,j,3))
-    plot(tstamp,body.KF.joint{j}.coord{3}.xc(2,:),'r','LineWidth',1)
-    plot(tstamp,body.KFC.joint{j}.coord{3}.xc(2,:),'g','LineWidth',1)
-    hold off
-    legend('unfiltered','KF with gating','KF with constraints')
-    title(['Velocity z of joint ' joint_names{j}])
-    ylabel('vz (m/s)')
-    xlabel('time (s)')
-    box on
+    joint = body.KFC.joint{j};
+    for idx = 1:3
+        coord = joint.coord{idx};
+        if isfield(coord, "xcp")
+            matrix(3 * (j-1) + idx, :) = coord.xcp(1, :);
+        else
+            matrix(3 * (j-1) + idx, :) = coord.xc(1, :);
+        end
+    end
+end
+labels = {};
+
+for i = 1:32
+    labels = [labels {["Joint_" i "_x"]}];
+    labels = [labels {["Joint_" i "_y"]}];
+    labels = [labels {["Joint_" i "_z"]}];
 end
 
+T = array2table(matrix);
+T.Properties.VariableNames(1:(3*32)) = labels;
+writetable(T,'file1.csv');
 
-%% Compute lengths of segments over time
-
-for i = 1:size(jind,1) % for each chain
-    % Segment length before filtering
-    L12(i,:) =  sqrt((body.NF.joints(:,jind(i,1),1)-body.NF.joints(:,jind(i,2),1)).^2 + ...
-                     (body.NF.joints(:,jind(i,1),2)-body.NF.joints(:,jind(i,2),2)).^2 + ...
-                     (body.NF.joints(:,jind(i,1),3)-body.NF.joints(:,jind(i,2),3)).^2);
-    
-    L23(i,:) =  sqrt((body.NF.joints(:,jind(i,2),1)-body.NF.joints(:,jind(i,3),1)).^2 + ...
-                     (body.NF.joints(:,jind(i,2),2)-body.NF.joints(:,jind(i,3),2)).^2 + ...
-                     (body.NF.joints(:,jind(i,2),3)-body.NF.joints(:,jind(i,3),3)).^2);
-    
-    % Segment length after filtering with KF for each coordinate and gating for outlier rejection
-    L12_KF(i,:) =  sqrt((body.KF.joint{jind(i,1)}.coord{1}.xc(1,:)-body.KF.joint{jind(i,2)}.coord{1}.xc(1,:)).^2 + ...
-                        (body.KF.joint{jind(i,1)}.coord{2}.xc(1,:)-body.KF.joint{jind(i,2)}.coord{2}.xc(1,:)).^2 + ...
-                        (body.KF.joint{jind(i,1)}.coord{3}.xc(1,:)-body.KF.joint{jind(i,2)}.coord{3}.xc(1,:)).^2);
-    
-    L23_KF(i,:) =  sqrt((body.KF.joint{jind(i,2)}.coord{1}.xc(1,:)-body.KF.joint{jind(i,3)}.coord{1}.xc(1,:)).^2 + ...
-                        (body.KF.joint{jind(i,2)}.coord{2}.xc(1,:)-body.KF.joint{jind(i,3)}.coord{2}.xc(1,:)).^2 + ...
-                        (body.KF.joint{jind(i,2)}.coord{3}.xc(1,:)-body.KF.joint{jind(i,3)}.coord{3}.xc(1,:)).^2);
-    
-    
-    % Segment length after Filtering with leg KF
-    L12_KFC(i,:) =  sqrt((body.KFC.joint{jind(i,1)}.coord{1}.xc(1,:)-body.KFC.joint{jind(i,2)}.coord{1}.xc(1,:)).^2 + ...
-                         (body.KFC.joint{jind(i,1)}.coord{2}.xc(1,:)-body.KFC.joint{jind(i,2)}.coord{2}.xc(1,:)).^2 + ...
-                         (body.KFC.joint{jind(i,1)}.coord{3}.xc(1,:)-body.KFC.joint{jind(i,2)}.coord{3}.xc(1,:)).^2);
-    
-    L23_KFC(i,:) =  sqrt((body.KFC.joint{jind(i,2)}.coord{1}.xc(1,:)-body.KFC.joint{jind(i,3)}.coord{1}.xc(1,:)).^2 + ...
-                         (body.KFC.joint{jind(i,2)}.coord{2}.xc(1,:)-body.KFC.joint{jind(i,3)}.coord{2}.xc(1,:)).^2 + ...
-                         (body.KFC.joint{jind(i,2)}.coord{3}.xc(1,:)-body.KFC.joint{jind(i,3)}.coord{3}.xc(1,:)).^2);
-    
-    % Average values of segment lengths
-    L12_avg(i) = mean(L12(i,:));
-    L23_avg(i) = mean(L23(i,:));
-    L12_KF_avg(i) = mean(L12_KF(i,:));
-    L23_KF_avg(i) = mean(L23_KF(i,:));
-    L12_KFC_avg(i) = mean(L12_KFC(i,:));
-    L23_KFC_avg(i) = mean(L23_KFC(i,:));
-
-    % RMS with respect to average
-    L12_rms(i) = rms(L12(i,:)-L12_avg(i));
-    L23_rms(i) = rms(L23(i,:)-L23_avg(i));
-    L12_KF_rms(i) = rms(L12_KF(i,:)-L12_KF_avg(i));
-    L23_KF_rms(i) = rms(L23_KF(i,:)-L23_KF_avg(i));
-    L12_KFC_rms(i) = rms(L12_KFC(i,:)-L12_KFC_avg(i));
-    L23_KFC_rms(i) = rms(L23_KFC(i,:)-L23_KFC_avg(i));
-end
-
-body.NF.L12 = L12;
-body.NF.L23 = L23;
-body.NF.L12_avg = L12_avg;
-body.NF.L23_avg = L23_avg;
-body.NF.L12_rms = L12_rms;
-body.NF.L23_rms = L23_rms;
-body.KF.L12 = L12_KF;
-body.KF.L23 = L23_KF;
-body.KF.L12_avg = L12_KF_avg;
-body.KF.L23_avg = L23_KF_avg;
-body.KF.L12_rms = L12_KF_rms;
-body.KF.L23_rms = L23_KF_rms;
-body.KF.L12 = L12_KFC;
-body.KFC.L23 = L23_KFC;
-body.KFC.L12_avg = L12_KFC_avg;
-body.KFC.L23_avg = L23_KFC_avg;
-body.KFC.L12_rms = L12_KFC_rms;
-body.KFC.L23_rms = L23_KFC_rms;
-
-save([fileName '_KF'],'body');
-
-%% Plot segment lengths over time
-figure
-for i=1:4
-    subplot(2,4,i)
-        hold on
-        plot(body.tstamp,L12(i,:));
-        plot(body.tstamp,L12_KF(i,:),'r','LineWidth',2);
-        plot(body.tstamp,L12_KFC(i,:),'g','LineWidth',2);
-        hold off
-        legend(['unfiltered: Avg = ' num2str(L12_avg(i)) ' m; RMS = ' num2str(L12_rms(i))], ...
-               ['KF with gating: Avg = ' num2str(L12_KF_avg(i)) ' m; RMS = ' num2str(L12_KF_rms(i))], ...
-               ['KF with constraints: Avg = ' num2str(L12_KFC_avg(i)) ' m; RMS = ' num2str(L12_KFC_rms(i))]);
-        title(['Upper segment chain ' num2str(i)]);
-        ylabel('[m]')
-        xlabel('[s]')
-        box on
-    subplot(2,4,4+i)
-        hold on
-        plot(body.tstamp,L23(i,:));
-        plot(body.tstamp,L23_KF(i,:),'r','LineWidth',2);
-        plot(body.tstamp,L23_KFC(i,:),'g','LineWidth',2);
-        hold off
-        legend(['unfiltered: Avg = ' num2str(L23_avg(i)) ' m; RMS = ' num2str(L23_rms(i))], ...
-               ['KF with gating: Avg = ' num2str(L23_KF_avg(i)) ' m; RMS = ' num2str(L23_KF_rms(i))], ...
-               ['KF with constraints: Avg = ' num2str(L23_KFC_avg(i)) ' m; RMS = ' num2str(L23_KFC_rms(i))]);
-        title(['Lower segment chain ' num2str(i)]);
-        ylabel('[m]')
-        xlabel('[s]')
-        box on
-end
-
-
-
+%%% Compare individually KF filtered, KF with constraints and non-filtered data
+%for j = 1:32
+%    figure
+%    subplot(3,2,1)
+%    hold on
+%    plot(tstamp,body.NF.joints(:,j,1))
+%    plot(tstamp,body.KF.joint{j}.coord{1}.xc(1,:),'r','LineWidth',1)
+%    plot(tstamp,body.KFC.joint{j}.coord{1}.xc(1,:),'g','LineWidth',1)
+%    hold off
+%    legend('unfiltered','KF with gating','KF with constraints')
+%    title(['Coord x (lateral) of joint ' joint_names{j}])
+%    ylabel('x (m)')
+%    xlabel('time (s)')
+%    box on
+%    
+%    subplot(3,2,2)
+%    hold on
+%    plot(tstamp,body.NF.vjoints(:,j,1))
+%    plot(tstamp,body.KF.joint{j}.coord{1}.xc(2,:),'r','LineWidth',1)
+%    plot(tstamp,body.KFC.joint{j}.coord{1}.xc(2,:),'g','LineWidth',1)
+%    hold off
+%    legend('unfiltered','KF with gating','KF with constraints')
+%    title(['Velocity x of joint ' joint_names{j}])
+%    ylabel('vx (m/s)')
+%    xlabel('time (s)')
+%    box on
+%    
+%    subplot(3,2,3)
+%    hold on
+%    plot(tstamp,body.NF.joints(:,j,2))
+%    plot(tstamp,body.KF.joint{j}.coord{2}.xc(1,:),'r','LineWidth',1)
+%    plot(tstamp,body.KFC.joint{j}.coord{2}.xc(1,:),'g','LineWidth',1)
+%    hold off
+%    legend('unfiltered','KF with gating','KF with constraints')
+%    title(['Coord y (vertical) of joint ' joint_names{j}])
+%    ylabel('y (m)')
+%    xlabel('time (s)')
+%    box on
+%    
+%    subplot(3,2,4)
+%    hold on
+%    plot(tstamp,body.NF.vjoints(:,j,2))
+%    plot(tstamp,body.KF.joint{j}.coord{2}.xc(2,:),'r','LineWidth',1)
+%    plot(tstamp,body.KFC.joint{j}.coord{2}.xc(2,:),'g','LineWidth',1)
+%    hold off
+%    legend('unfiltered','KF with gating','KF with constraints')
+%    title(['Velocity y of joint ' joint_names{j}])
+%    ylabel('vy (m/s)')
+%    xlabel('time (s)')
+%    box on
+%    
+%    subplot(3,2,5)
+%    hold on
+%    plot(tstamp,body.NF.joints(:,j,3))
+%    plot(tstamp,body.KF.joint{j}.coord{3}.xc(1,:),'r','LineWidth',1)
+%    plot(tstamp,body.KFC.joint{j}.coord{3}.xc(1,:),'g','LineWidth',1)
+%    hold off
+%    legend('unfiltered','KF with gating','KF with constraints')
+%    title(['Coord z (depth) of joint ' joint_names{j}])
+%    ylabel('z (m)')
+%    xlabel('time (s)')
+%    box on
+%    
+%    subplot(3,2,6)
+%    hold on
+%    plot(tstamp,body.NF.vjoints(:,j,3))
+%    plot(tstamp,body.KF.joint{j}.coord{3}.xc(2,:),'r','LineWidth',1)
+%    plot(tstamp,body.KFC.joint{j}.coord{3}.xc(2,:),'g','LineWidth',1)
+%    hold off
+%    legend('unfiltered','KF with gating','KF with constraints')
+%    title(['Velocity z of joint ' joint_names{j}])
+%    ylabel('vz (m/s)')
+%    xlabel('time (s)')
+%    box on
+%end
+%
+%
+%%% Compute lengths of segments over time
+%
+%for i = 1:size(jind,1) % for each chain
+%    % Segment length before filtering
+%    L12(i,:) =  sqrt((body.NF.joints(:,jind(i,1),1)-body.NF.joints(:,jind(i,2),1)).^2 + ...
+%                     (body.NF.joints(:,jind(i,1),2)-body.NF.joints(:,jind(i,2),2)).^2 + ...
+%                     (body.NF.joints(:,jind(i,1),3)-body.NF.joints(:,jind(i,2),3)).^2);
+%    
+%    L23(i,:) =  sqrt((body.NF.joints(:,jind(i,2),1)-body.NF.joints(:,jind(i,3),1)).^2 + ...
+%                     (body.NF.joints(:,jind(i,2),2)-body.NF.joints(:,jind(i,3),2)).^2 + ...
+%                     (body.NF.joints(:,jind(i,2),3)-body.NF.joints(:,jind(i,3),3)).^2);
+%    
+%    % Segment length after filtering with KF for each coordinate and gating for outlier rejection
+%    L12_KF(i,:) =  sqrt((body.KF.joint{jind(i,1)}.coord{1}.xc(1,:)-body.KF.joint{jind(i,2)}.coord{1}.xc(1,:)).^2 + ...
+%                        (body.KF.joint{jind(i,1)}.coord{2}.xc(1,:)-body.KF.joint{jind(i,2)}.coord{2}.xc(1,:)).^2 + ...
+%                        (body.KF.joint{jind(i,1)}.coord{3}.xc(1,:)-body.KF.joint{jind(i,2)}.coord{3}.xc(1,:)).^2);
+%    
+%    L23_KF(i,:) =  sqrt((body.KF.joint{jind(i,2)}.coord{1}.xc(1,:)-body.KF.joint{jind(i,3)}.coord{1}.xc(1,:)).^2 + ...
+%                        (body.KF.joint{jind(i,2)}.coord{2}.xc(1,:)-body.KF.joint{jind(i,3)}.coord{2}.xc(1,:)).^2 + ...
+%                        (body.KF.joint{jind(i,2)}.coord{3}.xc(1,:)-body.KF.joint{jind(i,3)}.coord{3}.xc(1,:)).^2);
+%    
+%    
+%    % Segment length after Filtering with leg KF
+%    L12_KFC(i,:) =  sqrt((body.KFC.joint{jind(i,1)}.coord{1}.xc(1,:)-body.KFC.joint{jind(i,2)}.coord{1}.xc(1,:)).^2 + ...
+%                         (body.KFC.joint{jind(i,1)}.coord{2}.xc(1,:)-body.KFC.joint{jind(i,2)}.coord{2}.xc(1,:)).^2 + ...
+%                         (body.KFC.joint{jind(i,1)}.coord{3}.xc(1,:)-body.KFC.joint{jind(i,2)}.coord{3}.xc(1,:)).^2);
+%    
+%    L23_KFC(i,:) =  sqrt((body.KFC.joint{jind(i,2)}.coord{1}.xc(1,:)-body.KFC.joint{jind(i,3)}.coord{1}.xc(1,:)).^2 + ...
+%                         (body.KFC.joint{jind(i,2)}.coord{2}.xc(1,:)-body.KFC.joint{jind(i,3)}.coord{2}.xc(1,:)).^2 + ...
+%                         (body.KFC.joint{jind(i,2)}.coord{3}.xc(1,:)-body.KFC.joint{jind(i,3)}.coord{3}.xc(1,:)).^2);
+%    
+%    % Average values of segment lengths
+%    L12_avg(i) = mean(L12(i,:));
+%    L23_avg(i) = mean(L23(i,:));
+%    L12_KF_avg(i) = mean(L12_KF(i,:));
+%    L23_KF_avg(i) = mean(L23_KF(i,:));
+%    L12_KFC_avg(i) = mean(L12_KFC(i,:));
+%    L23_KFC_avg(i) = mean(L23_KFC(i,:));
+%
+%    % RMS with respect to average
+%    L12_rms(i) = rms(L12(i,:)-L12_avg(i));
+%    L23_rms(i) = rms(L23(i,:)-L23_avg(i));
+%    L12_KF_rms(i) = rms(L12_KF(i,:)-L12_KF_avg(i));
+%    L23_KF_rms(i) = rms(L23_KF(i,:)-L23_KF_avg(i));
+%    L12_KFC_rms(i) = rms(L12_KFC(i,:)-L12_KFC_avg(i));
+%    L23_KFC_rms(i) = rms(L23_KFC(i,:)-L23_KFC_avg(i));
+%end
+%
+%body.NF.L12 = L12;
+%body.NF.L23 = L23;
+%body.NF.L12_avg = L12_avg;
+%body.NF.L23_avg = L23_avg;
+%body.NF.L12_rms = L12_rms;
+%body.NF.L23_rms = L23_rms;
+%body.KF.L12 = L12_KF;
+%body.KF.L23 = L23_KF;
+%body.KF.L12_avg = L12_KF_avg;
+%body.KF.L23_avg = L23_KF_avg;
+%body.KF.L12_rms = L12_KF_rms;
+%body.KF.L23_rms = L23_KF_rms;
+%body.KF.L12 = L12_KFC;
+%body.KFC.L23 = L23_KFC;
+%body.KFC.L12_avg = L12_KFC_avg;
+%body.KFC.L23_avg = L23_KFC_avg;
+%body.KFC.L12_rms = L12_KFC_rms;
+%body.KFC.L23_rms = L23_KFC_rms;
+%
+%save([fileName '_KF'],'body');
+%
+%%% Plot segment lengths over time
+%figure
+%for i=1:4
+%    subplot(2,4,i)
+%        hold on
+%        plot(body.tstamp,L12(i,:));
+%        plot(body.tstamp,L12_KF(i,:),'r','LineWidth',2);
+%        plot(body.tstamp,L12_KFC(i,:),'g','LineWidth',2);
+%        hold off
+%        legend(['unfiltered: Avg = ' num2str(L12_avg(i)) ' m; RMS = ' num2str(L12_rms(i))], ...
+%               ['KF with gating: Avg = ' num2str(L12_KF_avg(i)) ' m; RMS = ' num2str(L12_KF_rms(i))], ...
+%               ['KF with constraints: Avg = ' num2str(L12_KFC_avg(i)) ' m; RMS = ' num2str(L12_KFC_rms(i))]);
+%        title(['Upper segment chain ' num2str(i)]);
+%        ylabel('[m]')
+%        xlabel('[s]')
+%        box on
+%    subplot(2,4,4+i)
+%        hold on
+%        plot(body.tstamp,L23(i,:));
+%        plot(body.tstamp,L23_KF(i,:),'r','LineWidth',2);
+%        plot(body.tstamp,L23_KFC(i,:),'g','LineWidth',2);
+%        hold off
+%        legend(['unfiltered: Avg = ' num2str(L23_avg(i)) ' m; RMS = ' num2str(L23_rms(i))], ...
+%               ['KF with gating: Avg = ' num2str(L23_KF_avg(i)) ' m; RMS = ' num2str(L23_KF_rms(i))], ...
+%               ['KF with constraints: Avg = ' num2str(L23_KFC_avg(i)) ' m; RMS = ' num2str(L23_KFC_rms(i))]);
+%        title(['Lower segment chain ' num2str(i)]);
+%        ylabel('[m]')
+%        xlabel('[s]')
+%        box on
+%end
+%
+%
+%

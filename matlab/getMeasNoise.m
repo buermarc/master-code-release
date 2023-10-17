@@ -5,7 +5,7 @@ fileName = 'stand_b2_t1_NFOV_UNBINNED_720P_30fps.json'; % filename in JSON exten
 
 fprintf(['Using data from ' fileName ' to estimate measurement noise. \n']);
 
-fid = fopen(['..\Experiment_data\' fileName]); % Opening the file
+fid = fopen(fileName); % Opening the file
 raw = fread(fid,inf); % Reading the contents
 str = char(raw'); % Transformation
 fclose(fid); % Closing the file
