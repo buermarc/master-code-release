@@ -2,8 +2,10 @@
 #include <Eigen/Dense>
 #include <filter/com.hpp>
 #include <filter/ConstrainedSkeletonFilter.hpp>
+#include <filter/PointFilter3D.hpp>
 
 #include <iostream>
+#include <fstream>
 
 // Demonstrate some basic assertions.
 TEST(HelloTest, BasicAssertions) {
@@ -212,4 +214,50 @@ TEST(ConstrainedSkeletonFilterInit, BasicAssertions) {
         joints.push_back(Point(5.0 + i, 5.0 + i, 5.0 + i));
     }
     filter.step(joints, next_time);
+}
+
+TEST(PointFilter3DTest, BasicAssertions) {
+
+    std::string var_path("/home/d074052/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
+    auto joint_count = 32;
+    auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
+    auto var = get_measurement_error(var_joints, joint_count, 209, 339);
+
+
+    std::string data_path("../matlab/sts_NFOV_UNBINNED_720P_30fps.json");
+    auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
+    auto filter = PointFilter3D<double>::default_init(17, var);
+
+    std::vector<Point<double>> initial_points;
+    for (int joint = 0; joint < joint_count; ++joint) {
+        initial_points.push_back(Point<double>(
+            joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
+    }
+
+    auto joint_idx = 17;
+    auto initial_point = initial_points[joint_idx];
+    filter.init(initial_point);
+
+    std::ofstream file;
+    file.open("data/point3d.csv");
+    file << "Joint_" << joint_idx << "_x,";
+    file << "Joint_" << joint_idx << "_y,";
+    file << "Joint_" << joint_idx << "_z";
+    file << "\n";
+    file << initial_point.x << ",";
+    file << initial_point.y << ",";
+    file << initial_point.z << "\n";
+
+    for (int i = 1; i < n_frames; ++i) {
+        auto point = Point<double>(
+            joints(i, joint_idx, 0),
+            joints(i, joint_idx, 1),
+            joints(i, joint_idx, 2)
+        );
+        auto time_diff = timestamps[i] - timestamps[i - 1];
+        auto [position, velocity] = filter.step(point, time_diff);
+        file << position.x << ",";
+        file << position.y << ",";
+        file << position.z << "\n";
+    }
 }

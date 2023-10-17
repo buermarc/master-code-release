@@ -24,7 +24,7 @@ for joint_idx in range(32):
     axis[1, 0].plot(values)
     axis[1, 0].set_title(f"Cpp {joint_idx}")
 
-    un_values = unfiltered[unfiltered.columns[(3 * joint_idx) + 1 : (3 * (joint_idx+1)) + 1]]
+    un_values = unfiltered[unfiltered.columns[(3 * joint_idx) : (3 * (joint_idx+1))]]
     axis[2, 0].plot(un_values)
     axis[2, 0].set_title(f"Unfiltered {joint_idx}")
 

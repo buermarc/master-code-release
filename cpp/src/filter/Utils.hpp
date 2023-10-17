@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Eigen/src/Core/Matrix.h>
 #include <fstream>
 #include <iostream>
 #include <set>
@@ -110,4 +111,39 @@ void unroll(const std::vector<std::vector<V>>& v, std::set<X>& out)
 {
     for (const auto& e : v)
         unroll(e, out);
+}
+
+
+/*
+ *
+    if dim not in [2, 3, 4]:
+        raise ValueError("dim must be between 2 and 4")
+
+    if dim == 2:
+        Q = [[.25*dt**4, .5*dt**3],
+             [ .5*dt**3,    dt**2]]
+    elif dim == 3:
+        Q = [[.25*dt**4, .5*dt**3, .5*dt**2],
+             [ .5*dt**3,    dt**2,       dt],
+             [ .5*dt**2,       dt,        1]]
+    else:
+        Q = [[(dt**6)/36, (dt**5)/12, (dt**4)/6, (dt**3)/6],
+             [(dt**5)/12, (dt**4)/4,  (dt**3)/2, (dt**2)/2],
+             [(dt**4)/6,  (dt**3)/2,   dt**2,     dt],
+             [(dt**3)/6,  (dt**2)/2 ,  dt,        1.]]
+
+    if order_by_dim:
+        return block_diag(*[Q]*block_size) * var
+    return order_by_derivative(array(Q), dim, block_size) * var
+    >>> Q_discrete_white_noise(2, dt=0.1, var=1., block_size=3)
+def Q_discrete_white_noise(dim, dt=1., var=1., block_size=1, order_by_dim=True):
+ */
+template<typename Value>
+MatrixXd Q_discrete_white_noise_2d(Value time_diff, Value variation) {
+    MatrixXd system_noise(2, 2);
+    system_noise(0, 0) = 0.25 * std::pow(time_diff, 4);
+    system_noise(1, 0) = 0.5 * std::pow(time_diff, 3);
+    system_noise(0, 1) = 0.5 * std::pow(time_diff, 3);
+    system_noise(1, 1) = std::pow(time_diff, 2);
+    return system_noise;
 }

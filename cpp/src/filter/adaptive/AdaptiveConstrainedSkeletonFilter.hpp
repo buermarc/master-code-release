@@ -1,26 +1,4 @@
 #pragma once
-/** what should we do
- * define which joints are a combi
- *
-jind = [19 20 21; ... % left leg
-        23 24 25; ... % right leg
-        6  7  8;  ... % left arm
-        13 14 15];    % right arm
-
-        this are not all points, should we just filter the rest normally?
-
-rest_joints = set(range(0, len(joinst))).diff(set(jind)
-
-figure out where the difference in the whole step is -> there is just one more step
-
-we basically have something like
-class RigidJointConstructFilter3 ->  with step and everything else
-phi1
-phi2
-don't know why de do it so just do it
- */
-
-// #include <Eigen/src/Core/Matrix.h>
 #include <cstddef>
 #include <functional>
 #include <tuple>
@@ -28,27 +6,14 @@ don't know why de do it so just do it
 
 #include <Eigen/Dense>
 
-#include "Point.hpp"
-#include "PointFilter3D.hpp"
-#include "Utils.hpp"
+#include "../Point.hpp"
+#include "../Utils.hpp"
 
 using Eigen::MatrixXd;
 using Eigen::seq;
 
-MatrixXd generate_rigid_joint_al()
-{
-    MatrixXd Al(18, 18);
-    MatrixXd first(9, 18);
-    MatrixXd second(9, 18);
-    first << MatrixXd::Zero(9, 9), MatrixXd::Identity(9, 9);
-    second << MatrixXd::Zero(9, 9), MatrixXd::Zero(9, 9);
-
-    Al << first, second;
-    return Al;
-}
-
 template <typename Value>
-class RigidJointConstructFilter3 {
+class AdaptiveRigidJointConstructFilter3 {
 
     MatrixXd corrected_projected_state;
     MatrixXd corrected_projected_errors;
@@ -80,7 +45,7 @@ public:
     }
 
     //measurement_errors => var
-    static RigidJointConstructFilter3<Value> default_init(std::vector<int> joints, MatrixXd measurement_errors)
+    static AdaptiveRigidJointConstructFilter3<Value> default_init(std::vector<int> joints, MatrixXd measurement_errors)
     {
         auto eye = [](int size) { return MatrixXd::Identity(size, size); };
         auto zero = [](int size) { return MatrixXd::Zero(size, size); };
@@ -150,7 +115,7 @@ public:
             return result;
         };
 
-        return RigidJointConstructFilter3<Value>(
+        return AdaptiveRigidJointConstructFilter3<Value>(
             Al,
             Cl,
             Gl,
@@ -164,7 +129,7 @@ public:
             joints);
     }
 
-    RigidJointConstructFilter3(
+    AdaptiveRigidJointConstructFilter3(
         MatrixXd ad,
         MatrixXd c,
         MatrixXd gd,
@@ -271,27 +236,27 @@ public:
     }
 };
 
-template <typename Value>
-class ConstrainedSkeletonFilter {
+template <typename Value, typename AdaptivePointFilter>
+class AdaptiveConstrainedSkeletonFilter {
     size_t n_joints;
     bool initialized = false;
     Value last_time;
 
     //std::vector<std::vector<int>> constrained_joint_groups = { { 19, 20, 21 }, { 23, 24, 25 }, { 6, 7, 8 }, { 13, 14, 15 } };
     std::vector<std::vector<int>> constrained_joint_groups = { { 18, 19, 20 }, { 22, 23, 24 }, { 5, 6, 7 }, { 12, 13, 14 } };
-    std::unordered_map<int, RigidJointConstructFilter3<Value>> joint_group_filters;
-    std::unordered_map<int, PointFilter3D<Value>> single_joint_filters;
+    std::unordered_map<int, AdaptiveRigidJointConstructFilter3<Value>> joint_group_filters;
+    std::unordered_map<int, AdaptivePointFilter> single_joint_filters;
 
 public:
     int joint_count() { return n_joints; }
 
-    ConstrainedSkeletonFilter(
+    AdaptiveConstrainedSkeletonFilter(
         int m_n_joints,
         MatrixXd measurement_errors)
         : n_joints(m_n_joints)
     {
         for (auto joint_group : constrained_joint_groups) {
-            auto filter = RigidJointConstructFilter3<Value>::default_init(joint_group, measurement_errors);
+            auto filter = AdaptiveRigidJointConstructFilter3<Value>::default_init(joint_group, measurement_errors);
             joint_group_filters.insert(std::make_pair(joint_group.front(), filter));
         }
 
@@ -301,7 +266,7 @@ public:
 
         for (int i = 0; i < m_n_joints; ++i) {
             if (flat.find(i) == flat.end()) {
-                auto filter = PointFilter3D<Value>::default_init(i, measurement_errors);
+                auto filter = AdaptivePointFilter::default_init(i, measurement_errors);
                 single_joint_filters.insert(std::make_pair(i, filter));
             }
         }

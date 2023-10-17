@@ -1,37 +1,20 @@
 #pragma once
+#include "filter/com.hpp"
 #include <Eigen/Dense>
 #include <iostream>
+#include <math.h>
+#include <functional>
 #include <unsupported/Eigen/MatrixFunctions>
 
 using Eigen::MatrixXd;
 
-/**
- * how should the class look like:
- * could do it specific for 3d
- * could also do it just for any value
- *
- * If we are not generic then we can set Adn and the rest of the matrices to a
- * fixed value if we want to be generic this would be a bit trickier
- *
- * Maybe Generic class wich takes the stuff and actual clas fo rour case where
- * we set the stuff in the constructor could also do it just for any value
- *
- * Basically the gated 3d case just sets 3 GenericFilters for each var and then
- * steps with the 3d thing
- *
- *
- * Intgeration things might be the stuff that a specific class needs to
- * implement, because I do not want to have to implement symbolic integration
- */
 template <typename Value>
-class GenericFilter1D {
+class AdaptiveBarShalomFilter1D {
     Value value;
     MatrixXd corrected_state; // 2x1
     MatrixXd corrected_errors; // 2x1
     MatrixXd Ad;
-    MatrixXd B;
-    MatrixXd G;
-    MatrixXd Q; // Q(k) = Var(z(k))
+    MatrixXd Gd;
 
     MatrixXd C;
     MatrixXd CT;
@@ -39,24 +22,77 @@ class GenericFilter1D {
     Value measurement_noise;
     Value system_noise;
     Value threshold;
+    Value system_scale_factor;
+    int system_scale_count;
+    Value innovation_norm_max;
+
+    std::function<MatrixXd(MatrixXd, Value)> sub_ad;
+    std::function<MatrixXd(MatrixXd, Value)> sub_gd;
 
 public:
-    GenericFilter1D() {};
+    static AdaptiveBarShalomFilter1D<Value> default_init(
+        Value measurement_error
+    ) {
+        MatrixXd A(2, 2);
+        A(0, 0) = 1;
+        A(0, 1) = 0;
+        A(1, 0) = 0;
+        A(1, 1) = 1;
 
-    GenericFilter1D(MatrixXd ad, MatrixXd b, MatrixXd c, MatrixXd g, MatrixXd q,
+        MatrixXd C(1, 2);
+        C(0, 0) = 1;
+        C(0, 1) = 0;
+
+        MatrixXd G(2, 1);
+        G(0, 0) = 0;
+        G(1, 0) = 1;
+
+        auto sub_ad = [](MatrixXd Ad, Value time_diff) {
+            MatrixXd result = Ad.replicate(1, 1);
+            result(0, 1) = time_diff;
+            return result;
+        };
+
+        auto sub_gd = [](MatrixXd Gd, Value time_diff) {
+            MatrixXd result(2, 1);
+            result(0, 0) = std::pow(time_diff, 2) / 2;
+            result(1, 0) = time_diff;
+            return result;
+        };
+
+        Value measurement_noise = std::sqrt(measurement_error) * 10;
+        Value system_noise = std::pow(((1.0 / 3) * 10) / 3, 2);
+        Value threshold = 5.0;
+        Value system_scale_factor = 100;
+        Value innovation_norm_max = 3.0;
+        return AdaptiveBarShalomFilter1D(
+            A, C, G, measurement_noise, system_noise, threshold, system_scale_factor, innovation_norm_max, sub_ad, sub_gd
+        );
+
+    };
+
+    AdaptiveBarShalomFilter1D() {};
+
+    AdaptiveBarShalomFilter1D(MatrixXd ad, MatrixXd c, MatrixXd gd,
         Value m_measurement_noise, Value m_system_noise,
-        Value m_threshold)
+        Value m_threshold, Value m_system_scale_factor, int m_innovation_norm_max,
+        std::function<MatrixXd(MatrixXd, Value)> m_sub_ad,
+        std::function<MatrixXd(MatrixXd, Value)> m_sub_gd)
     {
         Ad = ad;
-        B = b;
         C = c;
-        G = g;
-        Q = q;
+        Gd = gd;
         measurement_noise = std::pow(m_measurement_noise, 2);
         system_noise = m_system_noise;
         threshold = m_threshold;
 
+        sub_ad = m_sub_ad;
+        sub_gd = m_sub_gd;
+
+        system_scale_factor = m_system_scale_factor;
         CT = C.transpose();
+        system_scale_count = 0;
+        innovation_norm_max = m_innovation_norm_max;
     };
 
     void init(MatrixXd initial_state, MatrixXd initial_errors)
@@ -68,18 +104,18 @@ public:
         // just the initial value that is recorded
         corrected_state = initial_state;
         corrected_errors = initial_errors;
+        // In our case the initial measurement is contained in the initial_state
+        Value initial_measurement = initial_state(0, 0);
     }
 
     std::tuple<Value, Value> step(Value value, Value time_diff)
     {
-        // Hard coded sub A = [1, Ts; 0, 1]
-        MatrixXd Adn = Ad.replicate(1, 1);
-        Adn(0, 1) = time_diff;
 
-        // Again: hard coded sub G = [Ts^2/2; Ts]
-        MatrixXd Gdn = G.replicate(1, 1);
-        Gdn(0, 0) = std::pow(time_diff, 2) / 2;
-        Gdn(1, 0) = time_diff;
+        MatrixXd Adn;
+        Adn = sub_ad(Ad, time_diff);
+
+        MatrixXd Gdn;
+        Gdn = sub_gd(Gd, time_diff);
 
         auto AdnT = Adn.transpose();
         auto GdnT = Gdn.transpose();
@@ -91,6 +127,8 @@ public:
         std::cout << "Gdn" << std::endl;
         std::cout << Gdn << std::endl;
         std::cout << std::endl;
+
+        // Update measurement noise (R)
 
         MatrixXd predicted_state = Adn * corrected_state;
         std::cout << "predicted_state" << std::endl;
@@ -115,10 +153,19 @@ public:
         std::cout << "innovation_norm" << std::endl;
         std::cout << innovation_norm << std::endl;
         std::cout << std::endl;
+        Value abs_innovation_norm = std::abs(innovation_norm);
 
         MatrixXd measurement_noise_matrix(1, 1);
         measurement_noise_matrix(0, 0) = measurement_noise;
-        if (std::abs(innovation_norm) <= threshold) {
+
+        if (abs_innovation_norm > innovation_norm_max) {
+            system_noise *= system_scale_factor;
+            ++system_scale_count;
+        } else if (system_scale_count > 0) {
+            --system_scale_count;
+        }
+
+        if (abs_innovation_norm <= threshold) {
             std::cout << "use correction" << std::endl;
             // We are recalculating tmp but that is fine as it still a bit
             // different as we are using matrices here

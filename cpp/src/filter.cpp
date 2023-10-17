@@ -1,3 +1,4 @@
+#include "filter/adaptive/AdaptivePointFilter3D.hpp"
 #include <Eigen/Dense>
 #include <algorithm>
 #include <array>
@@ -12,6 +13,11 @@
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include <filter/ConstrainedSkeletonFilter.hpp>
+#include <filter/adaptive/AdaptiveConstrainedSkeletonFilter.hpp>
+#include <filter/adaptive/AdaptivePointFilter3D.hpp>
+#include <filter/adaptive/AdaptiveRoseFilter1D.hpp>
+#include <filter/adaptive/AdaptiveBarShalomFilter1D.hpp>
+#include <filter/adaptive/AdaptiveZarchanFilter1D.hpp>
 #include <filter/SkeletonFilter.hpp>
 #include <filter/Utils.hpp>
 #include <filter/com.hpp>
@@ -20,6 +26,10 @@ using json = nlohmann::json;
 
 using Eigen::MatrixXd;
 using Eigen::Tensor;
+
+typedef AdaptivePointFilter3D<double, AdaptiveRoseFilter1D<double>> RosePointFilter;
+typedef AdaptivePointFilter3D<double, AdaptiveBarShalomFilter1D<double>> BarPointFilter;
+typedef AdaptivePointFilter3D<double, AdaptiveZarchanFilter1D<double>> ZarPointFilter;
 
 int filter_data_with_constrained_skeleton_filter()
 {
@@ -32,7 +42,7 @@ int filter_data_with_constrained_skeleton_filter()
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
 
     if (std::find(is_null.begin(), is_null.end(), true) != is_null.end()) {
-        std::cout << "found null" << std::endl;
+        std::cerr << "found null" << std::endl;
     }
 
     std::vector<Point<double>> initial_points;
@@ -40,7 +50,8 @@ int filter_data_with_constrained_skeleton_filter()
         initial_points.push_back(Point<double>(
             joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
     }
-    ConstrainedSkeletonFilter<double> filter(32, var);
+    // ConstrainedSkeletonFilter<double> filter(32, var);
+    AdaptiveConstrainedSkeletonFilter<double, RosePointFilter> filter(32, var);
     filter.init(initial_points, timestamps[0]);
 
     std::vector<std::vector<Point<double>>> filtered_values;
@@ -53,7 +64,6 @@ int filter_data_with_constrained_skeleton_filter()
     filtered_values.push_back(initial_joints);
 
     int max_frame = n_frames;
-    std::cout << "n_frames " << n_frames << std::endl;
     for (int frame_idx = 1; frame_idx < max_frame; ++frame_idx) {
         if (is_null[frame_idx])
             continue;
@@ -71,15 +81,15 @@ int filter_data_with_constrained_skeleton_filter()
         auto stop = std::chrono::high_resolution_clock::now();
 
         std::chrono::duration<double, std::milli> time = stop - start;
-        std::cout << time.count() << "ms\n";
+        std::cerr << time.count() << "ms\n";
         // std::cout << values[0] << std::endl;
-        std::cout << current_joint_positions[0].x - values[0].x << std::endl;
+        std::cerr << current_joint_positions[0].x - values[0].x << std::endl;
         filtered_values.push_back(values);
     }
 
     // Write out filtere values into csv
     std::ofstream file;
-    file.open("out.csv");
+    file.open("data/out.csv");
 
     // Write header
     int end = 32;
@@ -281,7 +291,7 @@ int filter_data_with_skeleton_filter()
         }
 
         std::ofstream file;
-        file.open("out.csv");
+        file.open("data/other_out.csv");
         for (auto value : filtered_values) {
             file << value << "\r";
         }
