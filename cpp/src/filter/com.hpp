@@ -3,7 +3,22 @@
 #include <Eigen/src/Core/Matrix.h>
 #include <iostream>
 
+#include "filter/Point.hpp"
 using Eigen::MatrixXd;
+
+template <typename Value>
+class Plane {
+    Point<Value> a, b, c, d;
+
+    Plane(Point<Value> m_a,
+        Point<Value> m_b,
+        Point<Value> m_c,
+        Point<Value> m_d)
+        : a(m_a)
+        , b(m_b)
+        , c(m_c)
+        , d(m_d) {};
+};
 
 enum AZURE_JOINT {
     PELVIS,
@@ -81,6 +96,12 @@ void _one_origin_one_joint(
 {
     MM(0, joint) += normalized_mass * normalized_com_position;
     MM(0, origin_joint) += normalized_mass * (1 - normalized_com_position);
+}
+
+template <typename Value>
+Plane<Value> azure_kinect_bos(std::vector<Point<Value>> joints)
+{
+    return Plane(joints[ANKLE_LEFT], joints[FOOT_LEFT], joints[ANKLE_RIGHT], joints[FOOT_RIGHT]);
 }
 
 MatrixXd get_azure_kinect_com_matrix(SEX sex = AVERAGE)

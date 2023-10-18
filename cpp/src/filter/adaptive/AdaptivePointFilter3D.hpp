@@ -7,7 +7,6 @@
 
 using Eigen::MatrixXd;
 
-
 template <typename Value, typename AdaptiveFilter>
 class AdaptivePointFilter3D {
     AdaptiveFilter x_filter;

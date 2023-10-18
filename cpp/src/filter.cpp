@@ -13,13 +13,13 @@
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include <filter/ConstrainedSkeletonFilter.hpp>
+#include <filter/SkeletonFilter.hpp>
+#include <filter/Utils.hpp>
+#include <filter/adaptive/AdaptiveBarShalomFilter1D.hpp>
 #include <filter/adaptive/AdaptiveConstrainedSkeletonFilter.hpp>
 #include <filter/adaptive/AdaptivePointFilter3D.hpp>
 #include <filter/adaptive/AdaptiveRoseFilter1D.hpp>
-#include <filter/adaptive/AdaptiveBarShalomFilter1D.hpp>
 #include <filter/adaptive/AdaptiveZarchanFilter1D.hpp>
-#include <filter/SkeletonFilter.hpp>
-#include <filter/Utils.hpp>
 #include <filter/com.hpp>
 
 using json = nlohmann::json;

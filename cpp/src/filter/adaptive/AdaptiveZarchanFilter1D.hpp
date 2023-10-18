@@ -1,11 +1,11 @@
 #pragma once
+#include "../Utils.hpp"
 #include "filter/com.hpp"
 #include <Eigen/Dense>
+#include <functional>
 #include <iostream>
 #include <math.h>
-#include <functional>
 #include <unsupported/Eigen/MatrixFunctions>
-#include "../Utils.hpp"
 
 using Eigen::MatrixXd;
 
@@ -32,8 +32,8 @@ class AdaptiveZarchanFilter1D {
 
 public:
     static AdaptiveZarchanFilter1D<Value> default_init(
-        Value measurement_error
-    ) {
+        Value measurement_error)
+    {
         MatrixXd A(2, 2);
         A(0, 0) = 1;
         A(0, 1) = 0;
@@ -67,9 +67,7 @@ public:
         Value system_scale_factor = 100;
         int std_scale = 3.0;
         return AdaptiveZarchanFilter1D(
-            A, C, G, measurement_noise, system_noise, threshold, system_scale_factor, std_scale, sub_ad, sub_gd
-        );
-
+            A, C, G, measurement_noise, system_noise, threshold, system_scale_factor, std_scale, sub_ad, sub_gd);
     };
 
     AdaptiveZarchanFilter1D() {};

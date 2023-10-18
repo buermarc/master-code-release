@@ -23,9 +23,9 @@ std::tuple<Tensor<double, 3>, int, std::vector<double>, std::vector<bool>>
 load_data(std::string path, int joint_counts, int max_frames = -1)
 {
     /**
-   * Load data and calculate measurement noise
-   * Returns loaded joints, and variance
-   */
+     * Load data and calculate measurement noise
+     * Returns loaded joints, and variance
+     */
     std::ifstream file(path);
     json data = json::parse(file);
     int n_frames = data["frames"].size();
@@ -113,7 +113,6 @@ void unroll(const std::vector<std::vector<V>>& v, std::set<X>& out)
         unroll(e, out);
 }
 
-
 /*
  *
     if dim not in [2, 3, 4]:
@@ -138,8 +137,9 @@ void unroll(const std::vector<std::vector<V>>& v, std::set<X>& out)
     >>> Q_discrete_white_noise(2, dt=0.1, var=1., block_size=3)
 def Q_discrete_white_noise(dim, dt=1., var=1., block_size=1, order_by_dim=True):
  */
-template<typename Value>
-MatrixXd Q_discrete_white_noise_2d(Value time_diff, Value variation) {
+template <typename Value>
+MatrixXd Q_discrete_white_noise_2d(Value time_diff, Value variation)
+{
     MatrixXd system_noise(2, 2);
     system_noise(0, 0) = 0.25 * std::pow(time_diff, 4);
     system_noise(1, 0) = 0.5 * std::pow(time_diff, 3);

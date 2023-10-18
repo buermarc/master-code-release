@@ -1,9 +1,9 @@
 #pragma once
 #include "filter/com.hpp"
 #include <Eigen/Dense>
+#include <functional>
 #include <iostream>
 #include <math.h>
-#include <functional>
 #include <unsupported/Eigen/MatrixFunctions>
 
 using Eigen::MatrixXd;
@@ -31,8 +31,8 @@ class AdaptiveBarShalomFilter1D {
 
 public:
     static AdaptiveBarShalomFilter1D<Value> default_init(
-        Value measurement_error
-    ) {
+        Value measurement_error)
+    {
         MatrixXd A(2, 2);
         A(0, 0) = 1;
         A(0, 1) = 0;
@@ -66,9 +66,7 @@ public:
         Value system_scale_factor = 100;
         Value innovation_norm_max = 3.0;
         return AdaptiveBarShalomFilter1D(
-            A, C, G, measurement_noise, system_noise, threshold, system_scale_factor, innovation_norm_max, sub_ad, sub_gd
-        );
-
+            A, C, G, measurement_noise, system_noise, threshold, system_scale_factor, innovation_norm_max, sub_ad, sub_gd);
     };
 
     AdaptiveBarShalomFilter1D() {};

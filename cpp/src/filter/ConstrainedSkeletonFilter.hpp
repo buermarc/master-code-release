@@ -79,7 +79,7 @@ public:
         return joints;
     }
 
-    //measurement_errors => var
+    // measurement_errors => var
     static RigidJointConstructFilter3<Value> default_init(std::vector<int> joints, MatrixXd measurement_errors)
     {
         auto eye = [](int size) { return MatrixXd::Identity(size, size); };
@@ -277,7 +277,7 @@ class ConstrainedSkeletonFilter {
     bool initialized = false;
     Value last_time;
 
-    //std::vector<std::vector<int>> constrained_joint_groups = { { 19, 20, 21 }, { 23, 24, 25 }, { 6, 7, 8 }, { 13, 14, 15 } };
+    // std::vector<std::vector<int>> constrained_joint_groups = { { 19, 20, 21 }, { 23, 24, 25 }, { 6, 7, 8 }, { 13, 14, 15 } };
     std::vector<std::vector<int>> constrained_joint_groups = { { 18, 19, 20 }, { 22, 23, 24 }, { 5, 6, 7 }, { 12, 13, 14 } };
     std::unordered_map<int, RigidJointConstructFilter3<Value>> joint_group_filters;
     std::unordered_map<int, PointFilter3D<Value>> single_joint_filters;

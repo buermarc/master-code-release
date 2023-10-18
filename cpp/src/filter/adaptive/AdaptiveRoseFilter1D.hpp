@@ -1,9 +1,9 @@
 #pragma once
 #include "filter/com.hpp"
 #include <Eigen/Dense>
+#include <functional>
 #include <iostream>
 #include <math.h>
-#include <functional>
 #include <unsupported/Eigen/MatrixFunctions>
 
 using Eigen::MatrixXd;
@@ -35,8 +35,8 @@ class AdaptiveRoseFilter1D {
 
 public:
     static AdaptiveRoseFilter1D<Value> default_init(
-        Value measurement_error
-    ) {
+        Value measurement_error)
+    {
         MatrixXd A(2, 2);
         A(0, 0) = 1;
         A(0, 1) = 0;
@@ -72,9 +72,7 @@ public:
         Value gamma = 2;
         Value alpha_fading_memory = 1.02;
         return AdaptiveRoseFilter1D(
-            A, C, G, measurement_noise, system_noise, threshold, alpha_measurement, alpha_innovation, gamma, alpha_fading_memory, sub_ad, sub_gd
-        );
-
+            A, C, G, measurement_noise, system_noise, threshold, alpha_measurement, alpha_innovation, gamma, alpha_fading_memory, sub_ad, sub_gd);
     };
 
     AdaptiveRoseFilter1D() {};
@@ -166,7 +164,6 @@ public:
 
         if (system_noise < 0) {
             std::cout << "System noise less than zero, set to zero." << std::endl;
-
         }
 
         MatrixXd predicted_state = Adn * corrected_state;
