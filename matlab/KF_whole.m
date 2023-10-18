@@ -837,13 +837,13 @@ end
 labels = {};
 
 for i = 1:32
-    labels = [labels {["Joint_" i "_x"]}];
-    labels = [labels {["Joint_" i "_y"]}];
-    labels = [labels {["Joint_" i "_z"]}];
+    labels = [labels {['Joint_' int2str(i) '_x']}];
+    labels = [labels {['Joint_' int2str(i) '_y']}];
+    labels = [labels {['Joint_' int2str(i) '_z']}];
 end
 
-T = array2table(matrix);
-T.Properties.VariableNames(1:(3*32)) = labels;
+T = array2table(matrix');
+T.Properties.VariableNames(1:96) = labels;
 writetable(T,'file1.csv');
 
 %%% Compare individually KF filtered, KF with constraints and non-filtered data
