@@ -41,8 +41,10 @@ for joint_idx in range(32):
     plt.savefig(f"results/out-{joint_idx}.pdf")
     plt.close()
 
+plt.cla()
+
 for group in constrained_joint_groups:
-    fig, axis = plt.subplots(2, 2)
+    fig, axis = plt.subplots(1, 2)
     x = cpp[cpp.columns[group[0]*3]]
     y = cpp[cpp.columns[group[0]*3 + 1]]
     z = cpp[cpp.columns[group[0]*3 + 2]]
@@ -52,8 +54,8 @@ for group in constrained_joint_groups:
     z_ = cpp[cpp.columns[group[1]*3 + 2]]
 
     distances = np.sqrt(((x - x_).pow(2) + (y - y_).pow(2) + (z - z_).pow(2)))
-    axis[0, 0].plot(distances)
-    axis[0, 0].set_title(f"Cpp {group[0]} - {group[1]}")
+    axis[0].plot(distances, alpha=0.5, label="Cpp")
+    axis[0].set_title(f"Cpp & Unfiltered {group[0]} - {group[1]}")
     x = unfiltered[unfiltered.columns[group[0]*3]]
     y = unfiltered[unfiltered.columns[group[0]*3 + 1]]
     z = unfiltered[unfiltered.columns[group[0]*3 + 2]]
@@ -63,8 +65,9 @@ for group in constrained_joint_groups:
     z_ = unfiltered[unfiltered.columns[group[1]*3 + 2]]
 
     distances = np.sqrt(((x - x_).pow(2) + (y - y_).pow(2) + (z - z_).pow(2)))
-    axis[0, 1].plot(distances)
-    axis[0, 1].set_title(f"Unfiltered {group[0]} - {group[1]}")
+    axis[0].plot(distances, alpha=0.5, label="Unfiltered")
+    # axis[0].set_title(f"Unfiltered {group[0]} - {group[1]}")
+    axis[0].legend()
 
     x = cpp[cpp.columns[group[1]*3]]
     y = cpp[cpp.columns[group[1]*3 + 1]]
@@ -75,17 +78,18 @@ for group in constrained_joint_groups:
     z_ = cpp[cpp.columns[group[2]*3 + 2]]
 
     distances = np.sqrt(((x - x_).pow(2) + (y - y_).pow(2) + (z - z_).pow(2)))
-    axis[1, 0].plot(distances)
-    axis[1, 0].set_title(f"Cpp {group[1]} - {group[2]}")
-    x = unfiltered[unfiltered.columns[group[0]*3]]
-    y = unfiltered[unfiltered.columns[group[0]*3 + 1]]
-    z = unfiltered[unfiltered.columns[group[0]*3 + 2]]
+    axis[1].plot(distances, alpha=0.5, label="Cpp")
+    axis[1].set_title(f"Cpp & Unfiltered {group[1]} - {group[2]}")
+    x = unfiltered[unfiltered.columns[group[1]*3]]
+    y = unfiltered[unfiltered.columns[group[1]*3 + 1]]
+    z = unfiltered[unfiltered.columns[group[1]*3 + 2]]
 
-    x_ = unfiltered[unfiltered.columns[group[1]*3]]
-    y_ = unfiltered[unfiltered.columns[group[1]*3 + 1]]
-    z_ = unfiltered[unfiltered.columns[group[1]*3 + 2]]
+    x_ = unfiltered[unfiltered.columns[group[2]*3]]
+    y_ = unfiltered[unfiltered.columns[group[2]*3 + 1]]
+    z_ = unfiltered[unfiltered.columns[group[2]*3 + 2]]
 
     distances = np.sqrt(((x - x_).pow(2) + (y - y_).pow(2) + (z - z_).pow(2)))
-    axis[1, 1].plot(distances)
-    axis[1, 1].set_title(f"Unfiltered {group[1]} - {group[2]}")
+    axis[1].plot(distances, alpha=0.5, label="Unfiltered")
+    axis[1].legend()
+    # axis[1].set_title(f"Unfiltered {group[1]} - {group[2]}")
     plt.savefig(f"results/constrained-{group[0]}.pdf")
