@@ -2,6 +2,7 @@
 #include <Eigen/Dense>
 #include <Eigen/src/Core/Matrix.h>
 #include <iostream>
+#include <tuple>
 
 #include "filter/Point.hpp"
 using Eigen::MatrixXd;
@@ -18,6 +19,26 @@ class Plane {
         , b(m_b)
         , c(m_c)
         , d(m_d) {};
+
+public:
+    std::tuple<Point<Value>, Point<Value>> into_normal_and_center_point()
+    {
+        Eigen::Vector3f va(a.x, a.y, a.z);
+        Eigen::Vector3f vb(b.x, b.y, b.z);
+        Eigen::Vector3f vc(c.x, c.y, c.z);
+        Eigen::Vector3f vd(d.x, d.y, d.z);
+
+        auto vml = va + 0.5 * (vd - va);
+        auto vmr = vb + 0.5 * (vc - vb);
+
+        auto vcenter = vml + 0.5 * (vmr - vml);
+
+        auto vnorm = (vcenter - va).cross(vcenter - vd);
+
+        Point<Value> center(vcenter(0), vcenter(1), vcenter(2));
+        Point<Value> norm(vnorm(0), vnorm(1), vnorm(2));
+        return std::make_tuple(center, norm);
+    }
 };
 
 enum AZURE_JOINT {
