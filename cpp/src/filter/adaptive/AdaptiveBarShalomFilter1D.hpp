@@ -1,5 +1,5 @@
 #pragma once
-#include "filter/com.hpp"
+#include "com.hpp"
 #include <Eigen/Dense>
 #include <functional>
 #include <iostream>

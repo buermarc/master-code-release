@@ -4,11 +4,12 @@
 #include <iostream>
 #include <tuple>
 
-#include "filter/Point.hpp"
+#include "Point.hpp"
 using Eigen::MatrixXd;
 
 template <typename Value>
 class Plane {
+public:
     Point<Value> a, b, c, d;
 
     Plane(Point<Value> m_a,
@@ -20,8 +21,7 @@ class Plane {
         , c(m_c)
         , d(m_d) {};
 
-public:
-    std::tuple<Point<Value>, Point<Value>> into_normal_and_center_point()
+    std::tuple<Point<Value>, Point<Value>> into_center_and_normal()
     {
         Eigen::Vector3f va(a.x, a.y, a.z);
         Eigen::Vector3f vb(b.x, b.y, b.z);
