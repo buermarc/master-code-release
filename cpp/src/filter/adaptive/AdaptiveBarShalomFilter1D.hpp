@@ -1,5 +1,5 @@
 #pragma once
-#include "com.hpp"
+#include "../com.hpp"
 #include <Eigen/Dense>
 #include <functional>
 #include <iostream>

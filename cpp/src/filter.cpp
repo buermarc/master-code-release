@@ -31,6 +31,130 @@ typedef AdaptivePointFilter3D<double, AdaptiveRoseFilter1D<double>> RosePointFil
 typedef AdaptivePointFilter3D<double, AdaptiveBarShalomFilter1D<double>> BarPointFilter;
 typedef AdaptivePointFilter3D<double, AdaptiveZarchanFilter1D<double>> ZarPointFilter;
 
+std::string trimString(std::string str)
+{
+    const std::string whiteSpaces = " \t\n\r\f\v";
+    // Remove leading whitespace
+    size_t first_non_space = str.find_first_not_of(whiteSpaces);
+    str.erase(0, first_non_space);
+    // Remove trailing whitespace
+    size_t last_non_space = str.find_last_not_of(whiteSpaces);
+    str.erase(last_non_space + 1);
+    return str;
+}
+
+std::vector<std::string> getNextLineAndSplitIntoTokens(std::istream& str)
+{
+    std::vector<std::string> result;
+    std::string line;
+    std::getline(str, line);
+
+    std::stringstream lineStream(line);
+    std::string cell;
+
+    while (std::getline(lineStream, cell, ',')) {
+        result.push_back(trimString(cell));
+    }
+    // This checks for a trailing comma with no data after it.
+    if (!lineStream && cell.empty()) {
+        // If there was a trailing comma then add an empty element.
+        result.push_back("");
+    }
+    return result;
+}
+
+int filter_reverse_pendelum()
+{
+    // TODO probably a 1x3 matrix
+    Point<double> measurement_error(1., 0.5, 0.1);
+    ZarPointFilter filter(measurement_error);
+    std::vector<std::vector<Point<double>>> res;
+
+    // Load csv
+    std::ifstream csv_file("data/noisy_result.csv");
+
+    auto header = getNextLineAndSplitIntoTokens(csv_file);
+
+    auto results = getNextLineAndSplitIntoTokens(csv_file);
+    std::cout << results.size() << std::endl;
+    std::vector<double> values(results.size());
+    std::transform(results.begin(), results.end(), values.begin(), [](auto element) { return std::stod(element); });
+
+    std::vector<std::string> loop = { "com", "left", "right" };
+    int i = 0;
+    for (auto name : loop) {
+        auto index = i * 3;
+        std::vector<Point<double>> _res;
+
+        Point<double> point(
+            values[index],
+            values[index + 1],
+            values[index + 2]);
+        filter.init(point);
+        _res.push_back(point);
+        res.push_back(_res);
+        ++i;
+    }
+
+    while (!csv_file.eof()) {
+        results = getNextLineAndSplitIntoTokens(csv_file);
+        if (results[0] == "")
+            break;
+        std::transform(results.begin(), results.end(), values.begin(), [](auto element) {
+            std::cout << element << std::endl;
+            return std::stod(element);
+        });
+        i = 0;
+        for (auto name : loop) {
+            auto index = i * 3;
+
+            Point<double> point(
+                values[index],
+                values[index + 1],
+                values[index + 2]);
+            double time = values.back();
+            auto [filtered_point, _] = filter.step(point, time);
+            res[i].push_back(filtered_point);
+            ++i;
+        }
+    }
+
+    // Write out CSV
+    std::ofstream file;
+    file.open("data/noisy_result_filtered.csv");
+
+    // Write header
+    std::for_each(loop.cbegin(), loop.cend() - 1, [&file](auto name) {
+        file << name << "_x,";
+        file << name << "_y,";
+        file << name << "_z,";
+    });
+    auto name = loop.back();
+    file << name << "_x,";
+    file << name << "_y,";
+    file << name << "_z";
+    file << "\n";
+
+    // Write elements
+    int elements = res.front().size();
+    for (int i = 0; i < elements; ++i) {
+        bool first = true;
+        for (int j = 0; j < loop.size(); ++j) {
+            if (first) {
+                file << res[j][i].x;
+                first = false;
+            } else {
+                file << ", " << res[j][i].x;
+            }
+            file << ", " << res[j][i].y;
+            file << ", " << res[j][i].z;
+        }
+        file << "\n";
+    }
+    file << std::endl;
+    return 0;
+}
+
 int filter_data_with_constrained_skeleton_filter()
 {
     std::string var_path("../matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
@@ -336,5 +460,6 @@ void mm()
 
 int main()
 {
-    filter_data_with_constrained_skeleton_filter();
+    filter_reverse_pendelum();
+    // filter_data_with_constrained_skeleton_filter();
 }
