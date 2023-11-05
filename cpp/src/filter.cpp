@@ -63,7 +63,26 @@ std::vector<std::string> getNextLineAndSplitIntoTokens(std::istream& str)
     return result;
 }
 
-int filter_reverse_pendelum()
+void save_measurement_erros()
+{
+    // Instead of alway using a default file to get the measurement erros just
+    // save them in hardcoded in a cpp file, so that they can be used as a
+    // somewhat sane default, whithout wasting time recomputing them always.
+    std::string var_path("../matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
+    int joint_count = 32;
+    auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
+    auto var = get_measurement_error(var_joints, joint_count, 209, 339);
+
+    auto size = var.size();
+    double* buffer = var.data();
+    std::cout << "double buffer[] = {";
+    for (int i = 0; i < size - 1; ++i) {
+        std::cout << buffer[i] << ", ";
+    }
+    std::cout << buffer[size - 1] << "};" << std::endl;
+}
+
+void filter_reverse_pendelum()
 {
     // TODO probably a 1x3 matrix
     Point<double> measurement_error(1., 0.5, 0.1);
@@ -152,7 +171,6 @@ int filter_reverse_pendelum()
         file << "\n";
     }
     file << std::endl;
-    return 0;
 }
 
 int filter_data_with_constrained_skeleton_filter()
@@ -460,6 +478,7 @@ void mm()
 
 int main()
 {
-    filter_reverse_pendelum();
+    save_measurement_erros();
+    // filter_reverse_pendelum();
     // filter_data_with_constrained_skeleton_filter();
 }
