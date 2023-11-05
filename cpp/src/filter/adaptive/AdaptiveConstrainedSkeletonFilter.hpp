@@ -72,13 +72,6 @@ public:
         phi_1 << eye(3), -1 * eye(3), zero(3), -1 * eye(3), eye(3), zero(3), zero(3), zero(3), zero(3);
         phi_2 << zero(3), zero(3), zero(3), zero(3), eye(3), -1 * eye(3), zero(3), -1 * eye(3), eye(3);
 
-        /**
-        std::string var_path("/home/d074052/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
-        auto joint_count = 32;
-        auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
-        auto var = get_measurement_error(var_joints, joint_count, 209, 339);
-        */
-
         MatrixXd m_measurement_noise = zero(3);
         {
             int i = 0;
@@ -87,10 +80,6 @@ public:
                 ++i;
             }
         } // remove i from leaking into outer scope
-        //
-        // measurement_noise.resize(9, 1);
-
-        // auto res = measurement_noise.asDiagonal();
 
         Value factor_system_noise = 1.0 / 3;
         Value vmax = 10.0 * factor_system_noise;
