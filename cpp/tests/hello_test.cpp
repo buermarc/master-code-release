@@ -1,28 +1,33 @@
-#include <gtest/gtest.h>
 #include <Eigen/Dense>
-#include <filter/com.hpp>
 #include <filter/ConstrainedSkeletonFilter.hpp>
 #include <filter/PointFilter3D.hpp>
+#include <filter/com.hpp>
+#include <gtest/gtest.h>
 
-#include <iostream>
 #include <fstream>
+#include <iostream>
+
+std::string USER = "mulc";
 
 // Demonstrate some basic assertions.
-TEST(HelloTest, BasicAssertions) {
-  // Expect two strings not to be equal.
-  EXPECT_STRNE("hello", "world");
-  // Expect equality.
-  EXPECT_EQ(7 * 6, 42);
+TEST(HelloTest, BasicAssertions)
+{
+    // Expect two strings not to be equal.
+    EXPECT_STRNE("hello", "world");
+    // Expect equality.
+    EXPECT_EQ(7 * 6, 42);
 }
 
-TEST(CenterOfMassTest, BasicAssertions) {
-  // Expect two strings not to be equal.
+TEST(CenterOfMassTest, BasicAssertions)
+{
+    // Expect two strings not to be equal.
     MatrixXd MM = get_azure_kinect_com_matrix();
     EXPECT_EQ(MM.size(), (1, 32));
 }
 
-TEST(EigenLearningTests, BasicAssertions) {
-  // Expect two strings not to be equal.
+TEST(EigenLearningTests, BasicAssertions)
+{
+    // Expect two strings not to be equal.
     MatrixXd temp(9, 18);
     MatrixXd eye = MatrixXd::Identity(9, 9);
     MatrixXd zeros = MatrixXd::Zero(9, 9);
@@ -35,9 +40,10 @@ TEST(EigenLearningTests, BasicAssertions) {
     EXPECT_EQ(temp(8, 9), 0);
 }
 
-TEST(RigidJointConstructFilter3InitTests, BasicAssertions) {
+TEST(RigidJointConstructFilter3InitTests, BasicAssertions)
+{
 
-    std::vector<int> example_joints = {19, 20, 21};  // left leg
+    std::vector<int> example_joints = { 19, 20, 21 }; // left leg
     MatrixXd Al(18, 18);
     MatrixXd Cl(9, 18);
     MatrixXd Gl(18, 9);
@@ -79,13 +85,13 @@ TEST(RigidJointConstructFilter3InitTests, BasicAssertions) {
 
     EXPECT_EQ(phi_1.reverse(), phi_2);
 
-    std::string var_path("/home/d074052/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
+    std::string var_path(std::format("/home/{}/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", USER));
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
 
     MatrixXd measurement_noise = zero(3);
-    { 
+    {
         int i = 0;
         for (auto element : example_joints) {
             measurement_noise.row(i) = 10 * var.row(element).array().sqrt();
@@ -110,7 +116,7 @@ TEST(RigidJointConstructFilter3InitTests, BasicAssertions) {
         MatrixXd result(18, 18);
         MatrixXd first = Ad.array() * time_diff;
         MatrixXd second = ((1 - Ad.array()) * Ad.exp().array());
-        result = first+second;
+        result = first + second;
         return result;
     };
 
@@ -126,7 +132,7 @@ TEST(RigidJointConstructFilter3InitTests, BasicAssertions) {
     };
 
     MatrixXd gldn;
-    gldn = sub_gd(Gl, 0.2);  // Gd is unnessary, but IDGAF
+    gldn = sub_gd(Gl, 0.2); // Gd is unnessary, but IDGAF
 
     auto filter = RigidJointConstructFilter3<double>(
         Al,
@@ -139,8 +145,7 @@ TEST(RigidJointConstructFilter3InitTests, BasicAssertions) {
         threshold,
         sub_ad,
         sub_gd,
-        example_joints
-    );
+        example_joints);
 
     auto initial_state = MatrixXd::Constant(18, 1, 1);
     EXPECT_EQ(initial_state.rows(), 18);
@@ -163,14 +168,15 @@ TEST(RigidJointConstructFilter3InitTests, BasicAssertions) {
     }
 }
 
-TEST(RigidJointConstructFilter3InitTestsDefaultInit, BasicAssertions) {
+TEST(RigidJointConstructFilter3InitTestsDefaultInit, BasicAssertions)
+{
 
-    std::string var_path("/home/d074052/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
+    std::string var_path(std::format("/home/{}/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", USER));
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
 
-    std::vector<int> joints = {19, 20, 21};
+    std::vector<int> joints = { 19, 20, 21 };
     auto filter = RigidJointConstructFilter3<double>::default_init(joints, var);
 
     auto initial_state = MatrixXd::Constant(18, 1, 1);
@@ -188,17 +194,17 @@ TEST(RigidJointConstructFilter3InitTestsDefaultInit, BasicAssertions) {
     }
 }
 
-TEST(ConstrainedSkeletonFilterInit, BasicAssertions) {
+TEST(ConstrainedSkeletonFilterInit, BasicAssertions)
+{
 
-    std::string var_path("/home/d074052/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
+    std::string var_path(std::format("/home/{}/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", USER));
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
 
     auto filter = ConstrainedSkeletonFilter<double>(
         joint_count,
-        var
-    );
+        var);
 
     std::vector<Point<double>> initial_points;
     for (int i = 0; i < 32; ++i) {
@@ -210,21 +216,21 @@ TEST(ConstrainedSkeletonFilterInit, BasicAssertions) {
 
     double next_time = 1.0;
     std::vector<Point<double>> joints;
-    for (int i = 0; i < 32; ++i) { 
+    for (int i = 0; i < 32; ++i) {
         joints.push_back(Point(5.0 + i, 5.0 + i, 5.0 + i));
     }
     filter.step(joints, next_time);
 }
 
-TEST(PointFilter3DTest, BasicAssertions) {
+TEST(PointFilter3DTest, BasicAssertions)
+{
 
-    std::string var_path("/home/d074052/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
+    std::string var_path(std::format("/home/{}/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", USER));
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
 
-
-    std::string data_path("../matlab/sts_NFOV_UNBINNED_720P_30fps.json");
+    std::string data_path(std::format("/home/{}/repos/master/code/matlab/sts_NFOV_UNBINNED_720P_30fps.json", USER));
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
     auto filter = PointFilter3D<double>::default_init(17, var);
 
@@ -252,8 +258,7 @@ TEST(PointFilter3DTest, BasicAssertions) {
         auto point = Point<double>(
             joints(i, joint_idx, 0),
             joints(i, joint_idx, 1),
-            joints(i, joint_idx, 2)
-        );
+            joints(i, joint_idx, 2));
         auto time_diff = timestamps[i] - timestamps[i - 1];
         auto [position, velocity] = filter.step(point, time_diff);
         file << position.x << ",";
