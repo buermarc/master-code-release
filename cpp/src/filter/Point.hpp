@@ -23,6 +23,9 @@ public:
 
     template <typename U>
     friend std::ostream& operator<<(std::ostream& out, const Point<U>& point);
+
+    template <typename U>
+    friend bool operator==(const Point<U>& lhs, const Point<U>& rhs);
 };
 
 template <typename Value>
@@ -34,4 +37,10 @@ std::ostream& operator<<(std::ostream& out, const Point<Value>& point)
         << ')'; // actual output done here
 
     return out;
+}
+
+template <typename Value>
+bool operator==(const Point<Value>& lhs, const Point<Value>& rhs)
+{
+    return lhs.x = rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
 }
