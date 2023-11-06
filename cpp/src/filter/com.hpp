@@ -31,7 +31,8 @@ public:
         auto vml = va + 0.5 * (vd - va);
         auto vmr = vb + 0.5 * (vc - vb);
 
-        auto vcenter = vml + 0.5 * (vmr - vml);
+        // 1000 = Convert from mm into m
+        auto vcenter = (vml + 0.5 * (vmr - vml)) / 1000;
 
         auto vnorm = (vcenter - va).cross(vcenter - vd);
 
