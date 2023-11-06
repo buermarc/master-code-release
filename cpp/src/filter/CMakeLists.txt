@@ -1,5 +1,5 @@
 add_library(
-    filter 
+    filter
     INTERFACE
     com.hpp
     ConstrainedSkeletonFilter.hpp
