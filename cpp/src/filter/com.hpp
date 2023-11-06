@@ -122,7 +122,7 @@ void _one_origin_one_joint(
 template <typename Value>
 Plane<Value> azure_kinect_bos(std::vector<Point<Value>> joints)
 {
-    return Plane(joints[ANKLE_LEFT], joints[FOOT_LEFT], joints[ANKLE_RIGHT], joints[FOOT_RIGHT]);
+    return Plane(joints[ANKLE_LEFT], joints[ANKLE_RIGHT], joints[FOOT_RIGHT], joints[FOOT_LEFT]);
 }
 
 MatrixXd get_azure_kinect_com_matrix(SEX sex = AVERAGE)
