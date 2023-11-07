@@ -4,7 +4,7 @@ TEST_BINS := $(_TEST_BINS:.cpp=)
 
 .PHONY: build
 build:
-	cmake -S . -b build
+	cmake -S . -B build
 
 .PHONY: tests
 tests:
