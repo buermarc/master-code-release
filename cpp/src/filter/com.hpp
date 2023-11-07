@@ -34,7 +34,7 @@ public:
         // 1000 = Convert from mm into m
         auto vcenter = (vml + 0.5 * (vmr - vml)) / 1000;
 
-        auto vnorm = (vcenter - va).cross(vcenter - vd);
+        auto vnorm = (vc - vcenter).cross(vd - vcenter) / 1000;
 
         Point<Value> center(vcenter(0), vcenter(1), vcenter(2));
         Point<Value> norm(vnorm(0), vnorm(1), vnorm(2));
@@ -123,7 +123,17 @@ void _one_origin_one_joint(
 template <typename Value>
 Plane<Value> azure_kinect_bos(std::vector<Point<Value>> joints)
 {
-    return Plane(joints[ANKLE_LEFT], joints[ANKLE_RIGHT], joints[FOOT_RIGHT], joints[FOOT_LEFT]);
+
+    auto ankle_left = joints[ANKLE_LEFT];
+    auto ankle_right = joints[ANKLE_RIGHT];
+
+    auto foot_left = joints[FOOT_LEFT];
+    auto foot_right = joints[FOOT_RIGHT];
+
+    ankle_left.y = foot_left.y;
+    ankle_right.y = foot_right.y;
+
+    return Plane(ankle_left, ankle_right, foot_right, foot_left);
 }
 
 MatrixXd get_azure_kinect_com_matrix(SEX sex = AVERAGE)
