@@ -1,7 +1,0 @@
-compile_commands.json
-.clangd
-build
-build-in-dockerfile
-*.pdf
-*.csv
-.cache
