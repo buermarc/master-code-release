@@ -5,24 +5,6 @@
 
 using Eigen::MatrixXd;
 
-/**
- * how should the class look like:
- * could do it specific for 3d
- * could also do it just for any value
- *
- * If we are not generic then we can set Adn and the rest of the matrices to a
- * fixed value if we want to be generic this would be a bit trickier
- *
- * Maybe Generic class wich takes the stuff and actual clas fo rour case where
- * we set the stuff in the constructor could also do it just for any value
- *
- * Basically the gated 3d case just sets 3 GenericFilters for each var and then
- * steps with the 3d thing
- *
- *
- * Intgeration things might be the stuff that a specific class needs to
- * implement, because I do not want to have to implement symbolic integration
- */
 template <typename Value>
 class GenericFilter1D {
     Value value;

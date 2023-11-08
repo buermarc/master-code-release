@@ -1,6 +1,5 @@
 compile_commands.json
 .clangd
-include
 build
 *.pdf
 *.csv

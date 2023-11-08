@@ -64,6 +64,4 @@ public:
         std::tie(position.z, velocity.z) = z_filter.step(value.z, time_diff);
         return std::make_tuple(position, velocity);
     }
-    // Consider a point an outlier if any of the axis are outliers
-    // How to include confidence level
 };

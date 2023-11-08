@@ -478,7 +478,7 @@ void mm()
 
 int main()
 {
-    save_measurement_erros();
+    // save_measurement_erros();
     // filter_reverse_pendelum();
-    // filter_data_with_constrained_skeleton_filter();
+    filter_data_with_constrained_skeleton_filter();
 }

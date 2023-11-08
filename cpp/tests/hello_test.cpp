@@ -7,7 +7,6 @@
 #include <fstream>
 #include <iostream>
 
-
 // Demonstrate some basic assertions.
 TEST(HelloTest, BasicAssertions)
 {

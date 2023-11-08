@@ -21,6 +21,7 @@ class SkeletonFilter {
 
 public:
     int joint_count() { return n_joints; }
+    bool is_initialized() { return initialized; }
 
     SkeletonFilter(std::vector<Point<Value>> measurement_noises,
         std::vector<Point<Value>> system_noises, int m_n_joints,
@@ -34,22 +35,9 @@ public:
         }
     }
 
-    void init(std::vector<Point<Value>> inital_points, Value initial_time)
-    {
-        if (initialized) {
-            return;
-        }
-        for (int i = 0; i < n_joints; ++i) {
-            joint_filters[i].init(inital_points[i]);
-        }
-        last_time = initial_time;
-        initialized = true;
-    }
+    void init(std::vector<Point<Value>> inital_points, Value initial_time);
 
-    bool is_initialized() { return initialized; }
-
-    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values,
-        Value new_time)
+    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values, Value new_time)
     {
         std::vector<Point<Value>> positions;
         std::vector<Point<Value>> velocities;

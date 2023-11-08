@@ -1,26 +1,4 @@
 #pragma once
-/** what should we do
- * define which joints are a combi
- *
-jind = [19 20 21; ... % left leg
-        23 24 25; ... % right leg
-        6  7  8;  ... % left arm
-        13 14 15];    % right arm
-
-        this are not all points, should we just filter the rest normally?
-
-rest_joints = set(range(0, len(joinst))).diff(set(jind)
-
-figure out where the difference in the whole step is -> there is just one more step
-
-we basically have something like
-class RigidJointConstructFilter3 ->  with step and everything else
-phi1
-phi2
-don't know why de do it so just do it
- */
-
-// #include <Eigen/src/Core/Matrix.h>
 #include <cstddef>
 #include <functional>
 #include <tuple>
@@ -35,17 +13,7 @@ don't know why de do it so just do it
 using Eigen::MatrixXd;
 using Eigen::seq;
 
-MatrixXd generate_rigid_joint_al()
-{
-    MatrixXd Al(18, 18);
-    MatrixXd first(9, 18);
-    MatrixXd second(9, 18);
-    first << MatrixXd::Zero(9, 9), MatrixXd::Identity(9, 9);
-    second << MatrixXd::Zero(9, 9), MatrixXd::Zero(9, 9);
-
-    Al << first, second;
-    return Al;
-}
+MatrixXd generate_rigid_joint_al();
 
 template <typename Value>
 class RigidJointConstructFilter3 {
@@ -284,6 +252,7 @@ class ConstrainedSkeletonFilter {
 
 public:
     int joint_count() { return n_joints; }
+    bool is_initialized() { return initialized; }
 
     ConstrainedSkeletonFilter(
         int m_n_joints,
@@ -337,8 +306,6 @@ public:
         last_time = initial_time;
         initialized = true;
     }
-
-    bool is_initialized() { return initialized; }
 
     std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values,
         Value new_time)

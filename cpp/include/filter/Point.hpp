@@ -1,8 +1,8 @@
 #pragma once
 #include <iostream>
 
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
 
 template <typename Value>
 class Point {
@@ -31,11 +31,12 @@ public:
     friend bool operator==(const Point<U>& lhs, const Point<U>& rhs);
 
     friend class boost::serialization::access;
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int version) {
-        ar & x;
-        ar & y;
-        ar & z;
+    template <class Archive>
+    void serialize(Archive& ar, const unsigned int version)
+    {
+        ar& x;
+        ar& y;
+        ar& z;
     }
 };
 

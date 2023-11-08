@@ -1,17 +1,18 @@
-FILES := $(shell find ./src ./tests -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.c')
+FILES := $(shell find ./src ./tests ./include/filter -name '*.cpp' -o -name '*.hpp' -o -name '*.h' -o -name '*.c')
 _TEST_BINS := $(shell find ./tests -name '*test.cpp')
 TEST_BINS := $(_TEST_BINS:.cpp=)
 
 .PHONY: build
 build:
-	cmake -S . -B build
+	FILTER_MAIN=1 FILTER_TEST=1 cmake -S . -B build
+	FILTER_MAIN=1 FILTER_TEST=1 cmake --build build
 
 .PHONY: tests
 tests:
 .PHONY: test
 test:
 	echo ${TEST_BINS}
-	export ASSETS_DIR=$(shell pwd)/tests/assets && cmake --build build && cd build && $(_TEST_BINS:.cpp=)
+	export ASSETS_DIR=$(shell pwd)/tests/assets && FILTER_TEST=1 cmake --build build && cd build && $(_TEST_BINS:.cpp=)
 
 .PHONY: format
 format:

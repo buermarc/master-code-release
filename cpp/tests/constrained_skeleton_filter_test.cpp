@@ -17,8 +17,8 @@
 #include <filter/adaptive/AdaptiveZarchanFilter1D.hpp>
 #include <filter/com.hpp>
 
-#include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 // include this header to serialize vectors
 #include <boost/serialization/vector.hpp>
@@ -27,11 +27,11 @@ typedef AdaptivePointFilter3D<double, AdaptiveRoseFilter1D<double>> RosePointFil
 typedef AdaptivePointFilter3D<double, AdaptiveBarShalomFilter1D<double>> BarPointFilter;
 typedef AdaptivePointFilter3D<double, AdaptiveZarchanFilter1D<double>> ZarPointFilter;
 
-template<typename T>
-std::vector<T> flatten(std::vector<std::vector<T>> const &vec)
+template <typename T>
+std::vector<T> flatten(std::vector<std::vector<T>> const& vec)
 {
     std::vector<T> flattened;
-    for (auto const &v: vec) {
+    for (auto const& v : vec) {
         flattened.insert(flattened.end(), v.begin(), v.end());
     }
     return flattened;
@@ -48,7 +48,7 @@ TEST(TestCachedMeasurementError, BasicAssertions)
     EXPECT_TRUE(var.isApprox(cached_var, 0.00001));
 }
 
-template<typename FilterType>
+template <typename FilterType>
 void test_adaptive_constrained_skeleton_filter(std::string name)
 {
     auto cached_var = get_cached_measurement_error();
@@ -100,7 +100,7 @@ void test_adaptive_constrained_skeleton_filter(std::string name)
     {
         std::ifstream ifs(std::format("{}/{}.dat", std::getenv("ASSETS_DIR"), name));
         boost::archive::text_iarchive ia(ifs);
-        ia & expected_values;
+        ia& expected_values;
     }
 
     EXPECT_TRUE(filtered_values == expected_values);
@@ -110,7 +110,6 @@ TEST(AdaptiveConstrainedSkeletonFilterBasicSanityCheckZarPointFilter, BasicAsser
 {
     test_adaptive_constrained_skeleton_filter<ZarPointFilter>("zar");
 }
-
 
 TEST(AdaptiveConstrainedSkeletonFilterBasicSanityCheckBarPointFilter, BasicAssertions)
 {

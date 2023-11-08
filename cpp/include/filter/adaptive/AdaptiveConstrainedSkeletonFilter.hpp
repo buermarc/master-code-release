@@ -238,6 +238,7 @@ class AdaptiveConstrainedSkeletonFilter {
 
 public:
     int joint_count() { return n_joints; }
+    bool is_initialized() { return initialized; }
 
     AdaptiveConstrainedSkeletonFilter(
         int m_n_joints,
@@ -291,8 +292,6 @@ public:
         last_time = initial_time;
         initialized = true;
     }
-
-    bool is_initialized() { return initialized; }
 
     std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values,
         Value new_time)
