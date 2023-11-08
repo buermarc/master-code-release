@@ -47,7 +47,7 @@ ExternalProject_Add(
 include_directories(SYSTEM ${EIGEN_INCLUDE_DIR})
 
 ### Boost (for serialization)
-set(BOOST_INCLUDE_LIBRARIES serialization)
+set(BOOST_INCLUDE_LIBRARIES archive serialization)
 set(BOOST_ENABLE_CMAKE ON)
 
 include(FetchContent)
@@ -72,7 +72,7 @@ add_library(
     src/filter/ConstrainedSkeletonFilter.cpp
 )
 
-target_link_libraries(filter nlohmann_json::nlohmann_json)
+target_link_libraries(filter nlohmann_json::nlohmann_json Boost::serialization)
 add_dependencies(filter eigen)
 
 IF(DEFINED ENV{FILTER_TEST})

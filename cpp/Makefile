@@ -23,3 +23,10 @@ DOCKER_TAG := filter-dev:latest
 .PHONY: docker-build
 docker-build:
 	docker build . -t ${DOCKER_TAG}
+
+build-in-dockerfile: docker-build
+	docker run -it -v $(shell pwd):/tmp/project ${DOCKER_TAG} make _build-in-dockerfile
+
+_build-in-dockerfile:
+	FILTER_MAIN=1 FILTER_TEST=1 cmake -S . -B build-in-dockerfile
+	FILTER_MAIN=1 FILTER_TEST=1 cmake --build build-in-dockerfile
