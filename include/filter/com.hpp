@@ -22,7 +22,25 @@ public:
         , c(m_c)
         , d(m_d) {};
 
-    std::tuple<Point<Value>, Point<Value>> into_center_and_normal();
+    std::tuple<Point<Value>, Point<Value>> into_center_and_normal()
+    {
+        Eigen::Vector3f va(a.x, a.y, a.z);
+        Eigen::Vector3f vb(b.x, b.y, b.z);
+        Eigen::Vector3f vc(c.x, c.y, c.z);
+        Eigen::Vector3f vd(d.x, d.y, d.z);
+
+        auto vml = va + 0.5 * (vd - va);
+        auto vmr = vb + 0.5 * (vc - vb);
+
+        // 1000 = Convert from mm into m
+        auto vcenter = (vml + 0.5 * (vmr - vml)) / 1000;
+
+        auto vnorm = (vc - vcenter).cross(vd - vcenter) / 1000;
+
+        Point<Value> center(vcenter(0), vcenter(1), vcenter(2));
+        Point<Value> norm(vnorm(0), vnorm(1), vnorm(2));
+        return std::make_tuple(center, norm);
+    }
 };
 
 enum AZURE_JOINT {
