@@ -75,6 +75,11 @@ add_library(
 target_link_libraries(filter nlohmann_json::nlohmann_json Boost::serialization)
 add_dependencies(filter eigen)
 
+target_include_directories(filter PUBLIC include)
+target_include_directories(filter SYSTEM INTERFACE
+  "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
+  "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>")
+
 IF(DEFINED ENV{FILTER_TEST})
     add_subdirectory(tests)
 ENDIF()
