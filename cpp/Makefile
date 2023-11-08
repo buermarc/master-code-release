@@ -11,7 +11,7 @@ tests:
 .PHONY: test
 test:
 	echo ${TEST_BINS}
-	cmake --build build && cd build && $(_TEST_BINS:.cpp='')
+	export ASSETS_DIR=$(shell pwd)/tests/assets && cmake --build build && cd build && $(_TEST_BINS:.cpp=)
 
 .PHONY: format
 format:

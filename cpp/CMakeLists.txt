@@ -18,7 +18,7 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 FetchContent_Declare(
-    json 
+    json
     URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz
 )
 FetchContent_MakeAvailable(json)
@@ -39,6 +39,16 @@ ExternalProject_Add(
     TEST_COMMAND ""
 )
 include_directories(SYSTEM ${EIGEN_INCLUDE_DIR})
+
+set(BOOST_INCLUDE_LIBRARIES serialization)
+set(BOOST_ENABLE_CMAKE ON)
+
+include(FetchContent)
+FetchContent_Declare(
+  Boost
+  URL https://github.com/boostorg/boost/releases/download/boost-1.83.0/boost-1.83.0.tar.xz
+)
+FetchContent_MakeAvailable(Boost)
 
 add_subdirectory(tests)
 add_subdirectory(src/filter)

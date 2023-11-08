@@ -28,5 +28,5 @@ target_link_libraries(hello_test nlohmann_json::nlohmann_json filter)
 target_include_directories(hello_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 gtest_discover_tests(constrained_skeleton_filter_test)
-target_link_libraries(constrained_skeleton_filter_test nlohmann_json::nlohmann_json filter)
+target_link_libraries(constrained_skeleton_filter_test nlohmann_json::nlohmann_json filter Boost::serialization)
 target_include_directories(constrained_skeleton_filter_test PRIVATE ${CMAKE_SOURCE_DIR}/src)

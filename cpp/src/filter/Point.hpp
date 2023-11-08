@@ -1,6 +1,9 @@
 #pragma once
 #include <iostream>
 
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+
 template <typename Value>
 class Point {
 public:
@@ -26,6 +29,14 @@ public:
 
     template <typename U>
     friend bool operator==(const Point<U>& lhs, const Point<U>& rhs);
+
+    friend class boost::serialization::access;
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version) {
+        ar & x;
+        ar & y;
+        ar & z;
+    }
 };
 
 template <typename Value>
@@ -42,5 +53,5 @@ std::ostream& operator<<(std::ostream& out, const Point<Value>& point)
 template <typename Value>
 bool operator==(const Point<Value>& lhs, const Point<Value>& rhs)
 {
-    return lhs.x = rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
+    return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;
 }
