@@ -3,8 +3,6 @@
 #include <filter/PointFilter3D.hpp>
 #include <filter/Utils.hpp>
 #include <gtest/gtest.h>
-#include <sstream>
-#include <string>
 
 #include <fstream>
 #include <iostream>
@@ -41,11 +39,7 @@ std::vector<T> flatten(std::vector<std::vector<T>> const& vec)
 
 TEST(TestCachedMeasurementError, BasicAssertions)
 {
-    std::stringstream ss;
-    ss << "/home/";
-    ss << std::getenv("USER");
-    ss << "/repos/master/code/_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json";
-    std::string var_path(ss.str());
+    std::string var_path(std::format("/home/{}/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
     int joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
@@ -58,11 +52,7 @@ template <typename FilterType>
 void test_adaptive_constrained_skeleton_filter(std::string name)
 {
     auto cached_var = get_cached_measurement_error();
-    std::stringstream ssd;
-    ssd << "/home/";
-    ssd << std::getenv("USER");
-    ssd << "/repos/master/code/matlab/sts_NFOV_UNBINNED_720P_30fps.json";
-    std::string data_path(ssd.str());
+    std::string data_path(std::format("/home/{}/repos/master/code/matlab/sts_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
 
     auto joint_count = 32;
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
@@ -108,9 +98,7 @@ void test_adaptive_constrained_skeleton_filter(std::string name)
 
     std::vector<std::vector<Point<double>>> expected_values;
     {
-        std::stringstream ss;
-        ss << std::getenv("ASSETS_DIR") << name << ".dat";
-        std::ifstream ifs(ss.str());
+        std::ifstream ifs(std::format("{}/{}.dat", std::getenv("ASSETS_DIR"), name));
         boost::archive::text_iarchive ia(ifs);
         ia& expected_values;
     }
