@@ -3,6 +3,8 @@
 #include <filter/PointFilter3D.hpp>
 #include <filter/com.hpp>
 #include <gtest/gtest.h>
+#include <sstream>
+#include <string>
 
 #include <fstream>
 #include <iostream>
@@ -83,7 +85,11 @@ TEST(RigidJointConstructFilter3InitTests, BasicAssertions)
 
     EXPECT_EQ(phi_1.reverse(), phi_2);
 
-    std::string var_path(std::format("/home/{}/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
+    std::stringstream ss;
+    ss << "/home/";
+    ss << std::getenv("USER");
+    ss << "/repos/master/code/_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json";
+    std::string var_path(ss.str());
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
@@ -169,7 +175,11 @@ TEST(RigidJointConstructFilter3InitTests, BasicAssertions)
 TEST(RigidJointConstructFilter3InitTestsDefaultInit, BasicAssertions)
 {
 
-    std::string var_path(std::format("/home/{}/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
+    std::stringstream ss;
+    ss << "/home/";
+    ss << std::getenv("USER");
+    ss << "/repos/master/code/_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json";
+    std::string var_path(ss.str());
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
@@ -195,7 +205,11 @@ TEST(RigidJointConstructFilter3InitTestsDefaultInit, BasicAssertions)
 TEST(ConstrainedSkeletonFilterInit, BasicAssertions)
 {
 
-    std::string var_path(std::format("/home/{}/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
+    std::stringstream ss;
+    ss << "/home/";
+    ss << std::getenv("USER");
+    ss << "/repos/master/code/_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json";
+    std::string var_path(ss.str());
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
@@ -223,12 +237,20 @@ TEST(ConstrainedSkeletonFilterInit, BasicAssertions)
 TEST(PointFilter3DTest, BasicAssertions)
 {
 
-    std::string var_path(std::format("/home/{}/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
+    std::stringstream ss;
+    ss << "/home/";
+    ss << std::getenv("USER");
+    ss << "/repos/master/code/_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json";
+    std::string var_path(ss.str());
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
 
-    std::string data_path(std::format("/home/{}/repos/master/code/matlab/sts_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
+    std::stringstream ssd;
+    ssd << "/home/";
+    ssd << std::getenv("USER");
+    ssd << "/repos/master/code/matlab/sts_NFOV_UNBINNED_720P_30fps.json";
+    std::string data_path(ssd.str());
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
     auto filter = PointFilter3D<double>::default_init(17, var);
 
