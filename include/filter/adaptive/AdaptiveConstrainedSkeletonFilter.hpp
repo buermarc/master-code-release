@@ -8,6 +8,7 @@
 
 #include "../Point.hpp"
 #include "../Utils.hpp"
+#include "filter/com.hpp"
 
 using Eigen::MatrixXd;
 using Eigen::seq;
@@ -226,7 +227,7 @@ public:
 };
 
 template <typename Value, typename AdaptivePointFilter>
-class AdaptiveConstrainedSkeletonFilter {
+class AdaptiveConstrainedSkeletonFilter : SkeletonStabilityMetrics<Value> {
     size_t n_joints;
     bool initialized = false;
     Value last_time;
@@ -242,8 +243,10 @@ public:
 
     AdaptiveConstrainedSkeletonFilter(
         int m_n_joints,
-        MatrixXd measurement_errors)
+        MatrixXd measurement_errors,
+        MatrixXd MM)
         : n_joints(m_n_joints)
+        , SkeletonStabilityMetrics<Value>(MM)
     {
         for (auto joint_group : constrained_joint_groups) {
             auto filter = AdaptiveRigidJointConstructFilter3<Value>::default_init(joint_group, measurement_errors);
@@ -339,6 +342,8 @@ public:
             positions[i] = position;
             velocities[i] = velocity;
         }
+
+        SkeletonStabilityMetrics<Value>::store_step(positions, velocities);
 
         last_time = new_time;
         return std::make_tuple(positions, velocities);

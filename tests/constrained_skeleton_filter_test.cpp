@@ -63,7 +63,7 @@ void test_adaptive_constrained_skeleton_filter(std::string name)
             joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
     }
 
-    AdaptiveConstrainedSkeletonFilter<double, FilterType> filter(32, cached_var);
+    AdaptiveConstrainedSkeletonFilter<double, FilterType> filter(32, cached_var, get_azure_kinect_com_matrix());
     filter.init(initial_points, timestamps[0]);
 
     std::vector<std::vector<Point<double>>> filtered_values;

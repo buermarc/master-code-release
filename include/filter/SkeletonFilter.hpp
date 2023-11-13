@@ -8,11 +8,12 @@
 #include "Point.hpp"
 #include "PointFilter3D.hpp"
 #include "Utils.hpp"
+#include "com.hpp"
 
 using Eigen::MatrixXd;
 
 template <typename Value>
-class SkeletonFilter {
+class SkeletonFilter : SkeletonStabilityMetrics<Value> {
     size_t n_joints;
     bool initialized = false;
     Value last_time;
@@ -25,8 +26,9 @@ public:
 
     SkeletonFilter(std::vector<Point<Value>> measurement_noises,
         std::vector<Point<Value>> system_noises, int m_n_joints,
-        Value threshold)
+        Value threshold, MatrixXd MM)
         : n_joints(m_n_joints)
+        , SkeletonStabilityMetrics<Value>(MM)
     {
         for (int i = 0; i < m_n_joints; ++i) {
             auto filter = PointFilter3D<Value>(measurement_noises[i],
@@ -58,36 +60,11 @@ public:
             positions.push_back(position);
             velocities.push_back(velocity);
         }
+
+        SkeletonStabilityMetrics<Value>::store_step(positions, velocities);
+
         last_time = new_time;
         return std::make_tuple(positions, velocities);
-    }
-
-    Point<Value> calculate_com(
-        std::vector<Point<Value>> filtered_positions,
-        MatrixXd MM) // MM[1x32]
-    {
-        Point<Value> com(0.0, 0.0, 0.0);
-        for (int joint = 0; joint < this->joint_count(); ++joint) {
-            com.x += filtered_positions[joint].x * MM(0, joint);
-            com.y += filtered_positions[joint].y * MM(0, joint);
-            com.z += filtered_positions[joint].z * MM(0, joint);
-        }
-        return com;
-    }
-
-    Point<Value> calculate_x_com(
-        Point<Value> com,
-        Point<Value> com_dot,
-        Value l // length of inverted pendelum
-    )
-    {
-        Value g = 9.81; // m/s
-        Value w_0 = g / l;
-        Point<Value> x_com(0.0, 0.0, 0.0);
-        x_com.x = com.x + (com_dot.x / w_0);
-        x_com.y = com.y + (com_dot.y / w_0);
-        x_com.z = com.z + (com_dot.z / w_0);
-        return x_com;
     }
 };
 
@@ -108,7 +85,7 @@ public:
         threshold = m_threshold;
 
         auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(m_noise_data_path, m_joint_count);
-        auto var = get_measurement_error(var_joints, m_joint_count, 209, 339);
+        auto var = get_cached_measurement_error();
         auto sqrt_var = var.array().sqrt();
         auto measurement_noise_for_all_joints = 10 * sqrt_var;
 

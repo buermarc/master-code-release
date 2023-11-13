@@ -124,3 +124,60 @@ Plane<Value> azure_kinect_bos(std::vector<Point<Value>> joints)
 }
 
 MatrixXd get_azure_kinect_com_matrix(SEX sex = AVERAGE);
+
+template <typename Value>
+class SkeletonStabilityMetrics {
+public:
+    std::vector<Point<Value>> m_filtered_positions = std::vector<Point<Value>>();
+    std::vector<Point<Value>> m_filtered_velocities = std::vector<Point<Value>>();
+    MatrixXd m_MM;
+
+    SkeletonStabilityMetrics(MatrixXd mm)
+        : m_MM(mm)
+    {
+    }
+
+    Point<Value> calculate_com()
+    {
+        Point<Value> com(0.0, 0.0, 0.0);
+        for (int joint = 0; joint < this->joint_count(); ++joint) {
+            com.x += m_filtered_positions[joint].x * m_MM(0, joint);
+            com.y += m_filtered_positions[joint].y * m_MM(0, joint);
+            com.z += m_filtered_positions[joint].z * m_MM(0, joint);
+        }
+        return com;
+    }
+
+    Point<Value> calculate_com_dot()
+    {
+        Point<Value> com(0.0, 0.0, 0.0);
+        for (int joint = 0; joint < this->joint_count(); ++joint) {
+            com.x += m_filtered_velocities[joint].x * m_MM(0, joint);
+            com.y += m_filtered_velocities[joint].y * m_MM(0, joint);
+            com.z += m_filtered_velocities[joint].z * m_MM(0, joint);
+        }
+        return com;
+    }
+
+    Point<Value> calculate_x_com(
+        Value l // length of inverted pendelum
+    )
+    {
+        auto com = calculate_com_dot();
+        auto com_dot = calculate_com_dot();
+
+        Value g = 9.81; // m/s
+        Value w_0 = g / l;
+        Point<Value> x_com(0.0, 0.0, 0.0);
+        x_com.x = com.x + (com_dot.x / w_0);
+        x_com.y = com.y + (com_dot.y / w_0);
+        x_com.z = com.z + (com_dot.z / w_0);
+        return x_com;
+    }
+
+    void store_step(std::vector<Point<Value>> positions, std::vector<Point<Value>> velocities)
+    {
+        m_filtered_positions = positions;
+        m_filtered_velocities = velocities;
+    }
+};

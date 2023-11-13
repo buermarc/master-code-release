@@ -68,7 +68,7 @@ void save_measurement_erros()
     // Instead of alway using a default file to get the measurement erros just
     // save them in hardcoded in a cpp file, so that they can be used as a
     // somewhat sane default, whithout wasting time recomputing them always.
-    std::string var_path("../matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
+    std::string var_path("./_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
     int joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
@@ -175,12 +175,12 @@ void filter_reverse_pendelum()
 
 int filter_data_with_constrained_skeleton_filter()
 {
-    std::string var_path("../matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
+    std::string var_path("./_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
     int joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
 
-    std::string data_path("../matlab/sts_NFOV_UNBINNED_720P_30fps.json");
+    std::string data_path("./_matlab/sts_NFOV_UNBINNED_720P_30fps.json");
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
 
     if (std::find(is_null.begin(), is_null.end(), true) != is_null.end()) {
@@ -193,7 +193,7 @@ int filter_data_with_constrained_skeleton_filter()
             joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
     }
     // ConstrainedSkeletonFilter<double> filter(32, var);
-    AdaptiveConstrainedSkeletonFilter<double, RosePointFilter> filter(32, var);
+    AdaptiveConstrainedSkeletonFilter<double, RosePointFilter> filter(32, var, get_azure_kinect_com_matrix());
     filter.init(initial_points, timestamps[0]);
 
     std::vector<std::vector<Point<double>>> filtered_values;
@@ -272,12 +272,12 @@ int filter_data_with_skeleton_filter()
 {
     std::cout << get_azure_kinect_com_matrix() << std::endl;
     return 0;
-    std::string var_path("../matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
+    std::string var_path("./_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
     int joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
 
-    std::string data_path("../matlab/sts_NFOV_UNBINNED_720P_30fps.json");
+    std::string data_path("./_matlab/sts_NFOV_UNBINNED_720P_30fps.json");
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
 
     if (std::find(is_null.begin(), is_null.end(), true) != is_null.end()) {
@@ -356,8 +356,9 @@ int filter_data_with_skeleton_filter()
         initial_points.push_back(Point<double>(
             joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
     }
+    MatrixXd MM = get_azure_kinect_com_matrix();
     SkeletonFilter<double> skeleton_filter(measurement_noises, system_noises, 32,
-        m_threshold);
+        m_threshold, MM);
     skeleton_filter.init(initial_points, timestamps[0]);
 
     std::vector<std::vector<Point<double>>> filtered_values;
