@@ -1,7 +1,7 @@
 #pragma once
-#include <filter/com.hpp>
 #include <Eigen/Dense>
 #include <Eigen/src/Core/Matrix.h>
+#include <filter/com.hpp>
 #include <iostream>
 #include <tuple>
 

@@ -37,16 +37,15 @@ public:
 
     void init(std::vector<Point<Value>> inital_points, Value initial_time)
     {
-         if (initialized) {
-             return;
-         }
-         for (int i = 0; i < n_joints; ++i) {
-             joint_filters[i].init(inital_points[i]);
-         }
-         last_time = initial_time;
-         initialized = true;
-     }
-
+        if (initialized) {
+            return;
+        }
+        for (int i = 0; i < n_joints; ++i) {
+            joint_filters[i].init(inital_points[i]);
+        }
+        last_time = initial_time;
+        initialized = true;
+    }
 
     std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values, Value new_time)
     {
