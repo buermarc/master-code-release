@@ -6,9 +6,10 @@
 
 #include <Eigen/Dense>
 
-#include "../Point.hpp"
-#include "../Utils.hpp"
-#include "filter/com.hpp"
+#include <filter/Point.hpp>
+#include <filter/SkeletonSaver.hpp>
+#include <filter/Utils.hpp>
+#include <filter/com.hpp>
 
 using Eigen::MatrixXd;
 using Eigen::seq;
@@ -227,7 +228,7 @@ public:
 };
 
 template <typename Value, typename AdaptivePointFilter>
-class AdaptiveConstrainedSkeletonFilter : SkeletonStabilityMetrics<Value> {
+class AdaptiveConstrainedSkeletonFilter : SkeletonStabilityMetrics<Value>, SkeletonSaver<Value> {
     size_t n_joints;
     bool initialized = false;
     Value last_time;
@@ -344,6 +345,10 @@ public:
         }
 
         SkeletonStabilityMetrics<Value>::store_step(positions, velocities);
+
+        if (this->saver_enabled()) {
+            this->save_step(new_time, values, positions, velocities);
+        }
 
         last_time = new_time;
         return std::make_tuple(positions, velocities);
