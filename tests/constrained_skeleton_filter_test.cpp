@@ -39,7 +39,7 @@ std::vector<T> flatten(std::vector<std::vector<T>> const& vec)
 
 TEST(TestCachedMeasurementError, BasicAssertions)
 {
-    std::string var_path(std::format("/home/{}/repos/master/code/matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
+    std::string var_path(std::format("/home/{}/repos/master/code/_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
     int joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
     auto var = get_measurement_error(var_joints, joint_count, 209, 339);
@@ -52,7 +52,7 @@ template <typename FilterType>
 void test_adaptive_constrained_skeleton_filter(std::string name)
 {
     auto cached_var = get_cached_measurement_error();
-    std::string data_path(std::format("/home/{}/repos/master/code/matlab/sts_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
+    std::string data_path(std::format("/home/{}/repos/master/code/_matlab/sts_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
 
     auto joint_count = 32;
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);

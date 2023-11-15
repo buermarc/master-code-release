@@ -4,6 +4,10 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
+
 template <typename Value>
 class Point {
 public:
@@ -39,6 +43,20 @@ public:
         ar& z;
     }
 };
+
+template <typename Value>
+void to_json(json& _json, const Point<Value>& value)
+{
+    _json = json { std::vector { value.x, value.y, value.z } };
+}
+
+template <typename Value>
+void from_json(const json& _json, Point<Value>& value)
+{
+    value.x = _json[0];
+    value.y = _json[1];
+    value.z = _json[2];
+}
 
 template <typename Value>
 std::ostream& operator<<(std::ostream& out, const Point<Value>& point)

@@ -10,6 +10,11 @@ add_executable(
     constrained_skeleton_filter_test.cpp
 )
 
+add_executable(
+    saver_test
+    saver_test.cpp
+)
+
 target_link_libraries(
   hello_test
   GTest::gtest_main
@@ -18,6 +23,11 @@ target_link_libraries(
 
 target_link_libraries(
   constrained_skeleton_filter_test
+  GTest::gtest_main
+)
+
+target_link_libraries(
+  saver_test
   GTest::gtest_main
 )
 
@@ -30,3 +40,7 @@ target_include_directories(hello_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 gtest_discover_tests(constrained_skeleton_filter_test)
 target_link_libraries(constrained_skeleton_filter_test nlohmann_json::nlohmann_json filter Boost::serialization)
 target_include_directories(constrained_skeleton_filter_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
+
+gtest_discover_tests(saver_test)
+target_link_libraries(saver_test nlohmann_json::nlohmann_json filter Boost::serialization)
+target_include_directories(saver_test PRIVATE ${CMAKE_SOURCE_DIR}/src)

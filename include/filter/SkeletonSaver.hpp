@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <filter/com.hpp>
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -59,10 +60,30 @@ public:
         m_enabled = true;
     }
 
+    vV get_timestamps()
+    {
+        return m_timestamps;
+    }
+
+    vvp get_unfiltered_positions()
+    {
+        return m_unfiltered_positions;
+    }
+
+    vvp get_filtered_positions()
+    {
+        return m_filtered_positions;
+    }
+
+    vvp get_filtered_velocities()
+    {
+        return m_filtered_velocities;
+    }
+
     json to_json()
     {
         json _json;
-        _json["timestamp"] = m_timestamps;
+        _json["timestamps"] = m_timestamps;
         _json["unfiltered_positions"] = m_unfiltered_positions;
         _json["filtered_positions"] = m_filtered_positions;
         _json["filtered_velocities"] = m_filtered_velocities;
@@ -71,7 +92,7 @@ public:
 
     json from_json(json _json)
     {
-        return SkeletonSaver<Value>(_json["timestamp"], _json["unfiltered_positions"], _json["filtered_positions"], _json["filtered_velocities"]);
+        return SkeletonSaver<Value>(_json["timestamps"], _json["unfiltered_positions"], _json["filtered_positions"], _json["filtered_velocities"]);
     }
 
     json read_from_json_file(std::string path)
