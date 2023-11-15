@@ -140,7 +140,7 @@ public:
     Point<Value> calculate_com()
     {
         Point<Value> com(0.0, 0.0, 0.0);
-        for (int joint = 0; joint < this->joint_count(); ++joint) {
+        for (int joint = 0; joint < m_MM.cols(); ++joint) {
             com.x += m_filtered_positions[joint].x * m_MM(0, joint);
             com.y += m_filtered_positions[joint].y * m_MM(0, joint);
             com.z += m_filtered_positions[joint].z * m_MM(0, joint);
@@ -151,7 +151,7 @@ public:
     Point<Value> calculate_com_dot()
     {
         Point<Value> com(0.0, 0.0, 0.0);
-        for (int joint = 0; joint < this->joint_count(); ++joint) {
+        for (int joint = 0; joint < m_MM.cols(); ++joint) {
             com.x += m_filtered_velocities[joint].x * m_MM(0, joint);
             com.y += m_filtered_velocities[joint].y * m_MM(0, joint);
             com.z += m_filtered_velocities[joint].z * m_MM(0, joint);
