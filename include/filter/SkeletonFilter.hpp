@@ -117,6 +117,6 @@ public:
     SkeletonFilter<Value> build()
     {
         return SkeletonFilter<Value>(measurement_noises, system_noises, joint_count,
-            threshold);
+            threshold, get_azure_kinect_com_matrix());
     }
 };
