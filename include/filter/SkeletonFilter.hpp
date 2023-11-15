@@ -14,7 +14,7 @@
 using Eigen::MatrixXd;
 
 template <typename Value>
-class SkeletonFilter : SkeletonStabilityMetrics<Value>, SkeletonSaver<Value> {
+class SkeletonFilter : public SkeletonStabilityMetrics<Value>, public SkeletonSaver<Value> {
     size_t n_joints;
     bool initialized = false;
     Value last_time;

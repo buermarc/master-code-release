@@ -228,7 +228,7 @@ public:
 };
 
 template <typename Value, typename AdaptivePointFilter>
-class AdaptiveConstrainedSkeletonFilter : SkeletonStabilityMetrics<Value>, public SkeletonSaver<Value> {
+class AdaptiveConstrainedSkeletonFilter : public SkeletonStabilityMetrics<Value>, public SkeletonSaver<Value> {
     size_t n_joints;
     bool initialized = false;
     Value last_time;

@@ -242,7 +242,7 @@ public:
 };
 
 template <typename Value>
-class ConstrainedSkeletonFilter : SkeletonStabilityMetrics<Value>, SkeletonSaver<Value> {
+class ConstrainedSkeletonFilter : public SkeletonStabilityMetrics<Value>, public SkeletonSaver<Value> {
     size_t n_joints;
     bool initialized = false;
     Value last_time;
