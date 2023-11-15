@@ -75,21 +75,18 @@ public:
 
 template <typename Value>
 class SkeletonFilterBuilder {
-    std::string noise_data_path;
     int joint_count;
     std::vector<Point<Value>> measurement_noises;
     std::vector<Point<Value>> system_noises;
     Value threshold;
 
 public:
-    SkeletonFilterBuilder(std::string m_noise_data_path, int m_joint_count,
+    SkeletonFilterBuilder(int m_joint_count,
         Value m_threshold)
         : joint_count(m_joint_count)
     {
-        noise_data_path = m_noise_data_path;
         threshold = m_threshold;
 
-        auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(m_noise_data_path, m_joint_count);
         auto var = get_cached_measurement_error();
         auto sqrt_var = var.array().sqrt();
         auto measurement_noise_for_all_joints = 10 * sqrt_var;
