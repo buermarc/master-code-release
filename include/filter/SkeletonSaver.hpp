@@ -80,7 +80,7 @@ public:
         return m_filtered_velocities;
     }
 
-    json to_json()
+    json to_json() const
     {
         json _json;
         _json["timestamps"] = m_timestamps;
@@ -90,7 +90,7 @@ public:
         return _json;
     }
 
-    json from_json(json _json)
+    static SkeletonSaver<Value> from_json(json _json)
     {
         return SkeletonSaver<Value>(_json["timestamps"], _json["unfiltered_positions"], _json["filtered_positions"], _json["filtered_velocities"]);
     }
@@ -119,3 +119,9 @@ public:
         ar& m_filtered_velocities;
     }
 };
+
+template <typename Value>
+void to_json(json& _json, const SkeletonSaver<Value>& saver)
+{
+    _json = saver.to_json();
+}

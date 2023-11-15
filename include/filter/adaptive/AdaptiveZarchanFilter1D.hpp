@@ -120,39 +120,39 @@ public:
         auto AdnT = Adn.transpose();
         auto GdnT = Gdn.transpose();
 
-        //std::cout << "Adn" << std::endl;
-        //std::cout << Adn << std::endl;
-        //std::cout << std::endl;
+        // std::cout << "Adn" << std::endl;
+        // std::cout << Adn << std::endl;
+        // std::cout << std::endl;
 
-        //std::cout << "Gdn" << std::endl;
-        //std::cout << Gdn << std::endl;
-        //std::cout << std::endl;
+        // std::cout << "Gdn" << std::endl;
+        // std::cout << Gdn << std::endl;
+        // std::cout << std::endl;
 
         // Update measurement noise (R)
 
         MatrixXd predicted_state = Adn * corrected_state;
-        //std::cout << "predicted_state" << std::endl;
-        //std::cout << predicted_state << std::endl;
+        // std::cout << "predicted_state" << std::endl;
+        // std::cout << predicted_state << std::endl;
         MatrixXd predicted_errors = Adn * corrected_errors * AdnT + Gdn * system_noise * GdnT;
-        //std::cout << "predicted_errors" << std::endl;
-        //std::cout << predicted_errors << std::endl;
+        // std::cout << "predicted_errors" << std::endl;
+        // std::cout << predicted_errors << std::endl;
 
         Value innovation = value - (C * predicted_state).array()(0); // residual
-        //std::cout << "innovation" << std::endl;
-        //std::cout << innovation << std::endl;
-        //std::cout << std::endl;
+        // std::cout << "innovation" << std::endl;
+        // std::cout << innovation << std::endl;
+        // std::cout << std::endl;
         Value innovation_covariance = (C * predicted_errors * CT).array()(0) + measurement_noise;
-        //std::cout << "innovation_covariance" << std::endl;
-        //std::cout << innovation_covariance << std::endl;
-        //std::cout << std::endl;
+        // std::cout << "innovation_covariance" << std::endl;
+        // std::cout << innovation_covariance << std::endl;
+        // std::cout << std::endl;
         Value sigma_value = std::sqrt(innovation_covariance);
-        //std::cout << "sigma_value" << std::endl;
-        //std::cout << sigma_value << std::endl;
-        //std::cout << std::endl;
+        // std::cout << "sigma_value" << std::endl;
+        // std::cout << sigma_value << std::endl;
+        // std::cout << std::endl;
         Value innovation_norm = innovation / sigma_value;
-        //std::cout << "innovation_norm" << std::endl;
-        //std::cout << innovation_norm << std::endl;
-        //std::cout << std::endl;
+        // std::cout << "innovation_norm" << std::endl;
+        // std::cout << innovation_norm << std::endl;
+        // std::cout << std::endl;
         Value abs_innovation_norm = std::abs(innovation_norm);
 
         MatrixXd measurement_noise_matrix(1, 1);
@@ -167,27 +167,27 @@ public:
         }
 
         if (abs_innovation_norm <= threshold) {
-            //std::cout << "use correction" << std::endl;
-            // We are recalculating tmp but that is fine as it still a bit
-            // different as we are using matrices here
+            // std::cout << "use correction" << std::endl;
+            //  We are recalculating tmp but that is fine as it still a bit
+            //  different as we are using matrices here
             MatrixXd tmp = C * predicted_errors * CT + measurement_noise_matrix;
             // TODO: if we have just one value we could also just use a simple
             // inversion instead of a pseudo inverse
             auto pseudo_inv = tmp.completeOrthogonalDecomposition().pseudoInverse();
-            //std::cout << "pseudo_inv==1/innovation_covariance" << std::endl;
-            //std::cout << pseudo_inv << "==" << 1 / innovation_covariance << std::endl;
+            // std::cout << "pseudo_inv==1/innovation_covariance" << std::endl;
+            // std::cout << pseudo_inv << "==" << 1 / innovation_covariance << std::endl;
             MatrixXd K_value = predicted_errors * CT * (1 / innovation_covariance);
-            //std::cout << "K_value" << std::endl;
-            //std::cout << K_value << std::endl;
+            // std::cout << "K_value" << std::endl;
+            // std::cout << K_value << std::endl;
             corrected_state = predicted_state + K_value * innovation;
-            //std::cout << "corrected_state" << std::endl;
-            //std::cout << corrected_state << std::endl;
+            // std::cout << "corrected_state" << std::endl;
+            // std::cout << corrected_state << std::endl;
             auto eye = MatrixXd::Identity(2, 2);
             corrected_errors = (eye - K_value * C) * predicted_errors;
-            //std::cout << "corrected_errors" << std::endl;
-            //std::cout << corrected_errors << std::endl;
+            // std::cout << "corrected_errors" << std::endl;
+            // std::cout << corrected_errors << std::endl;
         } else {
-            //std::cout << "use prediction" << std::endl;
+            // std::cout << "use prediction" << std::endl;
             corrected_state = predicted_state;
             corrected_errors = predicted_errors;
         }
