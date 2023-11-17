@@ -1,0 +1,308 @@
+version    4
+
+// [ GROUND ]
+    segment ground
+    endsegment
+
+    marker m_seat // idx = 0, based on my vicon angles, granny's limb segment lengths, and fk
+	parent ground
+	position 0 -0.2407 0.5445 // with new FILTERED procalc angles
+    endmarker
+
+// [ LUMPED FEET ]
+    segment    lumpedfeet
+        rtinmatrix    1
+        rt
+            1.00000    0.00000    0.00000    0.00000
+            0.00000    1.00000    0.00000    0.00000
+            0.00000    0.00000    1.00000    0.00000
+            0.00000    0.00000    0.00000    1.00000
+        mass
+            2.06
+        inertia
+            0.0074     0       0
+            0        0.0291     0
+            0       0        0.0224
+        com
+            0        0.0863   0.0354
+    meshFile meshes_human_sts/unit_cylinder_medres_feet.stl
+    meshscale 0.1075    0.1075    0.0354 // at one point assumed the length to be 0.1075*1.5 (0.134375) for visual purposes
+    meshrt 0 0 0 xyz 0 0.044 0.0354 // -0.0354 // y is 0.0502 in lua
+    endsegment
+	
+
+// [ LUMPED SHANKS ]
+    segment    lumpedshanks
+        parent    lumpedfeet
+        rtinmatrix    1
+        RT
+            1.00000    0.00000    0.00000    0.00000
+            0.00000    1.00000    0.00000    0.00000
+            0.00000    0.00000    1.00000    0.0708
+            0.00000    0.00000    0.00000    1.00000
+        rotations    x
+        ranges
+            -pi/4 pi/4
+        mass
+            5.6800
+        inertia
+            0.0661     0          0
+            0        0.1249     0
+            0         0        0.0648
+        com
+            0         0       0.2255
+    meshFile meshes_human_sts/unit_cylinder_medres_shanks.stl
+    meshscale 0.09 0.045 0.2020
+    meshrt 0 0 0 xyz 0 0 0.2020 //-0.2020
+    endsegment
+	
+	marker ankle
+	parent lumpedshanks 
+	position 0 0 0 
+    endmarker
+    
+// [ LUMPED THIGHS ]
+    segment    lumpedthighs
+        parent    lumpedshanks
+        rtinmatrix    1
+        rt
+            1.00000    0.00000    0.00000    0.00000
+            0.00000    1.00000    0.00000    0.00000
+            0.00000    0.00000    1.00000    0.4039
+            0.00000    0.00000    0.00000    1.00000
+        rotations    x
+        ranges
+            -0.02 5*pi/6
+        mass
+            16.6400
+        inertia
+            0.2614     0         0
+            0        0.4350     0
+            0          0        0.2182
+        com
+            0          0       0.2199
+    meshFile meshes_human_sts/unit_cylinder_medres_thighs.stl
+    meshscale 0.12 0.09 0.1722
+    meshrt 0 0 0 xyz 0 0 0.1722 //-0.1722
+    endsegment
+	
+	marker knee
+	parent lumpedthighs
+	position 0 0 0 
+    endmarker
+
+// [ LUMPED PELVIS-MPT ]
+    // Segment
+    segment    lumpedpelvismpt
+        parent      lumpedthighs
+        rtinmatrix    1
+        rt
+            1.00000    0.00000    0.00000    0
+            0.00000    1.00000    0.00000    0
+            0.00000    0.00000    1.00000    0.3443
+            0.00000    0.00000    0.00000    1.0000
+        rotations    x
+        ranges
+            -(3*pi/4) pi/4
+        mass    
+			19.9900
+        inertia
+			0.2464	0       0
+			0    	0.2752  0
+			0       0    	0.1102
+        com     
+			0       0    	0.1799
+	meshFile meshes_human_sts/unit_cylinder_medres_pelvismpt.stl // default 2m diam x 2m h marko
+	meshscale 0.1499	0.0864        0.1728
+	meshrt 0 0 0 xyz 0 0 0.1728 //0.0106
+    endsegment
+	
+	marker hip
+	parent lumpedpelvismpt
+	position 0 0 0 
+    endmarker
+	
+// [ UPPER TRUNK ]
+    segment    uppertrunk
+        parent    lumpedpelvismpt
+        rtinmatrix    1
+        rt
+            1.00000    0.00000    0.00000    0
+            0.00000    1.00000    0.00000    0
+            0.00000    0.00000    1.00000    0.3456
+            0.00000    0.00000    0.00000    1.0000
+		rotations x
+		ranges	
+			-0.3 0.3
+        mass
+			10.16
+        inertia
+            0.0416    	0.00000    	0.00000
+            0.00000    	0.0915    	0.00000
+            0.00000    	0.00000    	0.0850
+        com        
+			0.00000 	0.00000   	0.1008
+	meshFile meshes_human_sts/unit_cylinder_medres_upt.stl
+	meshscale 0.1528 0.1018  0.1018
+	meshrt 0 0 0 xyz 0 0 0.1018 // -0.4522, -0.2852 -0.2037 -0.1018
+    endsegment 
+	
+	marker trunk_joint
+	parent uppertrunk
+	position 0 0 0 
+    endmarker
+	
+	// [ HEAD ]
+    // segment    head
+	//
+    // FILL THE GAP
+	//
+	// meshscale 0.0544    0.0544    0.1089
+	// meshrt 0 0 0 xyz 0 0 0.1089
+	
+	// [ HEAD ]
+    // Segment
+    segment    head
+        parent    uppertrunk
+        RTinMatrix    1
+        RT
+            1.00000    0.00000    0.00000    0.00000
+            0.00000    1.00000    0.00000    0.00000
+            0.00000    0.00000    1.00000    0.2037
+            0.00000    0.00000    0.00000    1.00000
+	rotations x
+	ranges	-0.3 0.3
+        mass    4.8200
+        inertia
+            0.0199    0.00000    0.00000
+            0.00000    0.0168    0.00000
+            0.00000    0.00000    0.0156
+        com        0.00000        0.00000        0.1123
+	meshFile meshes_human_sts/unit_cylinder_medres_head.stl
+	meshscale 0.0544    0.0544    0.1089
+	meshrt 0 0 0 xyz 0 0 0.1089
+    endsegment
+	
+	marker C7
+	parent head
+	position 0 0 0 
+    endmarker
+	
+	// [ LEFT UPPER ARM ]
+    // Segment
+    segment    leftupperarm // left arm
+        parent    uppertrunk
+        RTinMatrix    1
+        RT
+            1.00000    0.00000    0.00000    -0.1528
+            0.00000    1.00000    0.00000    0.00000
+            0.00000    0.00000    1.00000    0.1222
+            0.00000    0.00000    0.00000    1.00000
+        rotations    xy
+        ranges  -pi/2 pi // was -pi/4 pi
+		-pi/2 pi/2 // was pi/6 5*pi/6
+        mass    2.1200
+        inertia
+            0.0096    0.00000    0.00000
+            0.00000    0.0110    0.00000
+            0.00000    0.00000    0.0031
+        com        0.00000        0.00000        -0.1100
+
+	meshfile meshes_human_sts/unit_cylinder_medres_leftupperarm.stl
+	meshscale 0.04 0.04 0.1295
+	meshrt 0 0 0 xyz 0 0 -0.1295
+    endsegment
+	
+	marker shoulder_left
+	parent leftupperarm
+	position 0 0 0 
+    endmarker
+
+// [ LEFT FOREARM-HAND ]
+    // Segment
+    segment leftforearmhand
+	parent leftupperarm
+	RTinMatrix 1
+	RT
+            1.00000    0.00000    0.00000    0.00000
+            0.00000    1.00000    0.00000    0.00000
+            0.00000    0.00000    1.00000    -0.2591
+            0.00000    0.00000    0.00000    1.00000
+	rotations x
+	ranges	0 5*pi/6 // was 0 1.2
+	mass 1.06
+	inertia
+	    0.0073      0       0
+	    0    	0.0075  0
+	    0        	0    	0.0006
+	com	0.0000		0.0000		-0.1765
+	meshFile meshes_human_sts/unit_cylinder_medres_leftforearmhand.stl
+	meshscale 0.0400    0.0400    0.1612
+	meshrt 0 0 0 xyz 0 0 -0.1612
+    endsegment
+	
+	marker elbow_left
+	parent leftforearmhand
+	position 0 0 0 
+    endmarker
+
+// [ RIGHT UPPER ARM ]
+    // Segment
+    segment    rightupperarm // right arm
+        parent    uppertrunk
+        RTinMatrix    1
+        RT
+            1.00000    0.00000    0.00000    0.1528
+            0.00000    1.00000    0.00000    0.00000
+            0.00000    0.00000    1.00000    0.1222
+            0.00000    0.00000    0.00000    1.00000
+	rotations xy
+        ranges  -pi/2 pi // was -pi/4 pi
+		-pi/2 pi/2 // was -5*pi/6 -pi/6
+        mass    2.1200
+        inertia
+            0.0096    0.00000    0.00000
+            0.00000    0.0110    0.00000
+            0.00000    0.00000    0.0031
+        com        0.00000        0.00000        -0.1100
+	meshFile meshes_human_sts/unit_cylinder_medres_rightupperarm.stl
+	meshscale 0.04 0.04 0.1295
+	meshrt 0 0 0 xyz 0 0 -0.1295
+    endsegment
+	
+	marker shoulder_right
+	parent rightupperarm
+	position 0 0 0 
+    endmarker
+
+// [ RIGHT FOREARM-HAND ]
+    // Segment
+    segment rightforearmhand
+	parent rightupperarm
+	RTinMatrix 1
+	RT
+            1.00000    0.00000    0.00000    0.00000
+            0.00000    1.00000    0.00000    0.00000
+            0.00000    0.00000    1.00000    -0.2591
+            0.00000    0.00000    0.00000    1.00000
+	rotations x
+	ranges	0 5*pi/6 // was 0 1.2
+	mass 1.06
+	inertia
+	    0.0073         0         0
+		 0    0.0075         0
+		 0         0    0.0006
+	com	0.0000		0.0000		-0.1765
+	meshFile meshes_human_sts/unit_cylinder_medres_rightforearmhand.stl
+	meshscale 0.0400    0.0400    0.1612
+	meshrt 0 0 0 xyz 0 0 -0.1612
+    endsegment
+	
+	marker elbow_right
+	parent rightforearmhand
+	position 0 0 0 
+    endmarker
+	
+
+	
+

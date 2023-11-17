@@ -1,0 +1,82 @@
+version 4
+
+// [ GROUND ]
+    segment ground
+    endsegment
+	
+	// Initial position of end effector
+	marker endeffector_i
+		parent ground
+        position 0 1 0
+    endmarker
+	
+	// Final position of end effector (target)
+	marker endeffector_f
+		parent ground
+        position 0 1.5 0.866
+    endmarker
+	
+segment Seg1
+    rotations	x
+    ranges
+        -pi pi
+    mass 1
+    inertia
+		0.0833  0.0000	0.0000
+		0.0000	0.0833	0.0000
+	    0.0000	0.0000	0.0010
+    com  0.0000 0.5000 0.0000
+    mesh 0 0 0.05
+	mesh 0 1 0.05
+	mesh 0 1 -0.05
+	mesh 0 0 -0.05
+	mesh 0 0 0.05
+	
+endsegment
+
+    // Joint 1
+    marker joint_1
+        parent Seg1
+        position 0 0 0
+    endmarker
+
+    // Joint 2
+    marker joint_2
+        parent Seg1
+        position 0 1 0
+    endmarker
+
+segment Seg2
+    parent Seg1
+    rotations	x
+    ranges
+        -5*pi/6 5*pi/6
+    rtinmatrix 0
+    rt 0 0 0 xyz 0 1 0  
+    mass 1
+    inertia
+        0.0833  0.0000	0.0000
+		0.0000	0.0833	0.0000
+	    0.0000	0.0000	0.0010
+    com  0.0000 0.5000 0.0000
+    mesh 0 0 0.05
+	mesh 0 0.85 0.05
+	mesh 0 0.85 0.15
+	mesh 0 1.05 0.15
+	mesh 0 1.05 0.10
+	mesh 0 0.95 0.10
+	mesh 0 0.95 -0.10
+	mesh 0 1.05 -0.10
+	mesh 0 1.05 -0.15
+	mesh 0 0.85 -0.15
+	mesh 0 0.85 -0.05
+	mesh 0 0 	-0.05
+	mesh 0 0 	0.05
+endsegment
+
+    // End effector
+    marker endeffector_center
+        parent Seg2
+        position 0 1 0
+    endmarker
+
