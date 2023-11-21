@@ -5,7 +5,7 @@ import pandas
 
 constrained_joint_groups = [ [ 18, 19, 20 ], [ 22, 23, 24 ], [ 5, 6, 7 ], [ 12, 13, 14 ] ];
 
-matlab = pandas.read_csv("../../matlab/file1.csv")
+matlab = pandas.read_csv("../_matlab/file1.csv")
 cpp = pandas.read_csv("../data/out.csv")
 unfiltered = pandas.read_csv("../data/unfiltered_out.csv")
 
