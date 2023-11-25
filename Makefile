@@ -12,7 +12,7 @@ tests:
 .PHONY: test
 test:
 	echo ${TEST_BINS}
-	export ASSETS_DIR=$(shell pwd)/tests/assets && FILTER_TEST=1 cmake --build build && cd build && $(_TEST_BINS:.cpp=)
+	export ASSETS_DIR=$(shell pwd)/tests/assets && FILTER_TEST=1 cmake --build build && cd build && $(_TEST_BINS:.cpp=;)
 
 .PHONY: format
 format:

@@ -27,6 +27,12 @@ public:
         , z(m_z)
     {
     }
+    Point(Value* m_data)
+        : x(m_data[0])
+        , y(m_data[1])
+        , z(m_data[2])
+    {
+    }
 
     template <typename U>
     friend std::ostream& operator<<(std::ostream& out, const Point<U>& point);
