@@ -52,6 +52,11 @@ public:
 
     std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values, Value new_time)
     {
+        if (!initialized) {
+            init(values, new_time);
+            return std::make_tuple(values, std::vector<Point<Value>>());
+        }
+
         std::vector<Point<Value>> positions;
         std::vector<Point<Value>> velocities;
         auto time_diff = new_time - last_time;
