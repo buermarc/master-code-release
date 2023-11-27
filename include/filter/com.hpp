@@ -33,9 +33,9 @@ public:
         auto vmr = vb + 0.5 * (vc - vb);
 
         // 1000 = Convert from mm into m
-        auto vcenter = (vml + 0.5 * (vmr - vml)) / 1000;
+        auto vcenter = (vml + 0.5 * (vmr - vml));
 
-        auto vnorm = (vc - vcenter).cross(vd - vcenter) / 1000;
+        auto vnorm = (vc - vcenter).cross(vd - vcenter);
 
         Point<Value> center(vcenter(0), vcenter(1), vcenter(2));
         Point<Value> norm(vnorm(0), vnorm(1), vnorm(2));
