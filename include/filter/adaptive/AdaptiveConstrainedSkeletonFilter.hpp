@@ -382,3 +382,27 @@ public:
         return x_com;
     }
 };
+
+template <typename Value, typename FilterType>
+class AdaptiveConstrainedSkeletonFilterBuilder {
+    int m_joint_count;
+    MatrixXd m_measurement_noises;
+    Value m_threshold;
+
+public:
+    AdaptiveConstrainedSkeletonFilterBuilder(int joint_count,
+        Value threshold)
+        : m_joint_count(joint_count)
+    {
+        m_threshold = threshold;
+
+        auto var = get_cached_measurement_error();
+        auto sqrt_var = var.array().sqrt();
+        m_measurement_noises = 10 * sqrt_var;
+    }
+
+    AdaptiveConstrainedSkeletonFilter<Value, FilterType> build()
+    {
+        return AdaptiveConstrainedSkeletonFilter<Value, FilterType>(m_joint_count, m_measurement_noises, get_azure_kinect_com_matrix());
+    }
+};
