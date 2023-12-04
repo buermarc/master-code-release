@@ -18,13 +18,12 @@ TEST(HelloTest, BasicAssertions)
 
 TEST(PointConstructor, BasicAssertions)
 {
-    double test[3] = {1,2,3};
+    double test[3] = { 1, 2, 3 };
     Point<double> value(test);
     EXPECT_EQ(value.x, 1);
     EXPECT_EQ(value.y, 2);
     EXPECT_EQ(value.z, 3);
 }
-
 
 TEST(CenterOfMassTest, BasicAssertions)
 {

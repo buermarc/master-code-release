@@ -1,6 +1,7 @@
 import numpy as np
 import biorbd
 import bioviz
+from bioviz import InterfacesCollections
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 
@@ -40,12 +41,14 @@ Qdot = np.zeros(model.nbQ())  # Set the model velocity
 # Initial conditions
 #Q_0 = np.array([0]);
 Q_0 = np.zeros(model.nbQ())
-Qdot_0 = np.ones(model.nbQ())*0.2
-Qdot_0 = np.zeros(model.nbQ())
+Qdot_0 = np.ones(model.nbQ())*0.1
+# Qdot_0 = np.zeros(model.nbQ())
+Qdot_0[0] = 0.5
+Qdot_0[3] = -0.1
 Qdot_0[6] = -0.3
-Qdot_0[7] = 0.8
+Qdot_0[7] = 0.9
 Qdot_0[9] = 0.3
-Qdot_0[10] = -0.8
+Qdot_0[10] = -0.6
 X_0 = np.hstack((Q_0, Qdot_0))
 
 Tau = np.ones((ntau,))*0.1
@@ -62,8 +65,8 @@ def fun(t, X):
 end = 1
 samples = 30 * end
 sol = solve_ivp(fun, [0, end], X_0, method='RK45', t_eval=np.linspace(0, end, samples))
-print(sol.t)
-print(sol.y)
+#print(sol.t)
+#print(sol.y)
 
 #X = [Q, Qdot]
 #Xdot = [Qdot, Qddot]
@@ -72,9 +75,25 @@ print(sol.y)
 #Tau = np.ones((10,)) # generalized forces
 #Qddot = model.ForwardDynamics(Q, Qdot, Tau)
 
-# for frame in sol.y[:model.nbQ()].T:
-#     for marker in model.markers(frame):
-#         print(marker.to_array())
+'''
+for frame in sol.y[:model.nbQ()].T:
+    for marker in model.markers(frame):
+        print(marker.to_array())
+'''
+
+#Markers = InterfacesCollections.Markers(model)
+# markers = Markers.get_data(Q=sol.y[:model.nbQ()].T, compute_kin=False)
+data = np.zeros((samples, 11, 3))
+for i, frame in enumerate(sol.y[:model.nbQ()].T):
+    for j, marker in enumerate(model.markers(frame)):
+        data[i, j, :] = marker.to_array()
+
+print(data)
+
+#for idx in np.arange(0, 11):
+#    print(data[:, idx, 0].var()+ data[:, idx, 1].var() + data[:, idx, 2].var())
+
+np.save("steps.npy", data)
 
 # Animate the model
 biorbd_viz.load_movement(sol.y[:model.nbQ()])

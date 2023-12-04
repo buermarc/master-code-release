@@ -193,7 +193,7 @@ int filter_data_with_constrained_skeleton_filter()
             joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
     }
     // ConstrainedSkeletonFilter<double> filter(32, var);
-    AdaptiveConstrainedSkeletonFilter<double, RosePointFilter> filter(32, var, get_azure_kinect_com_matrix());
+    AdaptiveConstrainedSkeletonFilter<double, ZarPointFilter> filter(32, var, get_azure_kinect_com_matrix());
     filter.init(initial_points, timestamps[0]);
 
     std::vector<std::vector<Point<double>>> filtered_values;

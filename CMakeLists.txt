@@ -57,6 +57,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(Boost)
 
+FetchContent_Declare(
+  cnpy
+  GIT_REPOSITORY https://github.com/rogersce/cnpy.git
+  GIT_TAG HEAD
+)
+# For Windows: Prevent overriding the parent project's compiler/linker settings
+FetchContent_MakeAvailable(cnpy)
 
 ###
 # --- Defininig Library
@@ -88,4 +95,9 @@ IF(DEFINED ENV{FILTER_MAIN})
     add_executable(main src/filter.cpp)
     target_link_libraries (main filter)
     add_dependencies(main eigen)
+
+    find_package(ZLIB)
+    add_executable(load src/loadnpy.cpp)
+    target_link_libraries(load cnpy ZLIB::ZLIB)
+    add_dependencies(load eigen)
 ENDIF()
