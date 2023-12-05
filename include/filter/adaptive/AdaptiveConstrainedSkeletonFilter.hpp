@@ -330,9 +330,9 @@ public:
 
             i = 0; // Start with offset of 8 in results to skip positions
             for (auto joint : joints) {
-                velocities[joint].x = result(8 + 3 * i, 0);
-                velocities[joint].y = result(8 + 3 * i + 1, 0);
-                velocities[joint].z = result(8 + 3 * i + 2, 0);
+                velocities[joint].x = result(9 + 3 * i, 0);
+                velocities[joint].y = result(9 + 3 * i + 1, 0);
+                velocities[joint].z = result(9 + 3 * i + 2, 0);
                 ++i;
             }
         }

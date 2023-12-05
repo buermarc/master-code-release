@@ -150,20 +150,20 @@ public:
 
     Point<Value> calculate_com_dot()
     {
-        Point<Value> com(0.0, 0.0, 0.0);
+        Point<Value> xcom(0.0, 0.0, 0.0);
         for (int joint = 0; joint < m_MM.cols(); ++joint) {
-            com.x += m_filtered_velocities[joint].x * m_MM(0, joint);
-            com.y += m_filtered_velocities[joint].y * m_MM(0, joint);
-            com.z += m_filtered_velocities[joint].z * m_MM(0, joint);
+            xcom.x += m_filtered_velocities[joint].x * m_MM(0, joint);
+            xcom.y += m_filtered_velocities[joint].y * m_MM(0, joint);
+            xcom.z += m_filtered_velocities[joint].z * m_MM(0, joint);
         }
-        return com;
+        return xcom;
     }
 
     Point<Value> calculate_x_com(
         Value l // length of inverted pendelum
     )
     {
-        auto com = calculate_com_dot();
+        auto com = calculate_com();
         auto com_dot = calculate_com_dot();
 
         Value g = 9.81 * 1000; // m/s
