@@ -166,7 +166,7 @@ public:
         auto com = calculate_com_dot();
         auto com_dot = calculate_com_dot();
 
-        Value g = 9.81; // m/s
+        Value g = 9.81 * 1000; // m/s
         Value w_0 = std::sqrt(g / l);
         Point<Value> x_com(0.0, 0.0, 0.0);
         x_com.x = com.x + (com_dot.x / w_0);
