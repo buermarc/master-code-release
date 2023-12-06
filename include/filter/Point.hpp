@@ -34,6 +34,18 @@ public:
     {
     }
 
+    const Point<Value> project_onto_plane(Point<Value>& point, Point<Value>& normed_n) {
+        Point<Value> projected_point;
+        Value sum = (point.x - this->x) * normed_n.x +
+            (point.y - this->y) * normed_n.y +
+            (point.z - this->z) * normed_n.z;
+        std::cout << "sum: " << sum << std::endl;
+        projected_point.x = this->x + sum * normed_n.x;
+        projected_point.y = this->y + sum * normed_n.y;
+        projected_point.z = this->z + sum * normed_n.z;
+        return projected_point;
+    }
+
     template <typename U>
     friend std::ostream& operator<<(std::ostream& out, const Point<U>& point);
 
