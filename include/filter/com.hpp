@@ -117,13 +117,10 @@ Plane<Value> azure_kinect_bos(std::vector<Point<Value>> joints)
     auto foot_left = joints[FOOT_LEFT];
     auto foot_right = joints[FOOT_RIGHT];
 
-    ankle_left.y = foot_left.y;
-    ankle_right.y = foot_right.y;
-
     return Plane(ankle_left, ankle_right, foot_right, foot_left);
 }
 
-MatrixXd get_azure_kinect_com_matrix(SEX sex = AVERAGE);
+MatrixXd get_azure_kinect_com_matrix(SEX sex = MALE);
 
 template <typename Value>
 class SkeletonStabilityMetrics {
@@ -166,7 +163,7 @@ public:
         auto com = calculate_com();
         auto com_dot = calculate_com_dot();
 
-        Value g = 9.81 * 1000; // m/s
+        Value g = 9.81;   // * 1000 / 1e12; // m/s
         Value w_0 = std::sqrt(g / l);
         Point<Value> x_com(0.0, 0.0, 0.0);
         x_com.x = com.x + (com_dot.x / w_0);
