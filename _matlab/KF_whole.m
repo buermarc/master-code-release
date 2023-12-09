@@ -846,6 +846,32 @@ T = array2table(matrix');
 T.Properties.VariableNames(1:96) = labels;
 writetable(T,'file1.csv');
 
+matrix = zeros(32 * 3, length(joints));
+
+for j = 1:32
+    joint = body.KFC.joint{j};
+    for idx = 1:3
+        coord = joint.coord{idx};
+        if isfield(coord, "xcp")
+            matrix(3 * (j-1) + idx, :) = coord.xcp(2, :);
+        else
+            matrix(3 * (j-1) + idx, :) = coord.xc(2, :);
+        end
+    end
+end
+labels = {};
+
+for i = 1:32
+    labels = [labels {['Joint_' int2str(i) '_x']}];
+    labels = [labels {['Joint_' int2str(i) '_y']}];
+    labels = [labels {['Joint_' int2str(i) '_z']}];
+end
+
+T2 = array2table(matrix');
+T2.Properties.VariableNames(1:96) = labels;
+writetable(T2,'file2.csv');
+
+
 %%% Compare individually KF filtered, KF with constraints and non-filtered data
 %for j = 1:32
 %    figure

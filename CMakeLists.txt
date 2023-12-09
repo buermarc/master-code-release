@@ -6,6 +6,9 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+find_package(PythonLibs)
+include_directories(${PYTHON_INCLUDE_DIRS})
+
 ###
 # --- Adding Dependencies
 ###
@@ -93,7 +96,7 @@ ENDIF()
 
 IF(DEFINED ENV{FILTER_MAIN})
     add_executable(main src/filter.cpp)
-    target_link_libraries (main filter)
+    target_link_libraries (main filter ${PYTHON_LIBRARIES} cnpy ZLIB::ZLIB)
     add_dependencies(main eigen)
 
     find_package(ZLIB)
