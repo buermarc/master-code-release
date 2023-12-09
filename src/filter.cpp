@@ -11,6 +11,7 @@
 #include <string>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <unsupported/Eigen/MatrixFunctions>
+#include <cnpy/cnpy.h>
 
 #include <filter/ConstrainedSkeletonFilter.hpp>
 #include <filter/SkeletonFilter.hpp>
@@ -192,11 +193,13 @@ int filter_data_with_constrained_skeleton_filter()
         initial_points.push_back(Point<double>(
             joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
     }
-    // ConstrainedSkeletonFilter<double> filter(32, var);
-    AdaptiveConstrainedSkeletonFilter<double, ZarPointFilter> filter(32, var, get_azure_kinect_com_matrix());
+    ConstrainedSkeletonFilter<double> filter(32, var, get_azure_kinect_com_matrix());
+    // AdaptiveConstrainedSkeletonFilter<double, ZarPointFilter> filter(32, var, get_azure_kinect_com_matrix());
     filter.init(initial_points, timestamps[0]);
 
     std::vector<std::vector<Point<double>>> filtered_values;
+    std::vector<std::vector<Point<double>>> unfiltered_values;
+    std::vector<std::vector<Point<double>>> filtered_velocities;
     // Add initial value
     std::vector<Point<double>> initial_joints;
     for (int joint = 0; joint < joint_count; ++joint) {
@@ -204,6 +207,10 @@ int filter_data_with_constrained_skeleton_filter()
             joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
     }
     filtered_values.push_back(initial_joints);
+    unfiltered_values.push_back(initial_joints);
+    // First velocites should be zero, default init of Point.xyz is 0
+    std::vector<Point<double>> initial_velocities(32);
+    filtered_velocities.push_back(initial_velocities);
 
     int max_frame = n_frames;
     for (int frame_idx = 1; frame_idx < max_frame; ++frame_idx) {
@@ -219,14 +226,17 @@ int filter_data_with_constrained_skeleton_filter()
         }
 
         auto start = std::chrono::high_resolution_clock::now();
-        auto [values, _] = filter.step(current_joint_positions, timestamps[frame_idx]);
+        auto [values, velocities] = filter.step(current_joint_positions, timestamps[frame_idx]);
         auto stop = std::chrono::high_resolution_clock::now();
+
+        unfiltered_values.push_back(current_joint_positions);
 
         std::chrono::duration<double, std::milli> time = stop - start;
         std::cerr << time.count() << "ms\n";
         // std::cout << values[0] << std::endl;
         std::cerr << current_joint_positions[0].x - values[0].x << std::endl;
         filtered_values.push_back(values);
+        filtered_velocities.push_back(velocities);
     }
 
     // Write out filtere values into csv
@@ -265,6 +275,101 @@ int filter_data_with_constrained_skeleton_filter()
     }
     // file << "\r\n";
     file << std::endl;
+
+    std::ofstream vel_file;
+    vel_file.open("data/vel_out.csv");
+
+    // Write header
+    for (int i = 0; i < end - 1; ++i) {
+        vel_file << "Joint_" << i << "_x,";
+        vel_file << "Joint_" << i << "_y,";
+        vel_file << "Joint_" << i << "_z,";
+    }
+    {
+        int i = end - 1;
+        vel_file << "Joint_" << i << "_x";
+        vel_file << ",Joint_" << i << "_y";
+        vel_file << ",Joint_" << i << "_z";
+    }
+    vel_file << "\n";
+
+    // Write elements
+    for (auto joints : filtered_velocities) {
+        bool first = true;
+        for (auto joint : joints) {
+            if (first) {
+                vel_file << joint.x;
+                first = false;
+            } else {
+                vel_file << ", " << joint.x;
+            }
+            vel_file << ", " << joint.y;
+            vel_file << ", " << joint.z;
+        }
+        vel_file << "\n";
+    }
+    // vel_file << "\r\n";
+    vel_file << std::endl;
+
+    std::ofstream un_file;
+    un_file.open("data/un_out.csv");
+
+
+    // Write header
+    for (int i = 0; i < end - 1; ++i) {
+        un_file << "Joint_" << i << "_x,";
+        un_file << "Joint_" << i << "_y,";
+        un_file << "Joint_" << i << "_z,";
+    }
+    {
+        int i = end - 1;
+        un_file << "Joint_" << i << "_x";
+        un_file << ",Joint_" << i << "_y";
+        un_file << ",Joint_" << i << "_z";
+    }
+    un_file << "\n";
+
+    // Write elements
+    for (auto joints : unfiltered_values) {
+        bool first = true;
+        for (auto joint : joints) {
+            if (first) {
+                un_file << joint.x;
+                first = false;
+            } else {
+                un_file << ", " << joint.x;
+            }
+            un_file << ", " << joint.y;
+            un_file << ", " << joint.z;
+        }
+        un_file << "\n";
+    }
+    // un_file << "\r\n";
+    un_file << std::endl;
+
+    cnpy::npy_save("data/timestamps.npy", timestamps);
+
+    /*
+    // HAND_RIGHT
+    std::vector<double> x(filtered_values.size());
+    std::vector<double> y(filtered_values.size());
+    std::vector<double> z(filtered_values.size());
+    std::transform(filtered_values.cbegin(), filtered_values.cend(), x.begin(), [](auto ele) { return ele.at(HAND_RIGHT).x; });
+    std::transform(filtered_values.cbegin(), filtered_values.cend(), y.begin(), [](auto ele) { return ele.at(HAND_RIGHT).y; });
+    std::transform(filtered_values.cbegin(), filtered_values.cend(), z.begin(), [](auto ele) { return ele.at(HAND_RIGHT).z; });
+
+    std::vector<double> diff_x;
+    diff_x.reserve(filtered_values.size());
+    diff_x.push_back(0);
+    for (int i = 0; i < filtered_values.size() - 1; ++i) {
+        auto position_n = filtered_values.at(i).at(HAND_RIGHT);
+        auto position_n1 = filtered_values.at(i + 1).at(HAND_RIGHT);
+        auto timestamp_n = timestamps.at(i);
+        auto timestamp_n1 = timestamps.at(i + 1);
+        diff_x.push_back((position_n1.x - position_n.x / timestamp_n1 - timestamp_n));
+    }
+    */
+
     return 0;
 }
 
