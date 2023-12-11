@@ -354,6 +354,7 @@ public:
 
         // Skip joints which are already covered in constrained joint groups
         for (auto& [i, filter] : single_joint_filters) {
+            std::cout << "Filter " << i << std::endl;
             auto [position, velocity] = filter.step(values[i], time_diff);
             positions[i] = position;
             velocities[i] = velocity;
