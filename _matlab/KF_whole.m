@@ -16,7 +16,7 @@ ap = 2;
 
 % Choose trashhold for the normalized innovation  for rejection of outliers
 % Refer to [2] (section 2.3. Gaiting technique for outlier detection and rejection)
-trashn = 2; % Trashhold for normalized innovation
+trashn = 5; % Trashhold for normalized innovation
 
 %% Load experimental data to filter
 % Pilot May 2021 - Matthew Millard
@@ -473,10 +473,13 @@ for j = 1:32
     y_z = joints(:,j,3);      % measurement vector
     xc_z(:,1) = [y_z(1); 0];    % initializaton for corrected state
     Pc_z(:,:,1) = [1 0; 0 1]; % initialization for corrected erros covariance matrix
-    
+
     
     %% Kalman Filter
     for k = 2:length(joints(:,j,1))
+        if (j == 18 && k == 238)
+            bar = 3;
+        end
         Ts = tstamp(k) - tstamp(k-1); % Current time step
     
         % Converting symbolic to double
@@ -495,9 +498,12 @@ for j = 1:32
         vi_x(k) = y_x(k) - C*xp_x(:,k); % innovation
         vi_y(k) = y_y(k) - C*xp_y(:,k); % innovation
         vi_z(k) = y_z(k) - C*xp_z(:,k); % innovation
-        Si_x(k) = C*Adn*Pp_x(:,:,k)*Adn'*C' + C*Q_x*C' + R_x; % covariance matrix of the innovation as n Eq. (5) of Sabatini (2003)
-        Si_y(k) = C*Adn*Pp_y(:,:,k)*Adn'*C' + C*Q_y*C' + R_y; % covariance matrix of the innovation as n Eq. (5) of Sabatini (2003)
-        Si_z(k) = C*Adn*Pp_z(:,:,k)*Adn'*C' + C*Q_z*C' + R_z; % covariance matrix of the innovation as n Eq. (5) of Sabatini (2003)
+        % Si_x(k) = C*Adn*Pp_x(:,:,k)*Adn'*C' + C*Q_x*C' + R_x; % covariance matrix of the innovation as n Eq. (5) of Sabatini (2003)
+        % Si_y(k) = C*Adn*Pp_y(:,:,k)*Adn'*C' + C*Q_y*C' + R_y; % covariance matrix of the innovation as n Eq. (5) of Sabatini (2003)
+        % Si_z(k) = C*Adn*Pp_z(:,:,k)*Adn'*C' + C*Q_z*C' + R_z; % covariance matrix of the innovation as n Eq. (5) of Sabatini (2003)
+        Si_x(k) = C*Pp_x(:,:,k)*C' + R_x;
+        Si_y(k) = C*Pp_y(:,:,k)*C' + R_y;
+        Si_z(k) = C*Pp_z(:,:,k)*C' + R_z;
         sigmaSi_x = sqrt(Si_x(k)); % only valid if covariance matrix Si is a scalar
         sigmaSi_y = sqrt(Si_y(k)); % only valid if covariance matrix Si is a scalar
         sigmaSi_z = sqrt(Si_z(k)); % only valid if covariance matrix Si is a scalar
@@ -507,9 +513,12 @@ for j = 1:32
     
         if all([abs(vinorm_x); abs(vinorm_y); abs(vinorm_z) ] < trashn)
             % Correction step
-            K_x(:,k) = Pp_x(:,:,k)*C'*pinv(C*Pp_x(:,:,k)*C' + R_x);
-            K_y(:,k) = Pp_y(:,:,k)*C'*pinv(C*Pp_y(:,:,k)*C' + R_y);
-            K_z(:,k) = Pp_z(:,:,k)*C'*pinv(C*Pp_z(:,:,k)*C' + R_z);
+            % K_x(:,k) = Pp_x(:,:,k)*C'*pinv(C*Pp_x(:,:,k)*C' + R_x);
+            % K_y(:,k) = Pp_y(:,:,k)*C'*pinv(C*Pp_y(:,:,k)*C' + R_y);
+            % K_z(:,k) = Pp_z(:,:,k)*C'*pinv(C*Pp_z(:,:,k)*C' + R_z);
+            K_x(:,k) = Pp_x(:,:,k)*C'*pinv(Si_x(k));
+            K_y(:,k) = Pp_y(:,:,k)*C'*pinv(Si_y(k));
+            K_z(:,k) = Pp_z(:,:,k)*C'*pinv(Si_z(k));
             xc_x(:,k) = xp_x(:,k) + K_x(:,k)*(y_x(k)' - C*xp_x(:,k));
             xc_y(:,k) = xp_y(:,k) + K_y(:,k)*(y_y(k)' - C*xp_y(:,k));
             xc_z(:,k) = xp_z(:,k) + K_z(:,k)*(y_z(k)' - C*xp_z(:,k));
