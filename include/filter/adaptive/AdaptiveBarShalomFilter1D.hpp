@@ -62,7 +62,7 @@ public:
 
         Value measurement_noise = measurement_error;
         Value system_noise = std::pow(((1.0 / 3) * 10) / 3, 2);
-        Value threshold = 5.0;
+        Value threshold = 10.0;
         Value system_scale_factor = 100;
         Value innovation_norm_max = 3.0;
         return AdaptiveBarShalomFilter1D(
@@ -157,9 +157,12 @@ public:
         measurement_noise_matrix(0, 0) = measurement_noise;
 
         if (abs_innovation_norm > innovation_norm_max) {
+            std::cout << "increase" << std::endl;
             system_noise *= system_scale_factor;
             ++system_scale_count;
         } else if (system_scale_count > 0) {
+            std::cout << "decrease" << std::endl;
+            system_noise /= system_scale_factor;
             --system_scale_count;
         }
 

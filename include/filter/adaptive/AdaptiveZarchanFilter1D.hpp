@@ -63,9 +63,9 @@ public:
 
         Value measurement_noise = measurement_error;
         Value system_noise = std::pow(((1.0 / 3) * 10) / 3, 2);
-        Value threshold = 5.0;
+        Value threshold = 10.0;
         Value system_scale_factor = 100;
-        int std_scale = 3.0;
+        int std_scale = 5.0;
         return AdaptiveZarchanFilter1D(
             A, C, G, measurement_noise, system_noise, threshold, system_scale_factor, std_scale, sub_ad, sub_gd);
     };
@@ -158,10 +158,12 @@ public:
         MatrixXd measurement_noise_matrix(1, 1);
         measurement_noise_matrix(0, 0) = measurement_noise;
 
-        if (std::abs(value) > std_scale * sigma_value) {
+        if (abs_innovation_norm > std_scale * sigma_value) {
+            std::cout << "increase" << std::endl;
             system_noise += system_scale_factor;
             ++system_scale_count;
         } else if (system_scale_count > 0) {
+            std::cout << "decrease" << std::endl;
             system_noise -= system_scale_factor;
             --system_scale_count;
         }
@@ -187,7 +189,7 @@ public:
             // std::cout << "corrected_errors" << std::endl;
             // std::cout << corrected_errors << std::endl;
         } else {
-            // std::cout << "use prediction" << std::endl;
+            std::cout << "use prediction" << std::endl;
             corrected_state = predicted_state;
             corrected_errors = predicted_errors;
         }
