@@ -368,32 +368,19 @@ public:
         last_time = new_time;
         return std::make_tuple(positions, velocities);
     }
+};
 
-    Point<Value> calculate_com(
-        std::vector<Point<Value>> filtered_positions,
-        MatrixXd MM) // MM[1x32]
-    {
-        Point<Value> com(0.0, 0.0, 0.0);
-        for (int joint = 0; joint < this->joint_count(); ++joint) {
-            com.x += filtered_positions[joint].x * MM(0, joint);
-            com.y += filtered_positions[joint].y * MM(0, joint);
-            com.z += filtered_positions[joint].z * MM(0, joint);
-        }
-        return com;
-    }
+template <typename Value>
+class ConstrainedSkeletonFilterBuilder {
+    int m_joint_count;
 
-    Point<Value> calculate_x_com(
-        Point<Value> com,
-        Point<Value> com_dot,
-        Value l // length of inverted pendelum
-    )
+public:
+    ConstrainedSkeletonFilterBuilder(int joint_count)
+        : m_joint_count(joint_count)
+    {}
+
+    ConstrainedSkeletonFilter<Value> build()
     {
-        Value g = 9.81; // m/s
-        Value w_0 = g / l;
-        Point<Value> x_com(0.0, 0.0, 0.0);
-        x_com.x = com.x + (com_dot.x / w_0);
-        x_com.y = com.y + (com_dot.y / w_0);
-        x_com.z = com.z + (com_dot.z / w_0);
-        return x_com;
+        return ConstrainedSkeletonFilter<Value>(m_joint_count, get_cached_measurement_error(), get_azure_kinect_com_matrix());
     }
 };
