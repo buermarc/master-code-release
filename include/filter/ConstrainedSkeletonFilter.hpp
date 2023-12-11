@@ -314,6 +314,7 @@ public:
     std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values,
         Value new_time)
     {
+        std::cout << "Timestamp: " << new_time << std::endl;
         std::vector<Point<Value>> positions(32);
         std::vector<Point<Value>> velocities(32);
         std::fill(positions.begin(), positions.end(), Point(0.0, 0.0, 0.0));
