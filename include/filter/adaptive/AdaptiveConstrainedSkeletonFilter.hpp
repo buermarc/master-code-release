@@ -370,6 +370,7 @@ public:
         m_threshold = threshold;
 
         auto var = get_cached_measurement_error();
+        m_measurement_noises = var;
     }
 
     AdaptiveConstrainedSkeletonFilter<Value, FilterType> build()
