@@ -22,9 +22,9 @@ public:
         Point<Value> measurement_noise;
         Point<Value> system_noise;
         Value threshold = 10;
-        measurement_noise.x = std::sqrt(measurement_errors(joint, 0)) * 10;
-        measurement_noise.y = std::sqrt(measurement_errors(joint, 1)) * 10;
-        measurement_noise.z = std::sqrt(measurement_errors(joint, 2)) * 10;
+        measurement_noise.x = measurement_errors(joint, 0);
+        measurement_noise.y = measurement_errors(joint, 1);
+        measurement_noise.z = measurement_errors(joint, 2);
 
         Value factor_system_noise = 1.0 / 3;
         Value vmax = 10.0 * factor_system_noise;

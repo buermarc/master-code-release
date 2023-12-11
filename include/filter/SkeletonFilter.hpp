@@ -93,8 +93,8 @@ public:
         threshold = m_threshold;
 
         auto var = get_cached_measurement_error();
-        auto sqrt_var = var.array().sqrt();
-        auto measurement_noise_for_all_joints = 10 * sqrt_var;
+        // auto sqrt_var = var.array().sqrt();
+        auto measurement_noise_for_all_joints = var;
 
         Value factor_system_noise = 1.0 / 3;
         Value vmax = 10.0 * factor_system_noise;

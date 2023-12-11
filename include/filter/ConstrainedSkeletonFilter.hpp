@@ -154,9 +154,9 @@ public:
         phi_2 = m_phi_2;
 
         MatrixXd reshaped = m_measurement_noise.reshaped<Eigen::RowMajor>(9, 1);
-        auto sqrt = reshaped.array().sqrt();
-        auto sqrt_10 = 10 * sqrt.array();
-        MatrixXd pow_measurement_noise = sqrt_10.array().pow(2);
+        // auto sqrt = reshaped.array().sqrt();
+        // auto sqrt_10 = 10 * sqrt.array();
+        MatrixXd pow_measurement_noise = reshaped.array().pow(2);
         measurement_noise = pow_measurement_noise.asDiagonal();
 
         system_noise = m_system_noise;

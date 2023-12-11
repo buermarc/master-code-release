@@ -64,7 +64,7 @@ public:
             return result;
         };
 
-        Value measurement_noise = std::sqrt(measurement_error) * 10;
+        Value measurement_noise = measurement_error;
         Value system_noise = std::pow(((1.0 / 3) * 10) / 3, 2);
         Value threshold = 5.0;
         Value alpha_measurement = 0.5;
