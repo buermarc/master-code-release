@@ -232,9 +232,9 @@ int filter_data_with_constrained_skeleton_filter()
         unfiltered_values.push_back(current_joint_positions);
 
         std::chrono::duration<double, std::milli> time = stop - start;
-        std::cerr << time.count() << "ms\n";
+        // std::cerr << time.count() << "ms\n";
         // std::cout << values[0] << std::endl;
-        std::cerr << current_joint_positions[0].x - values[0].x << std::endl;
+        // std::cerr << current_joint_positions[0].x - values[0].x << std::endl;
         filtered_values.push_back(values);
         filtered_velocities.push_back(velocities);
     }
