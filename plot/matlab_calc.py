@@ -15,7 +15,6 @@ timestamps = np.load("../data/timestamps.npy")
 
 rows = unfiltered.values.shape[0]-1
 cols = unfiltered.values.shape[1]
-breakpoint()
 finite_diff_vel = np.zeros_like(cpp_vel)
 finite_diff_vel[1:] = (unfiltered.values[1:] - unfiltered.values[:-1]) / (timestamps[1:] - timestamps[:-1]).repeat(cols).reshape(rows, cols)
 finite_diff_vel[0] = finite_diff_vel[1]
@@ -42,6 +41,9 @@ for joint_idx in range(32):
 
     axis[0, 1].plot(result, marker=",", alpha=0.5)
     axis[0, 1].set_title(f"Diff Cpp - Mat {joint_idx}")
+
+    print(joint_idx)
+    print(f"where: {np.where(np.absolute(result) >= 0.05)}")
 
     axis[1, 1].plot(values - un_values, marker=",", alpha=0.5)
     axis[1, 1].set_title(f"Diff Cpp - Unfiltered {joint_idx}")
