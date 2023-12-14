@@ -266,6 +266,12 @@ public:
         }
     }
 
+    Value time_diff(Value new_time) {
+        if (!initialized)
+            return 0;
+        return new_time - last_time;
+    }
+
     void init(std::vector<Point<Value>> initial_points, Value initial_time)
     {
         if (initialized) {
@@ -305,7 +311,7 @@ public:
         std::fill(positions.begin(), positions.end(), Point(0.0, 0.0, 0.0));
         std::fill(velocities.begin(), velocities.end(), Point(0.0, 0.0, 0.0));
 
-        auto time_diff = new_time - last_time;
+        auto _time_diff = time_diff(new_time);
 
         for (auto& [_, filter] : joint_group_filters) {
             auto joints = filter.get_joints();
@@ -317,7 +323,7 @@ public:
                 measurement(3 * i + 2, 0) = values[joint].z;
                 ++i;
             }
-            MatrixXd result = filter.step(measurement, time_diff);
+            MatrixXd result = filter.step(measurement, _time_diff);
 
             i = 0;
 
@@ -339,7 +345,7 @@ public:
 
         // Skip joints which are already covered in constrained joint groups
         for (auto& [i, filter] : single_joint_filters) {
-            auto [position, velocity] = filter.step(values[i], time_diff);
+            auto [position, velocity] = filter.step(values[i], _time_diff);
             positions[i] = position;
             velocities[i] = velocity;
         }
