@@ -21,7 +21,7 @@ public:
     {
         Point<Value> measurement_noise;
         Point<Value> system_noise;
-        Value threshold = 10;
+        Value threshold = 10e9;
         measurement_noise.x = measurement_errors(joint, 0);
         measurement_noise.y = measurement_errors(joint, 1);
         measurement_noise.z = measurement_errors(joint, 2);

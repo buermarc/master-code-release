@@ -72,7 +72,7 @@ void save_measurement_erros()
     std::string var_path("./_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
     int joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
-    auto var = get_measurement_error(var_joints, joint_count, 209, 339);
+    auto var = get_cached_measurement_error();
 
     auto size = var.size();
     double* buffer = var.data();

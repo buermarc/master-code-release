@@ -280,6 +280,12 @@ public:
         }
     }
 
+    Value time_diff(Value new_time) {
+        if (!initialized)
+            return 0;
+        return new_time - last_time;
+    }
+
     void init(std::vector<Point<Value>> initial_points, Value initial_time)
     {
         if (initialized) {
