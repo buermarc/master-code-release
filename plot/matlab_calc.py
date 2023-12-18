@@ -30,20 +30,26 @@ for joint_idx in range(32):
     fig.tight_layout() # Or equivalently,  "plt.tight_layout()"
 
     axis[0, 0].plot(mat_values)
+    axis[0, 0].legend(["X", "Y", "Z"])
     axis[0, 0].set_title(f"Matlab {joint_idx}", fontsize=8)
 
     values = cpp[cpp.columns[(3 * joint_idx) : (3 * (joint_idx+1))]].values
 
+    # if (joint_idx == 17):
+    #     breakpoint()
     result = mat_values - values
 
     axis[1, 0].plot(values)
+    axis[1, 0].legend(["X", "Y", "Z"])
     axis[1, 0].set_title(f"Cpp {joint_idx}", fontsize=8)
 
     un_values = unfiltered[unfiltered.columns[(3 * joint_idx) : (3 * (joint_idx+1))]].values
     axis[2, 0].plot(un_values)
+    axis[2, 0].legend(["X", "Y", "Z"])
     axis[2, 0].set_title(f"Unfiltered {joint_idx}", fontsize=8)
 
     axis[0, 1].plot(result, marker=",", alpha=0.5)
+    axis[0, 1].legend(["X", "Y", "Z"])
     axis[0, 1].set_title(f"Diff Cpp - Mat {joint_idx}", fontsize=8)
 
     print(joint_idx)
@@ -52,11 +58,13 @@ for joint_idx in range(32):
     diff = values - un_values
     rms = np.sqrt(np.power(diff, 2).mean())
     axis[1, 1].plot(diff, marker=",", alpha=0.5)
+    axis[1, 1].legend(["X", "Y", "Z"])
     axis[1, 1].set_title(f"Diff Cpp - Unfiltered {joint_idx} RMS: {rms:.2E}", fontsize=8)
 
     diff = mat_values - un_values
     rms = np.sqrt(np.power(diff, 2).mean())
     axis[2, 1].plot(diff, marker=",", alpha=0.5)
+    axis[2, 1].legend(["X", "Y", "Z"])
     axis[2, 1].set_title(f"Diff Matlab - Unfiltered {joint_idx} RMS: {rms:.2E}", fontsize=8)
 
     plt.savefig(f"results/out-{joint_idx}.pdf")
@@ -71,6 +79,7 @@ for joint_idx in range(32):
     fig.tight_layout() # Or equivalently,  "plt.tight_layout()"
 
     axis[0, 0].plot(mat_values)
+    axis[0, 0].legend(["X", "Y", "Z"])
     axis[0, 0].set_title(f"Vel Matlab {joint_idx}", fontsize=8)
 
     values = cpp_vel[cpp_vel.columns[(3 * joint_idx) : (3 * (joint_idx+1))]].values
@@ -78,6 +87,7 @@ for joint_idx in range(32):
     result = mat_values - values
 
     axis[1, 0].plot(values)
+    axis[1, 0].legend(["X", "Y", "Z"])
     axis[1, 0].set_title(f"Vel Cpp {joint_idx}", fontsize=8)
 
     '''
@@ -87,6 +97,7 @@ for joint_idx in range(32):
     '''
 
     axis[0, 1].plot(result, marker=",", alpha=0.5)
+    axis[0, 1].legend(["X", "Y", "Z"])
     axis[0, 1].set_title(f"Vel Diff Cpp - Mat {joint_idx}", fontsize=8)
 
     '''
@@ -100,6 +111,7 @@ for joint_idx in range(32):
     finite_diff = finite_diff_vel[:, (3 * joint_idx) : (3 * (joint_idx+1))]
     rms = np.sqrt(np.power(finite_diff, 2).mean())
     axis[1, 1].plot(finite_diff, marker=",", alpha=0.5)
+    axis[1, 1].legend(["X", "Y", "Z"])
     axis[1, 1].set_title(f"Finite diff vel {joint_idx} RMS: {rms:.2E}", fontsize=8)
 
     plt.savefig(f"results/vel-out-{joint_idx}.pdf")
