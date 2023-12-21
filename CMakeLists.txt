@@ -101,6 +101,6 @@ IF(DEFINED ENV{FILTER_MAIN})
 
     find_package(ZLIB)
     add_executable(load src/loadnpy.cpp)
-    target_link_libraries(load cnpy ZLIB::ZLIB)
+    target_link_libraries(load cnpy ZLIB::ZLIB filter)
     add_dependencies(load eigen)
 ENDIF()

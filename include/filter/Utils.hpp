@@ -16,7 +16,7 @@ load_data(std::string path, int joint_counts, int max_frames = -1);
 
 MatrixXd get_cached_measurement_error();
 
-MatrixXd get_measurement_error(Tensor<double, 3> joints, int joint_counts, int frame_start, int frame_end);
+MatrixXd _get_measurement_error(Tensor<double, 3> joints, int joint_counts, int frame_start, int frame_end);
 
 template <typename Value>
 MatrixXd Q_discrete_white_noise_2d(Value time_diff, Value variation)

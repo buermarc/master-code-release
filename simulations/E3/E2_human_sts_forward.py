@@ -88,12 +88,14 @@ for i, frame in enumerate(sol.y[:model.nbQ()].T):
     for j, marker in enumerate(model.markers(frame)):
         data[i, j, :] = marker.to_array()
 
-print(data)
+#print(data)
 
 #for idx in np.arange(0, 11):
 #    print(data[:, idx, 0].var()+ data[:, idx, 1].var() + data[:, idx, 2].var())
 
 np.save("steps.npy", data)
+noisy_data = data + np.random.normal((data.mean() / 2), 2, data.shape)
+np.save("noisy_steps.npy", noisy_data)
 
 # Animate the model
 biorbd_viz.load_movement(sol.y[:model.nbQ()])

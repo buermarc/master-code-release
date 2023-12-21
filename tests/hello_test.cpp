@@ -181,7 +181,7 @@ TEST(RigidJointConstructFilter3InitTestsDefaultInit, BasicAssertions)
     std::string var_path(std::format("/home/{}/repos/master/code/_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
-    auto var = get_measurement_error(var_joints, joint_count, 209, 339);
+    auto var = _get_measurement_error(var_joints, joint_count, 209, 339);
 
     std::vector<int> joints = { 19, 20, 21 };
     auto filter = RigidJointConstructFilter3<double>::default_init(joints, var);
@@ -207,7 +207,7 @@ TEST(ConstrainedSkeletonFilterInit, BasicAssertions)
     std::string var_path(std::format("/home/{}/repos/master/code/_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
-    auto var = get_measurement_error(var_joints, joint_count, 209, 339);
+    auto var = _get_measurement_error(var_joints, joint_count, 209, 339);
 
     auto filter = ConstrainedSkeletonFilter<double>(
         joint_count,
@@ -236,7 +236,7 @@ TEST(PointFilter3DTest, BasicAssertions)
     std::string var_path(std::format("/home/{}/repos/master/code/_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
     auto joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
-    auto var = get_measurement_error(var_joints, joint_count, 209, 339);
+    auto var = _get_measurement_error(var_joints, joint_count, 209, 339);
 
     std::string data_path(std::format("/home/{}/repos/master/code/_matlab/sts_NFOV_UNBINNED_720P_30fps.json", std::getenv("USER")));
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);

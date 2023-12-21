@@ -179,7 +179,7 @@ int filter_data_with_constrained_skeleton_filter()
     std::string var_path("./_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
     int joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
-    auto var = get_measurement_error(var_joints, joint_count, 209, 339);
+    auto var = _get_measurement_error(var_joints, joint_count, 209, 339);
 
     std::string data_path("./_matlab/sts_NFOV_UNBINNED_720P_30fps.json");
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
@@ -380,7 +380,7 @@ int filter_data_with_skeleton_filter()
     std::string var_path("./_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
     int joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
-    auto var = get_measurement_error(var_joints, joint_count, 209, 339);
+    auto var = _get_measurement_error(var_joints, joint_count, 209, 339);
 
     std::string data_path("./_matlab/sts_NFOV_UNBINNED_720P_30fps.json");
     auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
