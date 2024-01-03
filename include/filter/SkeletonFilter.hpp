@@ -38,6 +38,25 @@ public:
         }
     }
 
+    SkeletonFilter(
+        int m_n_joints,
+        MatrixXd measurement_errors,
+        MatrixXd MM,
+        int threshold = 10
+        )
+        : n_joints(m_n_joints)
+        , SkeletonStabilityMetrics<Value>(MM)
+    {
+        double factor_system_noise = 1.0 / 3;
+        double vmax = 10.0 * factor_system_noise;
+        double sigma_system_noise = vmax / 3;
+        double system_noise = std::pow(sigma_system_noise, 2);
+        for (int i = 0; i < m_n_joints; ++i) {
+            auto filter = PointFilter3D<Value>::default_init(i, measurement_errors);
+            joint_filters.push_back(filter);
+        }
+    }
+
     void init(std::vector<Point<Value>> inital_points, Value initial_time)
     {
         if (initialized) {
