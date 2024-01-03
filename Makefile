@@ -30,3 +30,12 @@ build-in-dockerfile: docker-build
 _build-in-dockerfile:
 	FILTER_MAIN=1 FILTER_TEST=1 cmake -S . -B build-in-dockerfile
 	FILTER_MAIN=1 FILTER_TEST=1 cmake --build build-in-dockerfile
+
+simulation:
+	cd simulations/E3/ && python E2_human_sts_forward.py ../../data
+
+filter-simulation: simulation
+	FILTER_MAIN=1 cmake -S . -B build && cmake --build build && ./build/load 0.0015
+
+plot-simulation: filter-simulation
+	cd plot && python animate.py
