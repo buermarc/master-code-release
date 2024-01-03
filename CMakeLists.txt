@@ -103,4 +103,8 @@ IF(DEFINED ENV{FILTER_MAIN})
     add_executable(load src/loadnpy.cpp)
     target_link_libraries(load cnpy ZLIB::ZLIB filter)
     add_dependencies(load eigen)
+
+    add_executable(read_tsv src/read_tsv.cpp)
+    target_link_libraries(load cnpy ZLIB::ZLIB filter)
+    add_dependencies(load eigen)
 ENDIF()

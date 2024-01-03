@@ -51,12 +51,12 @@ def main():
     Q_0 = np.zeros(model.nbQ())
     Qdot_0 = np.ones(model.nbQ())*0.1
     # Qdot_0 = np.zeros(model.nbQ())
-    Qdot_0[0] = 0.5
-    Qdot_0[3] = -0.1
-    Qdot_0[6] = -0.3
-    Qdot_0[7] = 0.9
-    Qdot_0[9] = 0.3
-    Qdot_0[10] = -0.6
+    # Qdot_0[0] = 0.5
+    # Qdot_0[3] = -0.1
+    # Qdot_0[6] = -0.3
+    # Qdot_0[7] = 0.9
+    # Qdot_0[9] = 0.3
+    # Qdot_0[10] = -0.6
     X_0 = np.hstack((Q_0, Qdot_0))
 
     Tau = np.ones((ntau,))*0.1
