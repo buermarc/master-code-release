@@ -65,7 +65,7 @@ int main(int argc, char** argv)
     filter.init(points, time);
 
     for (int i = 1; i < shape.at(0); ++i) {
-        time += 33e-3;
+        time += (33e-3/2);
         points.clear();
         for (int j = 0; j < shape.at(1); ++j) {
             points.push_back(Point<double>(

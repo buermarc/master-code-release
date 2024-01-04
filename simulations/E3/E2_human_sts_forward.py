@@ -51,12 +51,12 @@ def main():
     Q_0 = np.zeros(model.nbQ())
     Qdot_0 = np.ones(model.nbQ())*0.1
     # Qdot_0 = np.zeros(model.nbQ())
-    # Qdot_0[0] = 0.5
-    # Qdot_0[3] = -0.1
-    # Qdot_0[6] = -0.3
-    # Qdot_0[7] = 0.9
-    # Qdot_0[9] = 0.3
-    # Qdot_0[10] = -0.6
+    Qdot_0[0] = 0.5
+    Qdot_0[3] = -0.1
+    Qdot_0[6] = -0.3
+    Qdot_0[7] = 0.9
+    Qdot_0[9] = 0.3
+    Qdot_0[10] = -0.6
     X_0 = np.hstack((Q_0, Qdot_0))
 
     Tau = np.ones((ntau,))*0.1
@@ -71,7 +71,7 @@ def main():
         return np.hstack((Qdot, Qddot.to_array()))
 
     end = 1
-    samples = 30 * end
+    samples = 60 * end
     sol = solve_ivp(fun, [0, end], X_0, method='RK45', t_eval=np.linspace(0, end, samples))
     #print(sol.t)
     #print(sol.y)

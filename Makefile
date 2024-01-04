@@ -35,7 +35,7 @@ simulation:
 	cd simulations/E3/ && python E2_human_sts_forward.py ../../data
 
 filter-simulation: simulation
-	FILTER_MAIN=1 cmake -S . -B build && cmake --build build && ./build/load 0.0005
+	FILTER_MAIN=1 cmake -S . -B build && cmake --build build && ./build/load 0.0015
 
 plot-simulation: filter-simulation
 	cd plot && python animate.py
