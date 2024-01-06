@@ -46,6 +46,92 @@ public:
         return projected_point;
     }
 
+    const Point<Value> cross_product(Point<Value>&& other) {
+        Point<Value> cross_product;
+        cross_product.x = this->y*other.z - this->z*other.y;
+        cross_product.y = this->z*other.x - this->x*other.z;
+        cross_product.z = this->x*other.y - this->y*other.x;
+        return cross_product;
+    }
+
+    const Point<Value> normalized() {
+        auto norm = std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));
+        Point<double> copy(this);
+        return copy / norm;
+    }
+
+    Point<Value> operator+(Point<Value> const& other)
+    {
+        Point<Value> result;
+        result.x = this->x + other.x;
+        result.y = this->y + other.y;
+        result.z = this->z + other.z;
+        return result;
+    }
+
+    Point<Value> operator-(Point<Value> const& other)
+    {
+        Point<Value> result;
+        result.x = this->x - other.x;
+        result.y = this->y - other.y;
+        result.z = this->z - other.z;
+        return result;
+    }
+
+    Point<Value> operator*(Point<Value> const& other)
+    {
+        Point<Value> result;
+        result.x = this->x * other.x;
+        result.y = this->y * other.y;
+        result.z = this->z * other.z;
+        return result;
+    }
+
+    Point<Value> operator/(Point<Value> const& other)
+    {
+        Point<Value> result;
+        result.x = this->x / other.x;
+        result.y = this->y / other.y;
+        result.z = this->z / other.z;
+        return result;
+    }
+
+    Point<Value> operator+(Value const& value)
+    {
+        Point<Value> result;
+        result.x = this->x + value;
+        result.y = this->y + value;
+        result.z = this->z + value;
+        return result;
+    }
+
+    Point<Value> operator-(Value const& value)
+    {
+        Point<Value> result;
+        result.x = this->x - value;
+        result.y = this->y - value;
+        result.z = this->z - value;
+        return result;
+    }
+
+    Point<Value> operator*(Value const& value)
+    {
+        Point<Value> result;
+        result.x = this->x * value;
+        result.y = this->y * value;
+        result.z = this->z * value;
+        return result;
+    }
+
+    Point<Value> operator/(Value const& value)
+    {
+        Point<Value> result;
+        result.x = this->x / value;
+        result.y = this->y / value;
+        result.z = this->z / value;
+        return result;
+    }
+
     template <typename U>
     friend std::ostream& operator<<(std::ostream& out, const Point<U>& point);
 

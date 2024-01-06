@@ -8,6 +8,13 @@
 #include<tclap/CmdLine.h>
 #include<filter/Point.hpp>
 
+Point<double> azure_kinect_origin_lab_coords(Point<double> l_ak, Point<double> r_ak, Point<double> b_ak) {
+    Point<double> middle_between_left_and_right = l_ak + (r_ak - l_ak) / 2;
+
+    auto result = (r_ak - l_ak).cross_product(b_ak - l_ak);
+    return result;
+}
+
 template<typename T>
 void print_vec(std::vector<T> vector) {
     std::for_each(vector.cbegin(), vector.cend()-1, [](auto ele){ std::cout << ele << ", " << std::endl;});
@@ -169,7 +176,9 @@ void read_marker_file(std::string file) {
     }
 
     print_vec("timestamps", timestamps);
-    print_vec("l_sae", l_sae);
+    print_vec("l_ak", l_ak);
+    print_vec("r_ak", r_ak);
+    print_vec("b_ak", b_ak);
     print_vec("l_hle", l_hle);
     print_vec("l_usp", l_usp);
     print_vec("r_hle", r_hle);
