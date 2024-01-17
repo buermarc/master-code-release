@@ -5,6 +5,10 @@
 #include <boost/archive/binary_oarchive.hpp>
 
 #include <nlohmann/json.hpp>
+#include <Eigen/Dense>
+
+using Eigen::MatrixXd;
+
 
 using json = nlohmann::json;
 
@@ -46,7 +50,7 @@ public:
         return projected_point;
     }
 
-    const Point<Value> cross_product(Point<Value>&& other) {
+    const Point<Value> cross_product(Point<Value>& other) {
         Point<Value> cross_product;
         cross_product.x = this->y*other.z - this->z*other.y;
         cross_product.y = this->z*other.x - this->x*other.z;
@@ -54,9 +58,13 @@ public:
         return cross_product;
     }
 
+    const Value norm() {
+        return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));
+    }
+
     const Point<Value> normalized() {
-        auto norm = std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));
-        Point<double> copy(this);
+        auto norm = this->norm();
+        Point<double> copy(*this);
         return copy / norm;
     }
 
@@ -86,6 +94,18 @@ public:
         result.z = this->z * other.z;
         return result;
     }
+
+    Point<Value> mat_mul(MatrixXd const& other)
+    {
+        assert(other.rows() == 3);
+        assert(other.cols() == 3);
+        Point<Value> result;
+        result.x = this->x * other(0, 0) + this->y * other(0, 1) + this->z * other(0, 2);
+        result.y = this->x * other(1, 0) + this->y * other(1, 1) + this->z * other(1, 2);
+        result.z = this->z * other(2, 0) + this->y * other(2, 1) + this->z * other(2, 2);
+        return result;
+    }
+
 
     Point<Value> operator/(Point<Value> const& other)
     {

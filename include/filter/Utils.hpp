@@ -12,6 +12,9 @@ using Eigen::MatrixXd;
 using Eigen::Tensor;
 
 std::tuple<Tensor<double, 3>, int, std::vector<double>, std::vector<bool>>
+load_filtered_data(std::string path, int joint_counts, int max_frames = -1);
+
+std::tuple<Tensor<double, 3>, int, std::vector<double>, std::vector<bool>>
 load_data(std::string path, int joint_counts, int max_frames = -1);
 
 MatrixXd get_cached_measurement_error();

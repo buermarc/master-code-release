@@ -178,3 +178,14 @@ public:
         m_filtered_velocities = velocities;
     }
 };
+
+template<typename Value>
+Point<Value> com_helper(std::vector<Point<Value>>& points, MatrixXd MM) {
+    Point<Value> com(0.0, 0.0, 0.0);
+    for (int joint = 0; joint < MM.cols(); ++joint) {
+        com.x += points[joint].x * MM(0, joint);
+        com.y += points[joint].y * MM(0, joint);
+        com.z += points[joint].z * MM(0, joint);
+    }
+    return com;
+}

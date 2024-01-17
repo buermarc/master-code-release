@@ -10,6 +10,50 @@ using Eigen::MatrixXd;
 using Eigen::Tensor;
 
 std::tuple<Tensor<double, 3>, int, std::vector<double>, std::vector<bool>>
+load_filtered_data(std::string path, int joint_counts, int max_frames)
+{
+    /**
+     * Load data json and calculate measurement noise
+     * Returns loaded joints, and variance
+     */
+    std::ifstream file(path);
+    json data = json::parse(file);
+    int n_frames = data["filters"][0][1]["filtered_positions"].size();
+
+    // Only loead until max_frames if sensible
+    if (max_frames != -1 && max_frames <= n_frames) {
+        n_frames = max_frames;
+    }
+
+    Tensor<double, 3> joints(n_frames, joint_counts, 3);
+    std::vector<double> timestamps;
+
+    auto is_null = std::vector<bool>(n_frames, false);
+
+    for (int i = 0; i < n_frames; ++i) {
+        timestamps.push_back((double)data["frames"][i]["timestamp_usec"] * 1e-6);
+
+        if (data["filters"][0][1]["filtered_positions"][i].is_null()) {
+            is_null[i] = true;
+            std::cout << "Did find null, continue, at: " << i << std::endl;
+            continue;
+        }
+
+        auto joint_positions = data["filters"][0][1]["filtered_positions"][i];
+        for (int j = 0; j < joint_counts; ++j) {
+            joints(i, j, 0) = joint_positions[j][0][0];
+            joints(i, j, 1) = joint_positions[j][0][1];
+            joints(i, j, 2) = joint_positions[j][0][2];
+
+            // Invert x axis
+            joints(i, j, 0) *= (-1);
+        }
+    }
+
+    return { joints, n_frames, timestamps, is_null };
+}
+
+std::tuple<Tensor<double, 3>, int, std::vector<double>, std::vector<bool>>
 load_data(std::string path, int joint_counts, int max_frames)
 {
     /**
@@ -44,6 +88,9 @@ load_data(std::string path, int joint_counts, int max_frames)
             joints(i, j, 0) = joint_positions[j][0];
             joints(i, j, 1) = joint_positions[j][1];
             joints(i, j, 2) = joint_positions[j][2];
+
+            // Invert x axis
+            joints(i, j, 0) *= (-1);
         }
     }
 
