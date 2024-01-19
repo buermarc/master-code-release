@@ -102,7 +102,7 @@ public:
         Point<Value> result;
         result.x = this->x * other(0, 0) + this->y * other(0, 1) + this->z * other(0, 2);
         result.y = this->x * other(1, 0) + this->y * other(1, 1) + this->z * other(1, 2);
-        result.z = this->z * other(2, 0) + this->y * other(2, 1) + this->z * other(2, 2);
+        result.z = this->x * other(2, 0) + this->y * other(2, 1) + this->z * other(2, 2);
         return result;
     }
 

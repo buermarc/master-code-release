@@ -45,8 +45,6 @@ load_filtered_data(std::string path, int joint_counts, int max_frames)
             joints(i, j, 1) = joint_positions[j][0][1];
             joints(i, j, 2) = joint_positions[j][0][2];
 
-            // Invert x axis
-            joints(i, j, 0) *= (-1);
         }
     }
 
