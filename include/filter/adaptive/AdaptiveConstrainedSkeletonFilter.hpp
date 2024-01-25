@@ -1,4 +1,5 @@
 #pragma once
+#include "filter/PointFilter3D.hpp"
 #include <cstddef>
 #include <functional>
 #include <tuple>
@@ -233,7 +234,7 @@ public:
 };
 
 template <typename Value, typename AdaptivePointFilter>
-class AdaptiveConstrainedSkeletonFilter : AbstractSkeletonFilter<Value> {
+class AdaptiveConstrainedSkeletonFilter : public AbstractSkeletonFilter<Value> {
     size_t n_joints;
     bool initialized = false;
     Value last_time;
@@ -366,8 +367,11 @@ public:
     }
 };
 
-template <typename Value, typename FilterType>
-class AdaptiveConstrainedSkeletonFilterBuilder : AbstractSkeletonFilterBuilder<Value> {
+template <typename Value>
+class ZarchanAdaptiveConstrainedSkeletonFilter : public AdaptiveConstrainedSkeletonFilter<Value, ZarPointFilter> {};
+
+template <typename Value, typename AdaptivePointFilter>
+class AdaptiveConstrainedSkeletonFilterBuilder : public AbstractSkeletonFilterBuilder<Value> {
     int m_joint_count;
     MatrixXd m_measurement_noises;
     Value m_threshold;
@@ -385,29 +389,6 @@ public:
 
     std::shared_ptr<AbstractSkeletonFilter<Value>> build() override
     {
-        return std::make_shared<AdaptiveConstrainedSkeletonFilter<Value, FilterType>>(m_joint_count, m_measurement_noises, get_azure_kinect_com_matrix());
-    }
-};
-
-template <typename Value>
-class ZarchanAdaptiveConstrainedSkeletonFilterBuilder : AbstractSkeletonFilterBuilder<Value> {
-    int m_joint_count;
-    MatrixXd m_measurement_noises;
-    Value m_threshold;
-
-public:
-    ZarchanAdaptiveConstrainedSkeletonFilterBuilder(int joint_count,
-        Value threshold)
-        : m_joint_count(joint_count)
-    {
-        m_threshold = threshold;
-
-        auto var = get_cached_measurement_error();
-        m_measurement_noises = var;
-    }
-
-    std::shared_ptr<AbstractSkeletonFilter<Value>> build() override
-    {
-        return std::make_shared<AdaptiveConstrainedSkeletonFilter<Value, ZarPointFilter>>(m_joint_count, m_measurement_noises, get_azure_kinect_com_matrix());
+        return std::make_shared<AdaptiveConstrainedSkeletonFilter<Value, AdaptivePointFilter>>(m_joint_count, m_measurement_noises, get_azure_kinect_com_matrix());
     }
 };
