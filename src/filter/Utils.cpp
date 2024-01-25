@@ -18,21 +18,44 @@ load_filtered_data(std::string path, int joint_counts, int max_frames)
      */
     std::ifstream file(path);
     json data = json::parse(file);
+
+    /*
+    int n_frames = data["filters"][0][1]["filtered_positions"].size();
+    std::cout << "full frames: " << data["frames"].size() << std::endl;
+    std::cout << "less frames: " << data["filters"][0][1]["filtered_positions"].size() << std::endl;
+    */
+
     int n_frames = data["filters"][0][1]["filtered_positions"].size();
 
+    std::cout << "full frames: " << data["frames"].size() << std::endl;
     // Only loead until max_frames if sensible
     if (max_frames != -1 && max_frames <= n_frames) {
         n_frames = max_frames;
     }
 
-    Tensor<double, 3> joints(n_frames, joint_counts, 3);
+    Tensor<double, 3> joints(n_frames+1, joint_counts, 3);
     std::vector<double> timestamps;
 
     auto is_null = std::vector<bool>(n_frames, false);
 
-    for (int i = 0; i < n_frames; ++i) {
-        timestamps.push_back((double)data["frames"][i]["timestamp_usec"] * 1e-6);
+    // Load first frame from unfiltered data
+    auto joint_positions = data["frames"][0]["bodies"][0]["joint_positions"];
+    for (int j = 0; j < joint_counts; ++j) {
+        joints(0, j, 0) = (double)joint_positions[j][0] / 1000;
+        joints(0, j, 1) = (double)joint_positions[j][1] / 1000;
+        joints(0, j, 2) = (double)joint_positions[j][2] / 1000;
+    }
+    std::cout << "First filtered" << std::endl;
+    std::cout << joint_positions[7][0] << ", " << joint_positions[7][1] << ", " << joint_positions[7][2] << std::endl;
+    timestamps.push_back((double)data["frames"][0]["timestamp_usec"] * 1e-6);
 
+    // Load the rest of the frames from the filtered data
+    for (int i = 0; i < n_frames; ++i) {
+        timestamps.push_back((double)data["frames"][i+1]["timestamp_usec"] * 1e-6);
+
+        // Filtered json index i
+        // Filtered tensor index i+1
+        // Timestamp index i+1
         if (data["filters"][0][1]["filtered_positions"][i].is_null()) {
             is_null[i] = true;
             std::cout << "Did find null, continue, at: " << i << std::endl;
@@ -41,9 +64,9 @@ load_filtered_data(std::string path, int joint_counts, int max_frames)
 
         auto joint_positions = data["filters"][0][1]["filtered_positions"][i];
         for (int j = 0; j < joint_counts; ++j) {
-            joints(i, j, 0) = joint_positions[j][0][0];
-            joints(i, j, 1) = joint_positions[j][0][1];
-            joints(i, j, 2) = joint_positions[j][0][2];
+            joints(i+1, j, 0) = joint_positions[j][0][0];
+            joints(i+1, j, 1) = joint_positions[j][0][1];
+            joints(i+1, j, 2) = joint_positions[j][0][2];
 
         }
     }
@@ -72,6 +95,9 @@ load_data(std::string path, int joint_counts, int max_frames)
 
     auto is_null = std::vector<bool>(n_frames, false);
 
+    std::cout << "First unfiltered" << std::endl;
+    auto joint_positions = data["frames"][0]["bodies"][0]["joint_positions"];
+    std::cout << joint_positions[7][0] << ", " << joint_positions[7][1] << ", " << joint_positions[7][2] << std::endl;
     for (int i = 0; i < n_frames; ++i) {
         timestamps.push_back((double)data["frames"][i]["timestamp_usec"] * 1e-6);
 
@@ -86,9 +112,6 @@ load_data(std::string path, int joint_counts, int max_frames)
             joints(i, j, 0) = joint_positions[j][0];
             joints(i, j, 1) = joint_positions[j][1];
             joints(i, j, 2) = joint_positions[j][2];
-
-            // Invert x axis
-            joints(i, j, 0) *= (-1);
         }
     }
 

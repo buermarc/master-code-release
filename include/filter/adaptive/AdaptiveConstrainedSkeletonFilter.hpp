@@ -6,10 +6,15 @@
 
 #include <Eigen/Dense>
 
+#include <filter/adaptive/AdaptiveZarchanFilter1D.hpp>
+#include <filter/adaptive/AdaptivePointFilter3D.hpp>
+#include <filter/AbstractSkeletonFilter.hpp>
 #include <filter/Point.hpp>
 #include <filter/SkeletonSaver.hpp>
 #include <filter/Utils.hpp>
 #include <filter/com.hpp>
+
+typedef AdaptivePointFilter3D<double, AdaptiveZarchanFilter1D<double>> ZarPointFilter;
 
 using Eigen::MatrixXd;
 using Eigen::seq;
@@ -228,7 +233,7 @@ public:
 };
 
 template <typename Value, typename AdaptivePointFilter>
-class AdaptiveConstrainedSkeletonFilter : public SkeletonStabilityMetrics<Value>, public SkeletonSaver<Value> {
+class AdaptiveConstrainedSkeletonFilter : AbstractSkeletonFilter<Value> {
     size_t n_joints;
     bool initialized = false;
     Value last_time;
@@ -240,14 +245,13 @@ class AdaptiveConstrainedSkeletonFilter : public SkeletonStabilityMetrics<Value>
 
 public:
     int joint_count() { return n_joints; }
-    bool is_initialized() { return initialized; }
+    bool is_initialized() override { return initialized; }
 
     AdaptiveConstrainedSkeletonFilter(
         int m_n_joints,
         MatrixXd measurement_errors,
         MatrixXd MM)
         : n_joints(m_n_joints)
-        , SkeletonStabilityMetrics<Value>(MM)
     {
         for (auto joint_group : constrained_joint_groups) {
             auto filter = AdaptiveRigidJointConstructFilter3<Value>::default_init(joint_group, measurement_errors);
@@ -266,13 +270,13 @@ public:
         }
     }
 
-    Value time_diff(Value new_time) {
+    Value time_diff(Value new_time) override {
         if (!initialized)
             return 0;
         return new_time - last_time;
     }
 
-    void init(std::vector<Point<Value>> initial_points, Value initial_time)
+    void init(std::vector<Point<Value>> initial_points, Value initial_time) override
     {
         if (initialized) {
             return;
@@ -303,8 +307,8 @@ public:
         initialized = true;
     }
 
-    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values,
-        Value new_time)
+    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values, 
+        Value new_time) override
     {
         std::vector<Point<Value>> positions(32);
         std::vector<Point<Value>> velocities(32);
@@ -363,7 +367,7 @@ public:
 };
 
 template <typename Value, typename FilterType>
-class AdaptiveConstrainedSkeletonFilterBuilder {
+class AdaptiveConstrainedSkeletonFilterBuilder : AbstractSkeletonFilterBuilder<Value> {
     int m_joint_count;
     MatrixXd m_measurement_noises;
     Value m_threshold;
@@ -379,8 +383,31 @@ public:
         m_measurement_noises = var;
     }
 
-    AdaptiveConstrainedSkeletonFilter<Value, FilterType> build()
+    std::shared_ptr<AbstractSkeletonFilter<Value>> build() override
     {
-        return AdaptiveConstrainedSkeletonFilter<Value, FilterType>(m_joint_count, m_measurement_noises, get_azure_kinect_com_matrix());
+        return std::make_shared<AdaptiveConstrainedSkeletonFilter<Value, FilterType>>(m_joint_count, m_measurement_noises, get_azure_kinect_com_matrix());
+    }
+};
+
+template <typename Value>
+class ZarchanAdaptiveConstrainedSkeletonFilterBuilder : AbstractSkeletonFilterBuilder<Value> {
+    int m_joint_count;
+    MatrixXd m_measurement_noises;
+    Value m_threshold;
+
+public:
+    ZarchanAdaptiveConstrainedSkeletonFilterBuilder(int joint_count,
+        Value threshold)
+        : m_joint_count(joint_count)
+    {
+        m_threshold = threshold;
+
+        auto var = get_cached_measurement_error();
+        m_measurement_noises = var;
+    }
+
+    std::shared_ptr<AbstractSkeletonFilter<Value>> build() override
+    {
+        return std::make_shared<AdaptiveConstrainedSkeletonFilter<Value, ZarPointFilter>>(m_joint_count, m_measurement_noises, get_azure_kinect_com_matrix());
     }
 };

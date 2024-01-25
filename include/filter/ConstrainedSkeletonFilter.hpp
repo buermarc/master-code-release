@@ -6,6 +6,7 @@
 
 #include <Eigen/Dense>
 
+#include <filter/AbstractSkeletonFilter.hpp>
 #include <filter/Point.hpp>
 #include <filter/PointFilter3D.hpp>
 #include <filter/SkeletonSaver.hpp>
@@ -242,7 +243,7 @@ public:
 };
 
 template <typename Value>
-class ConstrainedSkeletonFilter : public SkeletonStabilityMetrics<Value>, public SkeletonSaver<Value> {
+class ConstrainedSkeletonFilter : public AbstractSkeletonFilter<Value> {
     size_t n_joints;
     bool initialized = false;
     Value last_time;
@@ -254,14 +255,14 @@ class ConstrainedSkeletonFilter : public SkeletonStabilityMetrics<Value>, public
 
 public:
     int joint_count() { return n_joints; }
-    bool is_initialized() { return initialized; }
+    bool is_initialized() override { return initialized; }
 
     ConstrainedSkeletonFilter(
         int m_n_joints,
         MatrixXd measurement_errors,
         MatrixXd MM)
         : n_joints(m_n_joints)
-        , SkeletonStabilityMetrics<Value>(MM)
+        , AbstractSkeletonFilter<Value>()
     {
         for (auto joint_group : constrained_joint_groups) {
             auto filter = RigidJointConstructFilter3<Value>::default_init(joint_group, measurement_errors);
@@ -280,13 +281,13 @@ public:
         }
     }
 
-    Value time_diff(Value new_time) {
+    Value time_diff(Value new_time) override {
         if (!initialized)
             return 0;
         return new_time - last_time;
     }
 
-    void init(std::vector<Point<Value>> initial_points, Value initial_time)
+    void init(std::vector<Point<Value>> initial_points, Value initial_time) override
     {
         if (initialized) {
             return;
@@ -318,7 +319,7 @@ public:
     }
 
     std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values,
-        Value new_time)
+        Value new_time) override
     {
         std::cout << "Timestamp: " << new_time << std::endl;
         std::vector<Point<Value>> positions(32);
@@ -378,7 +379,7 @@ public:
 };
 
 template <typename Value>
-class ConstrainedSkeletonFilterBuilder {
+class ConstrainedSkeletonFilterBuilder : public AbstractSkeletonFilterBuilder<Value> {
     int m_joint_count;
 
 public:
@@ -386,8 +387,8 @@ public:
         : m_joint_count(joint_count)
     {}
 
-    ConstrainedSkeletonFilter<Value> build()
+    std::shared_ptr<AbstractSkeletonFilter<Value>> build() override
     {
-        return ConstrainedSkeletonFilter<Value>(m_joint_count, get_cached_measurement_error(), get_azure_kinect_com_matrix());
+        return std::make_shared<ConstrainedSkeletonFilter<Value>>(m_joint_count, get_cached_measurement_error(), get_azure_kinect_com_matrix());
     }
 };

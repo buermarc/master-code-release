@@ -129,8 +129,8 @@ public:
     std::vector<Point<Value>> m_filtered_velocities = std::vector<Point<Value>>();
     MatrixXd m_MM;
 
-    SkeletonStabilityMetrics(MatrixXd mm)
-        : m_MM(mm)
+    SkeletonStabilityMetrics()
+        : m_MM(get_azure_kinect_com_matrix())
     {
     }
 

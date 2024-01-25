@@ -5,6 +5,7 @@
 
 #include <Eigen/Dense>
 
+#include <filter/AbstractSkeletonFilter.hpp>
 #include <filter/Point.hpp>
 #include <filter/PointFilter3D.hpp>
 #include <filter/SkeletonSaver.hpp>
@@ -14,7 +15,7 @@
 using Eigen::MatrixXd;
 
 template <typename Value>
-class SkeletonFilter : public SkeletonStabilityMetrics<Value>, public SkeletonSaver<Value> {
+class SkeletonFilter : public AbstractSkeletonFilter<Value> {
     size_t n_joints;
     bool initialized = false;
     Value last_time;
@@ -23,13 +24,12 @@ class SkeletonFilter : public SkeletonStabilityMetrics<Value>, public SkeletonSa
 
 public:
     int joint_count() { return n_joints; }
-    bool is_initialized() { return initialized; }
+    bool is_initialized() override { return initialized; }
 
     SkeletonFilter(std::vector<Point<Value>> measurement_noises,
         std::vector<Point<Value>> system_noises, int m_n_joints,
         Value threshold, MatrixXd MM)
         : n_joints(m_n_joints)
-        , SkeletonStabilityMetrics<Value>(MM)
     {
         for (int i = 0; i < m_n_joints; ++i) {
             auto filter = PointFilter3D<Value>(measurement_noises[i],
@@ -45,7 +45,7 @@ public:
         int threshold = 10
         )
         : n_joints(m_n_joints)
-        , SkeletonStabilityMetrics<Value>(MM)
+        , SkeletonStabilityMetrics<Value>()
     {
         double factor_system_noise = 1.0 / 3;
         double vmax = 10.0 * factor_system_noise;
@@ -57,7 +57,7 @@ public:
         }
     }
 
-    void init(std::vector<Point<Value>> inital_points, Value initial_time)
+    void init(std::vector<Point<Value>> inital_points, Value initial_time) override
     {
         if (initialized) {
             return;
@@ -69,7 +69,13 @@ public:
         initialized = true;
     }
 
-    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values, Value new_time)
+    Value time_diff(Value new_time) override {
+        if (!initialized)
+            return 0;
+        return new_time - last_time;
+    }
+
+    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values, Value new_time) override
     {
         if (!initialized) {
             init(values, new_time);
@@ -98,7 +104,7 @@ public:
 };
 
 template <typename Value>
-class SkeletonFilterBuilder {
+class SkeletonFilterBuilder : AbstractSkeletonFilterBuilder<Value> {
     int joint_count;
     std::vector<Point<Value>> measurement_noises;
     std::vector<Point<Value>> system_noises;
@@ -135,9 +141,9 @@ public:
         system_noises = m_system_noises;
     }
 
-    SkeletonFilter<Value> build()
+    std::shared_ptr<AbstractSkeletonFilter<Value>> build() override
     {
-        return SkeletonFilter<Value>(measurement_noises, system_noises, joint_count,
+        return std::make_shared<SkeletonFilter<Value>>(measurement_noises, system_noises, joint_count,
             threshold, get_azure_kinect_com_matrix());
     }
 };
