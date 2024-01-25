@@ -281,7 +281,8 @@ public:
         }
     }
 
-    Value time_diff(Value new_time) override {
+    Value time_diff(Value new_time) override
+    {
         if (!initialized)
             return 0;
         return new_time - last_time;
@@ -385,7 +386,8 @@ class ConstrainedSkeletonFilterBuilder : public AbstractSkeletonFilterBuilder<Va
 public:
     ConstrainedSkeletonFilterBuilder(int joint_count)
         : m_joint_count(joint_count)
-    {}
+    {
+    }
 
     std::shared_ptr<AbstractSkeletonFilter<Value>> build() override
     {

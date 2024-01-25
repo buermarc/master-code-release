@@ -6,12 +6,12 @@
 
 #include <Eigen/Dense>
 
-#include <filter/adaptive/AdaptiveZarchanFilter1D.hpp>
-#include <filter/adaptive/AdaptivePointFilter3D.hpp>
 #include <filter/AbstractSkeletonFilter.hpp>
 #include <filter/Point.hpp>
 #include <filter/SkeletonSaver.hpp>
 #include <filter/Utils.hpp>
+#include <filter/adaptive/AdaptivePointFilter3D.hpp>
+#include <filter/adaptive/AdaptiveZarchanFilter1D.hpp>
 #include <filter/com.hpp>
 
 typedef AdaptivePointFilter3D<double, AdaptiveZarchanFilter1D<double>> ZarPointFilter;
@@ -270,7 +270,8 @@ public:
         }
     }
 
-    Value time_diff(Value new_time) override {
+    Value time_diff(Value new_time) override
+    {
         if (!initialized)
             return 0;
         return new_time - last_time;
@@ -307,7 +308,7 @@ public:
         initialized = true;
     }
 
-    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values, 
+    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values,
         Value new_time) override
     {
         std::vector<Point<Value>> positions(32);
@@ -363,7 +364,6 @@ public:
         last_time = new_time;
         return std::make_tuple(positions, velocities);
     }
-
 };
 
 template <typename Value, typename FilterType>

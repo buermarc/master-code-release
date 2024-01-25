@@ -4,11 +4,10 @@
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
-#include <nlohmann/json.hpp>
 #include <Eigen/Dense>
+#include <nlohmann/json.hpp>
 
 using Eigen::MatrixXd;
-
 
 using json = nlohmann::json;
 
@@ -38,11 +37,10 @@ public:
     {
     }
 
-    const Point<Value> project_onto_plane(Point<Value>& point, Point<Value>& normed_n) {
+    const Point<Value> project_onto_plane(Point<Value>& point, Point<Value>& normed_n)
+    {
         Point<Value> projected_point;
-        Value sum = (point.x - this->x) * normed_n.x +
-            (point.y - this->y) * normed_n.y +
-            (point.z - this->z) * normed_n.z;
+        Value sum = (point.x - this->x) * normed_n.x + (point.y - this->y) * normed_n.y + (point.z - this->z) * normed_n.z;
         std::cout << "sum: " << sum << std::endl;
         projected_point.x = this->x + sum * normed_n.x;
         projected_point.y = this->y + sum * normed_n.y;
@@ -50,19 +48,22 @@ public:
         return projected_point;
     }
 
-    const Point<Value> cross_product(Point<Value>& other) {
+    const Point<Value> cross_product(Point<Value>& other)
+    {
         Point<Value> cross_product;
-        cross_product.x = this->y*other.z - this->z*other.y;
-        cross_product.y = this->z*other.x - this->x*other.z;
-        cross_product.z = this->x*other.y - this->y*other.x;
+        cross_product.x = this->y * other.z - this->z * other.y;
+        cross_product.y = this->z * other.x - this->x * other.z;
+        cross_product.z = this->x * other.y - this->y * other.x;
         return cross_product;
     }
 
-    const Value norm() {
+    const Value norm()
+    {
         return std::sqrt(std::pow(x, 2) + std::pow(y, 2) + std::pow(z, 2));
     }
 
-    const Point<Value> normalized() {
+    const Point<Value> normalized()
+    {
         auto norm = this->norm();
         Point<double> copy(*this);
         return copy / norm;
@@ -105,7 +106,6 @@ public:
         result.z = this->x * other(2, 0) + this->y * other(2, 1) + this->z * other(2, 2);
         return result;
     }
-
 
     Point<Value> operator/(Point<Value> const& other)
     {

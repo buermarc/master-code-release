@@ -42,8 +42,7 @@ public:
         int m_n_joints,
         MatrixXd measurement_errors,
         MatrixXd MM,
-        int threshold = 10
-        )
+        int threshold = 10)
         : n_joints(m_n_joints)
         , SkeletonStabilityMetrics<Value>()
     {
@@ -69,7 +68,8 @@ public:
         initialized = true;
     }
 
-    Value time_diff(Value new_time) override {
+    Value time_diff(Value new_time) override
+    {
         if (!initialized)
             return 0;
         return new_time - last_time;

@@ -33,7 +33,7 @@ load_filtered_data(std::string path, int joint_counts, int max_frames)
         n_frames = max_frames;
     }
 
-    Tensor<double, 3> joints(n_frames+1, joint_counts, 3);
+    Tensor<double, 3> joints(n_frames + 1, joint_counts, 3);
     std::vector<double> timestamps;
 
     auto is_null = std::vector<bool>(n_frames, false);
@@ -51,7 +51,7 @@ load_filtered_data(std::string path, int joint_counts, int max_frames)
 
     // Load the rest of the frames from the filtered data
     for (int i = 0; i < n_frames; ++i) {
-        timestamps.push_back((double)data["frames"][i+1]["timestamp_usec"] * 1e-6);
+        timestamps.push_back((double)data["frames"][i + 1]["timestamp_usec"] * 1e-6);
 
         // Filtered json index i
         // Filtered tensor index i+1
@@ -64,10 +64,9 @@ load_filtered_data(std::string path, int joint_counts, int max_frames)
 
         auto joint_positions = data["filters"][0][1]["filtered_positions"][i];
         for (int j = 0; j < joint_counts; ++j) {
-            joints(i+1, j, 0) = joint_positions[j][0][0];
-            joints(i+1, j, 1) = joint_positions[j][0][1];
-            joints(i+1, j, 2) = joint_positions[j][0][2];
-
+            joints(i + 1, j, 0) = joint_positions[j][0][0];
+            joints(i + 1, j, 1) = joint_positions[j][0][1];
+            joints(i + 1, j, 2) = joint_positions[j][0][2];
         }
     }
 

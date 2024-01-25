@@ -1,29 +1,32 @@
-#include<string>
-#include<tuple>
-#include<algorithm>
-#include<vector>
-#include<fstream>
-#include<iostream>
-#include<sstream>
-#include<tclap/CmdLine.h>
-#include<filter/Point.hpp>
+#include <algorithm>
+#include <filter/Point.hpp>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+#include <tclap/CmdLine.h>
+#include <tuple>
+#include <vector>
 
-Point<double> azure_kinect_origin_lab_coords(Point<double> l_ak, Point<double> r_ak, Point<double> b_ak) {
+Point<double> azure_kinect_origin_lab_coords(Point<double> l_ak, Point<double> r_ak, Point<double> b_ak)
+{
     Point<double> middle_between_left_and_right = l_ak + (r_ak - l_ak) / 2;
 
     auto result = (r_ak - l_ak).cross_product(b_ak - l_ak);
     return result;
 }
 
-template<typename T>
-void print_vec(std::vector<T> vector) {
-    std::for_each(vector.cbegin(), vector.cend()-1, [](auto ele){ std::cout << ele << ", " << std::endl;});
+template <typename T>
+void print_vec(std::vector<T> vector)
+{
+    std::for_each(vector.cbegin(), vector.cend() - 1, [](auto ele) { std::cout << ele << ", " << std::endl; });
     std::cout << vector.back() << std::endl;
 }
-template<typename T>
-void print_vec(std::string name, std::vector<T> vector) {
+template <typename T>
+void print_vec(std::string name, std::vector<T> vector)
+{
     std::cout << "@name: ";
-    std::for_each(vector.cbegin(), vector.cend()-1, [](auto ele){ std::cout << ele << ", " << std::endl;});
+    std::for_each(vector.cbegin(), vector.cend() - 1, [](auto ele) { std::cout << ele << ", " << std::endl; });
     std::cout << vector.back() << std::endl;
 }
 
@@ -59,7 +62,8 @@ std::vector<std::string> getNextLineAndSplitIntoTokens(std::istream& str)
     return result;
 }
 
-void read_marker_file(std::string file) {
+void read_marker_file(std::string file)
+{
 
     std::ifstream csv_file(file);
 
@@ -73,10 +77,9 @@ void read_marker_file(std::string file) {
         for (auto element : header) {
             std::cout << element << " ";
         }
-        std::cout << std::endl;;
+        std::cout << std::endl;
+        ;
     } while (key != "Frame");
-
-
 
     std::vector<double> timestamps;
     std::vector<Point<double>> l_ak;
@@ -107,72 +110,56 @@ void read_marker_file(std::string file) {
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
 
         i += 3;
         r_ak.push_back(
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
 
         i += 3;
         b_ak.push_back(
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
 
         i += 3;
         l_sae.push_back(
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
 
         i += 3;
         l_hle.push_back(
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
 
         i += 3;
         l_usp.push_back(
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
 
         i += 3;
         r_hle.push_back(
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
 
         i += 3;
         r_usp.push_back(
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
     }
 
     print_vec("timestamps", timestamps);
@@ -189,9 +176,9 @@ std::tuple<
     std::vector<double>,
     std::vector<Point<double>>,
     std::vector<Point<double>>,
-    std::vector<Point<double>>
->
-read_force_plate_file(std::string force_plate_file) {
+    std::vector<Point<double>>>
+read_force_plate_file(std::string force_plate_file)
+{
     std::ifstream csv_file(force_plate_file);
 
     // Go through headers for file
@@ -204,10 +191,9 @@ read_force_plate_file(std::string force_plate_file) {
         for (auto element : header) {
             std::cout << element << " ";
         }
-        std::cout << std::endl;;
+        std::cout << std::endl;
+        ;
     } while (key != "SAMPLE");
-
-
 
     std::vector<double> timestamps;
     std::vector<Point<double>> force;
@@ -230,32 +216,27 @@ read_force_plate_file(std::string force_plate_file) {
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
 
         i += 3;
         moment.push_back(
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
 
         i += 3;
         cop.push_back(
             Point<double>(
                 std::stod(results.at(i + 0)),
                 std::stod(results.at(i + 1)),
-                std::stod(results.at(i + 2))
-            )
-        );
+                std::stod(results.at(i + 2))));
     }
     return std::make_tuple(timestamps, force, moment, cop);
 }
 
-void read_force_plate_files(std::string force_plate_file_f1, std::string force_plate_file_f2) {
+void read_force_plate_files(std::string force_plate_file_f1, std::string force_plate_file_f2)
+{
     auto [timestamp_f1, force_f1, moment_f1, com_f1] = read_force_plate_file(force_plate_file_f1);
     auto [timestamp_f2, force_f2, moment_f2, com_f2] = read_force_plate_file(force_plate_file_f2);
 
@@ -269,7 +250,8 @@ void read_force_plate_files(std::string force_plate_file_f1, std::string force_p
     print_vec("com_f2", com_f2);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
 
     TCLAP::CmdLine cmd("Read tsv file from Qualisys.");
 
@@ -286,7 +268,7 @@ int main(int argc, char** argv) {
     std::stringstream force_plate_file_name_f1;
     std::stringstream force_plate_file_name_f2;
 
-    marker_file_name << file <<  ".tsv";
+    marker_file_name << file << ".tsv";
     force_plate_file_name_f1 << file << "_f_1.tsv";
     force_plate_file_name_f2 << file << "_f_2.tsv";
 
@@ -296,5 +278,4 @@ int main(int argc, char** argv) {
     std::cout << marker_file_name.str() << std::endl;
     std::cout << force_plate_file_name_f1.str() << std::endl;
     std::cout << force_plate_file_name_f2.str() << std::endl;
-
 }

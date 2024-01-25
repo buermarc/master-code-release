@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cnpy/cnpy.h>
 #include <cstddef>
 #include <cstdio>
 #include <fstream>
@@ -11,7 +12,6 @@
 #include <string>
 #include <unsupported/Eigen/CXX11/Tensor>
 #include <unsupported/Eigen/MatrixFunctions>
-#include <cnpy/cnpy.h>
 
 #include <filter/ConstrainedSkeletonFilter.hpp>
 #include <filter/SkeletonFilter.hpp>
@@ -313,7 +313,6 @@ int filter_data_with_constrained_skeleton_filter()
 
     std::ofstream un_file;
     un_file.open("data/un_out.csv");
-
 
     // Write header
     for (int i = 0; i < end - 1; ++i) {

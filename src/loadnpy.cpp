@@ -55,8 +55,7 @@ int main(int argc, char** argv)
         points.push_back(Point<double>(
             noisy_matrix(0, i, 0),
             noisy_matrix(0, i, 1),
-            noisy_matrix(0, i, 2)
-        ));
+            noisy_matrix(0, i, 2)));
         filtered(0, i, 0) = noisy_matrix(0, i, 0);
         filtered(0, i, 1) = noisy_matrix(0, i, 1);
         filtered(0, i, 2) = noisy_matrix(0, i, 2);
@@ -65,14 +64,13 @@ int main(int argc, char** argv)
     filter.init(points, time);
 
     for (int i = 1; i < shape.at(0); ++i) {
-        time += (33e-3/2);
+        time += (33e-3 / 2);
         points.clear();
         for (int j = 0; j < shape.at(1); ++j) {
             points.push_back(Point<double>(
                 noisy_matrix(i, j, 0),
                 noisy_matrix(i, j, 1),
-                noisy_matrix(i, j, 2)
-            ));
+                noisy_matrix(i, j, 2)));
         }
         auto [positions, velocity] = filter.step(points, time);
         for (int j = 0; j < shape.at(1); ++j) {
@@ -90,6 +88,6 @@ int main(int argc, char** argv)
     std::cout << "diff_noise_filtered" << std::endl;
     std::cout << diff_noise_filtered << std::endl;
     auto d = filtered.dimensions();
-    cnpy::npy_save("data/filtered.npy", filtered.data(), {d[0], d[1], d[2]}, "w");
+    cnpy::npy_save("data/filtered.npy", filtered.data(), { d[0], d[1], d[2] }, "w");
     std::cout << ones << std::endl;
 }

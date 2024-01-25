@@ -163,7 +163,7 @@ public:
         auto com = calculate_com();
         auto com_dot = calculate_com_dot();
 
-        Value g = 9.81;   // * 1000 / 1e12; // m/s
+        Value g = 9.81; // * 1000 / 1e12; // m/s
         Value w_0 = std::sqrt(g / l);
         Point<Value> x_com(0.0, 0.0, 0.0);
         x_com.x = com.x + (com_dot.x / w_0);
@@ -179,8 +179,9 @@ public:
     }
 };
 
-template<typename Value>
-Point<Value> com_helper(std::vector<Point<Value>>& points, MatrixXd MM) {
+template <typename Value>
+Point<Value> com_helper(std::vector<Point<Value>>& points, MatrixXd MM)
+{
     Point<Value> com(0.0, 0.0, 0.0);
     for (int joint = 0; joint < MM.cols(); ++joint) {
         com.x += points[joint].x * MM(0, joint);
