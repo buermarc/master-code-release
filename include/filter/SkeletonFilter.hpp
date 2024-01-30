@@ -104,7 +104,7 @@ public:
 };
 
 template <typename Value>
-class SkeletonFilterBuilder : AbstractSkeletonFilterBuilder<Value> {
+class SkeletonFilterBuilder : public AbstractSkeletonFilterBuilder<Value> {
     int joint_count;
     std::vector<Point<Value>> measurement_noises;
     std::vector<Point<Value>> system_noises;
