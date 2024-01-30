@@ -249,7 +249,7 @@ class ConstrainedSkeletonFilter : public AbstractSkeletonFilter<Value> {
     Value last_time;
 
     // std::vector<std::vector<int>> constrained_joint_groups = { { 19, 20, 21 }, { 23, 24, 25 }, { 6, 7, 8 }, { 13, 14, 15 } };
-    std::vector<std::vector<int>> constrained_joint_groups = { { 18, 19, 20 }, { 22, 23, 24 }, { 5, 6, 7 }, { 12, 13, 14 } };
+    std::vector<std::vector<int>> m_constrained_joint_groups; // = { { 18, 19, 20 }, { 22, 23, 24 }, { 5, 6, 7 }, { 12, 13, 14 } };
     std::unordered_map<int, RigidJointConstructFilter3<Value>> joint_group_filters;
     std::unordered_map<int, PointFilter3D<Value>> single_joint_filters;
 
@@ -260,18 +260,20 @@ public:
     ConstrainedSkeletonFilter(
         int m_n_joints,
         MatrixXd measurement_errors,
-        MatrixXd MM)
-        : n_joints(m_n_joints)
+        MatrixXd MM,
+        std::vector<std::vector<int>> constrained_joint_groups = { { 18, 19, 20 }, { 22, 23, 24 }, { 5, 6, 7 }, { 12, 13, 14 } }
+        )
+        : n_joints(m_n_joints), m_constrained_joint_groups(constrained_joint_groups)
         , AbstractSkeletonFilter<Value>()
     {
-        for (auto joint_group : constrained_joint_groups) {
+        for (auto joint_group : m_constrained_joint_groups) {
             auto filter = RigidJointConstructFilter3<Value>::default_init(joint_group, measurement_errors);
             joint_group_filters.insert(std::make_pair(joint_group.front(), filter));
         }
 
         // Skip joints which are already covered in constrained joint groups
         std::set<int> flat;
-        unroll(constrained_joint_groups, flat);
+        unroll(m_constrained_joint_groups, flat);
 
         for (int i = 0; i < m_n_joints; ++i) {
             if (flat.find(i) == flat.end()) {
