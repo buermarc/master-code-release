@@ -12,7 +12,8 @@ Point<double> azure_kinect_origin_lab_coords(Point<double> l_ak, Point<double> r
 {
     Point<double> middle_between_left_and_right = l_ak + (r_ak - l_ak) / 2;
 
-    auto result = (r_ak - l_ak).cross_product(b_ak - l_ak);
+    auto l_to_b = b_ak - l_ak;
+    auto result = (r_ak - l_ak).cross_product(l_to_b);
     return result;
 }
 

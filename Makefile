@@ -38,4 +38,4 @@ filter-simulation: simulation
 	FILTER_MAIN=1 cmake -S . -B build && cmake --build build && ./build/load 0.0015
 
 plot-simulation: filter-simulation
-	cd plot && python animate.py
+	cd plot && python simulation_evaluate.py

@@ -73,6 +73,41 @@ def main():
         plt.cla()
 
 
+    x = np.arange(steps.shape[0])
+
+    filtered_diff_x = steps[:, :, 0] - filtered[:, :, 0]
+    filtered_diff_y = steps[:, :, 1] - filtered[:, :, 1]
+    filtered_diff_z = steps[:, :, 2] - filtered[:, :, 2]
+
+    noisy_diff_x = steps[:, :, 0] - noisy_steps[:, :, 0]
+    noisy_diff_y = steps[:, :, 1] - noisy_steps[:, :, 1]
+    noisy_diff_z = steps[:, :, 2] - noisy_steps[:, :, 2]
+
+    error_filtered = np.linalg.norm(steps - filtered, axis=2)
+    rms_filtered = np.sqrt(np.mean(np.power(error_filtered, 2), axis=0))
+
+    error_noisy = np.linalg.norm(steps - noisy_steps, axis=2)
+    rms_noisy = np.sqrt(np.mean(np.power(error_noisy, 2), axis=0))
+
+    print(f"rms_filtered: {rms_filtered}")
+    print(f"rms_noisy: {rms_noisy}")
+    print(f"diff rms: {(rms_noisy - rms_filtered)}")
+
+    fig, axis = plt.subplots(1, 3)
+
+    axis[0].errorbar(x, filtered_diff_x.mean(axis=1), yerr=filtered_diff_x.std(axis=1))
+    axis[0].errorbar(x, noisy_diff_x.mean(axis=1), yerr=noisy_diff_x.std(axis=1))
+
+    axis[1].errorbar(x, filtered_diff_y.mean(axis=1), yerr=filtered_diff_y.std(axis=1))
+    axis[1].errorbar(x, noisy_diff_y.mean(axis=1), yerr=noisy_diff_y.std(axis=1))
+
+    axis[2].errorbar(x, filtered_diff_z.mean(axis=1), yerr=filtered_diff_z.std(axis=1))
+    axis[2].errorbar(x, noisy_diff_z.mean(axis=1), yerr=noisy_diff_z.std(axis=1))
+
+
+
+    plt.savefig("results/simualtion_combined_with_errorbar.pdf")
+
     if args.animate:
 
         def update_graph(num):
