@@ -261,9 +261,9 @@ public:
         int m_n_joints,
         MatrixXd measurement_errors,
         MatrixXd MM,
-        std::vector<std::vector<int>> constrained_joint_groups = { { 18, 19, 20 }, { 22, 23, 24 }, { 5, 6, 7 }, { 12, 13, 14 } }
-        )
-        : n_joints(m_n_joints), m_constrained_joint_groups(constrained_joint_groups)
+        std::vector<std::vector<int>> constrained_joint_groups = { { 18, 19, 20 }, { 22, 23, 24 }, { 5, 6, 7 }, { 12, 13, 14 } })
+        : n_joints(m_n_joints)
+        , m_constrained_joint_groups(constrained_joint_groups)
         , AbstractSkeletonFilter<Value>()
     {
         this->m_filter_type_name = "ConstrainedSkeletonFilter";

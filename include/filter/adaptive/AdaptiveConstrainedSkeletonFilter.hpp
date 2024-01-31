@@ -369,7 +369,8 @@ public:
 };
 
 template <typename Value>
-class ZarchanAdaptiveConstrainedSkeletonFilter : public AdaptiveConstrainedSkeletonFilter<Value, ZarPointFilter> {};
+class ZarchanAdaptiveConstrainedSkeletonFilter : public AdaptiveConstrainedSkeletonFilter<Value, ZarPointFilter> {
+};
 
 template <typename Value, typename AdaptivePointFilter>
 class AdaptiveConstrainedSkeletonFilterBuilder : public AbstractSkeletonFilterBuilder<Value> {

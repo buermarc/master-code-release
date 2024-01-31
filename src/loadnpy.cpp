@@ -48,7 +48,6 @@ int main(int argc, char** argv)
     std::vector<std::vector<int>> constrained_joint_groups = { { 1, 2, 3 } };
     ConstrainedSkeletonFilter<double> filter = ConstrainedSkeletonFilter<double>(11, ones, zero, constrained_joint_groups);
 
-
     Eigen::Tensor filtered = Eigen::Tensor<double, 3, Eigen::RowMajor>(shape.at(0), shape.at(1), shape.at(2));
 
     std::vector<std::vector<Point<double>>> positions;
