@@ -254,6 +254,7 @@ public:
         MatrixXd MM)
         : n_joints(m_n_joints)
     {
+        this->m_filter_type_name = "AdaptiveConstrainedSkeletonFilter";
         for (auto joint_group : constrained_joint_groups) {
             auto filter = AdaptiveRigidJointConstructFilter3<Value>::default_init(joint_group, measurement_errors);
             joint_group_filters.insert(std::make_pair(joint_group.front(), filter));

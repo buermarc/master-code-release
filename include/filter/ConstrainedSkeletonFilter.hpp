@@ -266,6 +266,8 @@ public:
         : n_joints(m_n_joints), m_constrained_joint_groups(constrained_joint_groups)
         , AbstractSkeletonFilter<Value>()
     {
+        this->m_filter_type_name = "ConstrainedSkeletonFilter";
+
         for (auto joint_group : m_constrained_joint_groups) {
             auto filter = RigidJointConstructFilter3<Value>::default_init(joint_group, measurement_errors);
             joint_group_filters.insert(std::make_pair(joint_group.front(), filter));

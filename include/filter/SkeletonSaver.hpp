@@ -24,6 +24,8 @@ class SkeletonSaver {
     bool m_enabled;
 
 public:
+    std::string m_filter_type_name = "Unset";
+
     SkeletonSaver(bool enabled = true)
         : m_enabled(enabled)
     {
@@ -87,6 +89,7 @@ public:
         _json["unfiltered_positions"] = m_unfiltered_positions;
         _json["filtered_positions"] = m_filtered_positions;
         _json["filtered_velocities"] = m_filtered_velocities;
+        _json["filter_type"] = m_filter_type_name;
         return _json;
     }
 
@@ -117,6 +120,7 @@ public:
         ar& m_unfiltered_positions;
         ar& m_filtered_positions;
         ar& m_filtered_velocities;
+        ar& m_filter_type_name;
     }
 };
 

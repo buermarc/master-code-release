@@ -31,6 +31,7 @@ public:
         Value threshold, MatrixXd MM)
         : n_joints(m_n_joints)
     {
+        this->m_filter_type_name = "SkeletonFilter";
         for (int i = 0; i < m_n_joints; ++i) {
             auto filter = PointFilter3D<Value>(measurement_noises[i],
                 system_noises[i], threshold);
