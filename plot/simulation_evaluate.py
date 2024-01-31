@@ -24,53 +24,47 @@ def main():
     len_samples = grouped.shape[0]
 
     # Attaching 3D axis to the figure
-    fig = plt.figure()
-    ax = p3.Axes3D(fig)
 
-    #idx_order = [0, 2, 1]
-    idx_order = [0, 1, 2]
-    graph, = ax.plot(grouped[0, :, idx_order[0]].flatten(), grouped[0, :, idx_order[1]].flatten(), (-1)*grouped[0, :, idx_order[2]].flatten(), linestyle="", marker="o")
+    if not args.animate:
+        plt.rcParams["figure.figsize"] = (12,12)
+        for i in range(grouped.shape[1]):
+            fig, axis = plt.subplots(2, 3)
 
+            axis[0, 0].plot(steps[:, i, 0], label="Steps")
+            axis[0, 0].plot(noisy_steps[:, i, 0], label="Noisy Steps")
+            axis[0, 0].plot(filtered[:, i, 0], label="Filtered")
+            axis[0, 0].set_title(f"Joint {i} - x", fontsize=8)
+            axis[0, 0].legend()
 
-    plt.rcParams["figure.figsize"] = (12,12)
-    for i in range(grouped.shape[1]):
-        fig, axis = plt.subplots(2, 3)
+            axis[0, 1].plot(steps[:, i, 1], label="Steps")
+            axis[0, 1].plot(noisy_steps[:, i, 1], label="Noisy Steps")
+            axis[0, 1].plot(filtered[:, i, 1], label="Filtered")
+            axis[0, 1].set_title(f"Joint {i} - y", fontsize=8)
+            axis[0, 1].legend()
 
-        axis[0, 0].plot(steps[:, i, 0], label="Steps")
-        axis[0, 0].plot(noisy_steps[:, i, 0], label="Noisy Steps")
-        axis[0, 0].plot(filtered[:, i, 0], label="Filtered")
-        axis[0, 0].set_title(f"Joint {i} - x", fontsize=8)
-        axis[0, 0].legend()
+            axis[0, 2].plot(steps[:, i, 2], label="Steps")
+            axis[0, 2].plot(noisy_steps[:, i, 2], label="Noisy Steps")
+            axis[0, 2].plot(filtered[:, i, 2], label="Filtered")
+            axis[0, 2].set_title(f"Joint {i} - z", fontsize=8)
+            axis[0, 2].legend()
 
-        axis[0, 1].plot(steps[:, i, 1], label="Steps")
-        axis[0, 1].plot(noisy_steps[:, i, 1], label="Noisy Steps")
-        axis[0, 1].plot(filtered[:, i, 1], label="Filtered")
-        axis[0, 1].set_title(f"Joint {i} - y", fontsize=8)
-        axis[0, 1].legend()
+            axis[1, 0].plot(steps[:, i, 0] - noisy_steps[:, i, 0], label="Diff Simulation and Noise")
+            axis[1, 0].plot(steps[:, i, 0] - filtered[:, i, 0], label="Diff Simulation and Filtered")
+            axis[1, 0].set_title(f"Joint {i} - x", fontsize=8)
+            axis[1, 0].legend()
 
-        axis[0, 2].plot(steps[:, i, 2], label="Steps")
-        axis[0, 2].plot(noisy_steps[:, i, 2], label="Noisy Steps")
-        axis[0, 2].plot(filtered[:, i, 2], label="Filtered")
-        axis[0, 2].set_title(f"Joint {i} - z", fontsize=8)
-        axis[0, 2].legend()
+            axis[1, 1].plot(steps[:, i, 1] - noisy_steps[:, i, 1], label="Diff Simulation and Noise")
+            axis[1, 1].plot(steps[:, i, 1] - filtered[:, i, 1], label="Diff Simulation and Filtered")
+            axis[1, 1].set_title(f"Joint {i} - y", fontsize=8)
+            axis[1, 1].legend()
 
-        axis[1, 0].plot(steps[:, i, 0] - noisy_steps[:, i, 0], label="Diff Simulation and Noise")
-        axis[1, 0].plot(steps[:, i, 0] - filtered[:, i, 0], label="Diff Simulation and Filtered")
-        axis[1, 0].set_title(f"Joint {i} - x", fontsize=8)
-        axis[1, 0].legend()
+            axis[1, 2].plot(steps[:, i, 2] - noisy_steps[:, i, 2], label="Diff Simulation and Noise")
+            axis[1, 2].plot(steps[:, i, 2] - filtered[:, i, 2], label="Diff Simulation and Filtered")
+            axis[1, 2].set_title(f"Joint {i} - z", fontsize=8)
+            axis[1, 2].legend()
 
-        axis[1, 1].plot(steps[:, i, 1] - noisy_steps[:, i, 1], label="Diff Simulation and Noise")
-        axis[1, 1].plot(steps[:, i, 1] - filtered[:, i, 1], label="Diff Simulation and Filtered")
-        axis[1, 1].set_title(f"Joint {i} - y", fontsize=8)
-        axis[1, 1].legend()
-
-        axis[1, 2].plot(steps[:, i, 2] - noisy_steps[:, i, 2], label="Diff Simulation and Noise")
-        axis[1, 2].plot(steps[:, i, 2] - filtered[:, i, 2], label="Diff Simulation and Filtered")
-        axis[1, 2].set_title(f"Joint {i} - z", fontsize=8)
-        axis[1, 2].legend()
-
-        plt.savefig(f"results/simualtion-{i}.pdf", )
-        plt.cla()
+            plt.savefig(f"results/simualtion-{i}.pdf", )
+            plt.cla()
 
 
     x = np.arange(steps.shape[0])
@@ -93,22 +87,32 @@ def main():
     print(f"rms_noisy: {rms_noisy}")
     print(f"diff rms: {(rms_noisy - rms_filtered)}")
 
-    fig, axis = plt.subplots(1, 3)
+    if not args.animate:
+        fig, axis = plt.subplots(1, 3)
 
-    axis[0].errorbar(x, filtered_diff_x.mean(axis=1), yerr=filtered_diff_x.std(axis=1))
-    axis[0].errorbar(x, noisy_diff_x.mean(axis=1), yerr=noisy_diff_x.std(axis=1))
+        axis[0].errorbar(x, filtered_diff_x.mean(axis=1), yerr=filtered_diff_x.std(axis=1))
+        axis[0].errorbar(x, noisy_diff_x.mean(axis=1), yerr=noisy_diff_x.std(axis=1))
 
-    axis[1].errorbar(x, filtered_diff_y.mean(axis=1), yerr=filtered_diff_y.std(axis=1))
-    axis[1].errorbar(x, noisy_diff_y.mean(axis=1), yerr=noisy_diff_y.std(axis=1))
+        axis[1].errorbar(x, filtered_diff_y.mean(axis=1), yerr=filtered_diff_y.std(axis=1))
+        axis[1].errorbar(x, noisy_diff_y.mean(axis=1), yerr=noisy_diff_y.std(axis=1))
 
-    axis[2].errorbar(x, filtered_diff_z.mean(axis=1), yerr=filtered_diff_z.std(axis=1))
-    axis[2].errorbar(x, noisy_diff_z.mean(axis=1), yerr=noisy_diff_z.std(axis=1))
+        axis[2].errorbar(x, filtered_diff_z.mean(axis=1), yerr=filtered_diff_z.std(axis=1))
+        axis[2].errorbar(x, noisy_diff_z.mean(axis=1), yerr=noisy_diff_z.std(axis=1))
 
 
 
-    plt.savefig("results/simualtion_combined_with_errorbar.pdf")
+        plt.savefig("results/simualtion_combined_with_errorbar.pdf")
+        plt.cla()
+        plt.close()
 
     if args.animate:
+
+        fig = plt.figure()
+        ax = p3.Axes3D(fig)
+
+        #idx_order = [0, 2, 1]
+        idx_order = [0, 1, 2]
+        graph, = ax.plot(grouped[0, :, idx_order[0]].flatten(), grouped[0, :, idx_order[1]].flatten(), (-1)*grouped[0, :, idx_order[2]].flatten(), linestyle="", marker="o")
 
         def update_graph(num):
             graph.set_data (grouped[num, :, idx_order[0]].flatten(), grouped[num, :, idx_order[1]].flatten())
