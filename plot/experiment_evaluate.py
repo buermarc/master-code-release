@@ -1,9 +1,11 @@
 import numpy as np
 import argparse
+from dataclasses import dataclass
 import matplotlib.pyplot as plt
+from pathlib import Path
 
 
-def main():
+def old_main():
     parser = argparse.ArgumentParser()
     parser.add_argument("experiment_folder")
 
@@ -53,6 +55,58 @@ def main():
     plt.legend()
     plt.show()
     plt.cla()
+
+@dataclass
+class Data:
+    down_kinect_com: np.ndarray
+    down_kinect_joints: np.ndarray
+    down_kinect_ts: np.ndarray
+    down_kinect_unfiltered_com: np.ndarray
+    down_kinect_unfiltered_joints: np.ndarray
+    down_qtm_cop: np.ndarray
+    down_qtm_joints: np.ndarray
+    down_qtm_ts: np.ndarray
+    kinect_com: np.ndarray
+    kinect_joints: np.ndarray
+    kinect_ts: np.ndarray
+    kinect_unfiltered_com: np.ndarray
+    kinect_unfiltered_joints: np.ndarray
+    qtm_cop: np.ndarray
+    qtm_joints: np.ndarray
+    qtm_ts: np.ndarray
+
+
+
+def load_processed_data(path: Path) -> Data:
+    return Data(
+        np.load(path / "down_kinect_com.npy"),
+        np.load(path / "down_kinect_joints.npy"),
+        np.load(path / "down_kinect_ts.npy"),
+        np.load(path / "down_kinect_unfiltered_com.npy"),
+        np.load(path / "down_kinect_unfiltered_joints.npy"),
+        np.load(path / "down_qtm_cop.npy"),
+        np.load(path / "down_qtm_joints.npy"),
+        np.load(path / "down_qtm_ts.npy"),
+        np.load(path / "kinect_com.npy"),
+        np.load(path / "kinect_joints.npy"),
+        np.load(path / "kinect_ts.npy"),
+        np.load(path / "kinect_unfiltered_com.npy"),
+        np.load(path / "kinect_unfiltered_joints.npy"),
+        np.load(path / "qtm_cop.npy"),
+        np.load(path / "qtm_joints.npy"),
+        np.load(path / "qtm_ts.npy"),
+    )
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("experiment_folder")
+
+    args = parser.parse_args()
+
+    data = load_processed_data(Path(args.experiment_folder))
+
+    plt.plot(data.kinect_com[:, 0], data.kinect_com[:, 1])
+    plt.show()
 
 if __name__ == "__main__":
     main()
