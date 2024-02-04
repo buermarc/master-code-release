@@ -3,6 +3,7 @@ import argparse
 from dataclasses import dataclass
 import matplotlib.pyplot as plt
 from pathlib import Path
+from enum import IntEnum
 
 
 def old_main():
@@ -76,6 +77,41 @@ class Data:
     qtm_ts: np.ndarray
 
 
+Joint = IntEnum("Joint", [
+    "PELVIS",
+    "SPINE_NAVEL",
+    "SPINE_CHEST",
+    "NECK",
+    "CLAVICLE_LEFT",
+    "SHOULDER_LEFT",
+    "ELBOW_LEFT",
+    "WRIST_LEFT",
+    "HAND_LEFT",
+    "HANDTIP_LEFT",
+    "THUMB_LEFT",
+    "CLAVICLE_RIGHT",
+    "SHOULDER_RIGHT",
+    "ELBOW_RIGHT",
+    "WRIST_RIGHT",
+    "HAND_RIGHT",
+    "HANDTIP_RIGHT",
+    "THUMB_RIGHT",
+    "HIP_LEFT",
+    "KNEE_LEFT",
+    "ANKLE_LEFT",
+    "FOOT_LEFT",
+    "HIP_RIGHT",
+    "KNEE_RIGHT",
+    "ANKLE_RIGHT",
+    "FOOT_RIGHT",
+    "HEAD",
+    "NOSE",
+    "EYE_LEFT",
+    "EAR_LEFT",
+    "EYE_RIGHT",
+    "EAR_RIGHT",
+], start = 0)
+
 
 def load_processed_data(path: Path) -> Data:
     return Data(
@@ -105,8 +141,24 @@ def main():
 
     data = load_processed_data(Path(args.experiment_folder))
 
-    plt.plot(data.kinect_com[:, 0], data.kinect_com[:, 1])
+
+    plt.plot(data.kinect_ts, data.kinect_joints[:, int(Joint.SHOULDER_LEFT), 0], label="kinect")
+    plt.plot(data.qtm_ts, data.qtm_joints[:, 0, 0], label="qtm")
+    plt.legend()
     plt.show()
+    plt.cla()
+
+    plt.plot(data.kinect_ts, data.kinect_joints[:, int(Joint.ELBOW_LEFT), 0], label="kinect")
+    plt.plot(data.qtm_ts, data.qtm_joints[:, 2, 0], label="qtm")
+    plt.legend()
+    plt.show()
+    plt.cla()
+
+    plt.plot(data.kinect_ts, data.kinect_joints[:, int(Joint.WRIST_LEFT), 0], label="kinect")
+    plt.plot(data.qtm_ts, data.qtm_joints[:, 2, 0], label="qtm")
+    plt.legend()
+    plt.show()
+    plt.cla()
 
 if __name__ == "__main__":
     main()
