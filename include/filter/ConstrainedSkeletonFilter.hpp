@@ -259,6 +259,7 @@ public:
 
     ConstrainedSkeletonFilter(
         int m_n_joints,
+        double factor,
         MatrixXd measurement_errors,
         MatrixXd MM,
         std::vector<std::vector<int>> constrained_joint_groups = { { 18, 19, 20 }, { 22, 23, 24 }, { 5, 6, 7 }, { 12, 13, 14 } })
@@ -266,7 +267,8 @@ public:
         , m_constrained_joint_groups(constrained_joint_groups)
         , AbstractSkeletonFilter<Value>()
     {
-        this->m_filter_type_name = "ConstrainedSkeletonFilter";
+        this->set_filter_type("ConstrainedSkeletonFilter");
+        this->set_measurement_error_factor(factor);
 
         for (auto joint_group : m_constrained_joint_groups) {
             auto filter = RigidJointConstructFilter3<Value>::default_init(joint_group, measurement_errors);
@@ -386,15 +388,16 @@ public:
 template <typename Value>
 class ConstrainedSkeletonFilterBuilder : public AbstractSkeletonFilterBuilder<Value> {
     int m_joint_count;
+    double m_factor;
 
 public:
-    ConstrainedSkeletonFilterBuilder(int joint_count)
-        : m_joint_count(joint_count)
+    ConstrainedSkeletonFilterBuilder(int joint_count, double measurement_error_factor)
+        : m_joint_count(joint_count),  m_factor(measurement_error_factor)
     {
     }
 
     std::shared_ptr<AbstractSkeletonFilter<Value>> build() override
     {
-        return std::make_shared<ConstrainedSkeletonFilter<Value>>(m_joint_count, get_cached_measurement_error(), get_azure_kinect_com_matrix());
+        return std::make_shared<ConstrainedSkeletonFilter<Value>>(m_joint_count, m_factor, get_cached_measurement_error(m_factor), get_azure_kinect_com_matrix());
     }
 };

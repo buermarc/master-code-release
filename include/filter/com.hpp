@@ -13,6 +13,7 @@ class Plane {
 public:
     Point<Value> a, b, c, d;
 
+    Plane() {};
     Plane(Point<Value> m_a,
         Point<Value> m_b,
         Point<Value> m_c,

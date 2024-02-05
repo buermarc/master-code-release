@@ -27,11 +27,13 @@ public:
     bool is_initialized() override { return initialized; }
 
     SkeletonFilter(std::vector<Point<Value>> measurement_noises,
-        std::vector<Point<Value>> system_noises, int m_n_joints,
+        std::vector<Point<Value>> system_noises, int m_n_joints, double factor,
         Value threshold, MatrixXd MM)
         : n_joints(m_n_joints)
     {
-        this->m_filter_type_name = "SkeletonFilter";
+        this->set_filter_type("SkeletonFilter");
+        this->set_measurement_error_factor(factor);
+
         for (int i = 0; i < m_n_joints; ++i) {
             auto filter = PointFilter3D<Value>(measurement_noises[i],
                 system_noises[i], threshold);
@@ -110,15 +112,17 @@ class SkeletonFilterBuilder : public AbstractSkeletonFilterBuilder<Value> {
     std::vector<Point<Value>> measurement_noises;
     std::vector<Point<Value>> system_noises;
     Value threshold;
+    double m_factor;
 
 public:
     SkeletonFilterBuilder(int m_joint_count,
-        Value m_threshold)
+        Value m_threshold, double measurement_error_factor=5.0)
         : joint_count(m_joint_count)
     {
         threshold = m_threshold;
 
-        auto var = get_cached_measurement_error();
+        auto var = get_cached_measurement_error(measurement_error_factor);
+        m_factor = measurement_error_factor;
         // auto sqrt_var = var.array().sqrt();
         auto measurement_noise_for_all_joints = var;
 
@@ -144,7 +148,7 @@ public:
 
     std::shared_ptr<AbstractSkeletonFilter<Value>> build() override
     {
-        return std::make_shared<SkeletonFilter<Value>>(measurement_noises, system_noises, joint_count,
+        return std::make_shared<SkeletonFilter<Value>>(measurement_noises, system_noises, joint_count, m_factor,
             threshold, get_azure_kinect_com_matrix());
     }
 };

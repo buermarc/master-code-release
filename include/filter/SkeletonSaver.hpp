@@ -23,8 +23,10 @@ class SkeletonSaver {
     vvp m_filtered_velocities;
     bool m_enabled;
 
-public:
     std::string m_filter_type_name = "Unset";
+    double m_measurement_error_factor = -1.0;
+
+public:
 
     SkeletonSaver(bool enabled = true)
         : m_enabled(enabled)
@@ -82,6 +84,16 @@ public:
         return m_filtered_velocities;
     }
 
+    void set_filter_type(std::string name )
+    {
+        this->m_filter_type_name = name;
+    }
+
+    void set_measurement_error_factor(double factor)
+    {
+        this->m_measurement_error_factor = factor;
+    }
+
     json to_json() const
     {
         json _json;
@@ -90,6 +102,7 @@ public:
         _json["filtered_positions"] = m_filtered_positions;
         _json["filtered_velocities"] = m_filtered_velocities;
         _json["filter_type"] = m_filter_type_name;
+        _json["measurement_error_factor"] = m_measurement_error_factor;
         return _json;
     }
 
@@ -121,6 +134,7 @@ public:
         ar& m_filtered_positions;
         ar& m_filtered_velocities;
         ar& m_filter_type_name;
+        ar& m_measurement_error_factor;
     }
 };
 

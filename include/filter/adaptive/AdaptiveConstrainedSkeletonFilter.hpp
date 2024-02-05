@@ -250,11 +250,14 @@ public:
 
     AdaptiveConstrainedSkeletonFilter(
         int m_n_joints,
+        double factor,
         MatrixXd measurement_errors,
         MatrixXd MM)
         : n_joints(m_n_joints)
     {
-        this->m_filter_type_name = "AdaptiveConstrainedSkeletonFilter";
+        this->set_filter_type("AdaptiveConstrainedSkeletonFilter");
+        this->set_measurement_error_factor(factor);
+
         for (auto joint_group : constrained_joint_groups) {
             auto filter = AdaptiveRigidJointConstructFilter3<Value>::default_init(joint_group, measurement_errors);
             joint_group_filters.insert(std::make_pair(joint_group.front(), filter));
@@ -375,22 +378,24 @@ class ZarchanAdaptiveConstrainedSkeletonFilter : public AdaptiveConstrainedSkele
 template <typename Value, typename AdaptivePointFilter>
 class AdaptiveConstrainedSkeletonFilterBuilder : public AbstractSkeletonFilterBuilder<Value> {
     int m_joint_count;
+    double m_factor;
     MatrixXd m_measurement_noises;
     Value m_threshold;
 
 public:
     AdaptiveConstrainedSkeletonFilterBuilder(int joint_count,
-        Value threshold)
+        Value threshold, double measurement_error_factor=5.0)
         : m_joint_count(joint_count)
     {
         m_threshold = threshold;
 
-        auto var = get_cached_measurement_error();
+        auto var = get_cached_measurement_error(measurement_error_factor);
         m_measurement_noises = var;
+        m_factor = measurement_error_factor;
     }
 
     std::shared_ptr<AbstractSkeletonFilter<Value>> build() override
     {
-        return std::make_shared<AdaptiveConstrainedSkeletonFilter<Value, AdaptivePointFilter>>(m_joint_count, m_measurement_noises, get_azure_kinect_com_matrix());
+        return std::make_shared<AdaptiveConstrainedSkeletonFilter<Value, AdaptivePointFilter>>(m_joint_count, m_factor, m_measurement_noises, get_azure_kinect_com_matrix());
     }
 };
