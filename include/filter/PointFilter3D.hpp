@@ -87,11 +87,11 @@ public:
     {
         Point<Value> position;
         Point<Value> velocity;
-        std::cout << "x axis" << std::endl;
+        // std::cout << "x axis" << std::endl;
         std::tie(position.x, velocity.x) = x_filter.step(value.x, time_diff);
-        std::cout << "y axis" << std::endl;
+        // std::cout << "y axis" << std::endl;
         std::tie(position.y, velocity.y) = y_filter.step(value.y, time_diff);
-        std::cout << "z axis" << std::endl;
+        // std::cout << "z axis" << std::endl;
         std::tie(position.z, velocity.z) = z_filter.step(value.z, time_diff);
         return std::make_tuple(position, velocity);
     }
