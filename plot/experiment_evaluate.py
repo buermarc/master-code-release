@@ -182,34 +182,77 @@ def load_processed_data(path: Path) -> Data:
         json.load((path / "config.json").open(mode="r", encoding="UTF-8")),
     )
 
-def double_filtered(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 6, N: int = 2) -> np.ndarray:
+def double_butter(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 6, N: int = 2) -> np.ndarray:
     shape = data.shape
     if len(shape) == 1:
-        return _double_filtered(data, sample_frequency, cut_off, N)
+        return _double_butter(data, sample_frequency, cut_off, N)
     elif len(shape) == 2:
         result = np.empty_like(data)
         for i in range(shape[1]):
-            result[:, i] = _double_filtered(data[:, i], sample_frequency, cut_off, N)
+            result[:, i] = _double_butter(data[:, i], sample_frequency, cut_off, N)
         return result
     elif len(shape) == 3:
         # Bad performance, but hopefully not so important
         result = np.empty_like(data)
         for i in range(shape[1]):
             for j in range(shape[2]):
-                result[:, i, j] = _double_filtered(data[:, i, j], sample_frequency, cut_off, N)
+                result[:, i, j] = _double_butter(data[:, i, j], sample_frequency, cut_off, N)
     else:
         print(f"shape: {shape}")
         raise NotImplementedError
 
 
-def _double_filtered(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 6, N: int = 2) -> np.ndarray:
+def _double_butter(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 6, N: int = 2) -> np.ndarray:
     """Take Nx1 data and return it double filtered."""
     mean = data.mean()
     sos = signal.butter(N, cut_off, fs=sample_frequency, output="sos")
     once_filtered = signal.sosfilt(sos, data - mean)
-    return np.flip(signal.sosfilt(sos, np.flip(once_filtered))) + mean
+    second_mean = once_filtered.mean()
+    return np.flip(signal.sosfilt(sos, np.flip(once_filtered) - second_mean) + second_mean) + mean
 
-def find_best_measurement_error_factor(experiment_folder: Path) -> tuple[Path, double]:
+def find_best_measurement_error_factor_rmse(experiment_folder: Path) -> tuple[Path, double]:
+    directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
+    RMSEs = []
+    all_RMSEs = []
+    factors = []
+    for directory in directories:
+        data = load_processed_data(directory)
+
+        rmse = 0
+        length = data.down_kinect_joints.shape[0]
+        offset = int(length * 0.1)
+        for joint in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]:
+
+            a = data.down_kinect_joints[:, int(joint), :]
+            b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), :])
+
+            # Only take rmse in account for 90% of the signal, prevent
+            # weighting butterworth problems in the beginning and the end
+            diff = np.linalg.norm(b[offset:-offset] - a[offset:-offset], axis=1)
+            result = np.sqrt(np.mean(np.power(diff, 2)))
+
+            rmse += result
+
+            all_RMSEs.append(rmse)
+
+        print(rmse)
+        RMSEs.append(rmse)
+        factors.append(data.config["measurement_error_factor"])
+
+    RMSEs = np.array(RMSEs)
+    assert len(RMSEs) == len(directories)
+    breakpoint()
+
+    plt.plot(np.array(factors), RMSEs, marker="X", ls="None")
+    plt.show()
+    plt.cla()
+    plt.plot(all_RMSEs, marker="X", ls="None")
+    plt.show()
+    argmin = np.argmin(RMSEs)
+    print(f"Min value: {RMSEs.min()}")
+    return  directories[argmin], factors[argmin]
+
+def find_best_measurement_error_factor_corr(experiment_folder: Path) -> tuple[Path, double]:
     """Returns best factor path and factor."""
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     correlations = []
@@ -223,7 +266,7 @@ def find_best_measurement_error_factor(experiment_folder: Path) -> tuple[Path, d
             for i in range(3):
                 length = data.down_kinect_joints.shape[0]
                 a = data.down_kinect_joints[:, int(joint), i]
-                b = double_filtered(data.down_kinect_unfiltered_joints[:, int(joint), i])
+                b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), i])
                 corr = signal.correlate(a, b)
                 correlation += corr[length-1]
                 all_correlations.append(correlation)
@@ -249,12 +292,13 @@ def main():
     parser.add_argument("experiment_folder")
 
     args = parser.parse_args()
-    path, factor = find_best_measurement_error_factor(Path(args.experiment_folder))
+    path, factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder))
     print(path)
     data = load_processed_data(path)
-    plt.plot(data.down_kinect_ts, data.down_kinect_joints[:, int(Joint.WRIST_LEFT), 2], label="Kalman")
-    plt.plot(data.down_kinect_ts, double_filtered(data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2]), label="Butter Unfiltered")
-    plt.plot(data.down_kinect_ts, data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2], label="Unfiltered")
+    o = int(data.down_kinect_joints.shape[0] * 0.1)
+    plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Kalman")
+    plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2][o:-o]), label="Butter Unfiltered")
+    plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Unfiltered")
     plt.legend()
     plt.show()
 
@@ -269,9 +313,9 @@ def plot_main():
 
     data = load_processed_data(Path(args.experiment_folder))
     plt.plot(data.down_kinect_ts, data.down_kinect_com[:, 0], label="kinect_com")
-    plt.plot(data.down_kinect_ts, double_filtered(data.down_kinect_com[:, 0]), label="butter kinect_com")
+    plt.plot(data.down_kinect_ts, double_butter(data.down_kinect_com[:, 0]), label="butter kinect_com")
     plt.plot(data.qtm_cop_ts, data.qtm_cop[:, 0], label="qtm cop")
-    plt.plot(data.qtm_cop_ts, double_filtered(data.qtm_cop[:, 0], 900), label="butter qtm cop")
+    plt.plot(data.qtm_cop_ts, double_butter(data.qtm_cop[:, 0], 900), label="butter qtm cop")
     plt.legend()
     plt.show()
     plt.cla()
@@ -302,8 +346,8 @@ def test():
 
     data = load_processed_data(Path(args.experiment_folder))
 
-    out = double_filtered(data.qtm_cop, 900)
-    assert np.all(out[:, 0] == double_filtered(data.qtm_cop[:, 0], 900))
+    out = double_butter(data.qtm_cop, 900)
+    assert np.all(out[:, 0] == double_butter(data.qtm_cop[:, 0], 900))
 
     result = downsample(data.qtm_cop[:, 0], data.qtm_cop_ts, 450)
     diff = result - data.down_qtm_cop[:, 0]
