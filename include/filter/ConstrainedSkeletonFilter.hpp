@@ -321,6 +321,11 @@ public:
             filter.init(initial_points[i]);
         }
 
+        if (this->saver_enabled()) {
+            std::vector<Point<Value>> velocities(initial_points.size());
+            this->save_step(initial_time, initial_points, initial_points, velocities);
+        }
+
         last_time = initial_time;
         initialized = true;
     }
@@ -328,7 +333,7 @@ public:
     std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values,
         Value new_time) override
     {
-        std::cout << "Timestamp: " << new_time << std::endl;
+        // std::cout << "Timestamp: " << new_time << std::endl;
         std::vector<Point<Value>> positions(32);
         std::vector<Point<Value>> velocities(32);
         std::fill(positions.begin(), positions.end(), Point(0.0, 0.0, 0.0));
@@ -368,7 +373,7 @@ public:
 
         // Skip joints which are already covered in constrained joint groups
         for (auto& [i, filter] : single_joint_filters) {
-            std::cout << "Filter " << i << std::endl;
+            // std::cout << "Filter " << i << std::endl;
             auto [position, velocity] = filter.step(values[i], time_diff);
             positions[i] = position;
             velocities[i] = velocity;

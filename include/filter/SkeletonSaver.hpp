@@ -94,6 +94,11 @@ public:
         this->m_measurement_error_factor = factor;
     }
 
+    double get_measurement_error_factor()
+    {
+        return this->m_measurement_error_factor;
+    }
+
     json to_json() const
     {
         json _json;

@@ -59,13 +59,17 @@ public:
         }
     }
 
-    void init(std::vector<Point<Value>> inital_points, Value initial_time) override
+    void init(std::vector<Point<Value>> initial_points, Value initial_time) override
     {
         if (initialized) {
             return;
         }
         for (int i = 0; i < n_joints; ++i) {
-            joint_filters[i].init(inital_points[i]);
+            joint_filters[i].init(initial_points[i]);
+        }
+        if (this->saver_enabled()) {
+            std::vector<Point<Value>> velocities(initial_points.size());
+            this->save_step(initial_time, initial_points, initial_points, velocities);
         }
         last_time = initial_time;
         initialized = true;
