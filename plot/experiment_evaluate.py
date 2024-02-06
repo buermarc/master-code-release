@@ -210,7 +210,29 @@ def _double_butter(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 
     second_mean = once_filtered.mean()
     return np.flip(signal.sosfilt(sos, np.flip(once_filtered) - second_mean) + second_mean) + mean
 
-def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: double = 0.15) -> tuple[Path, double]:
+
+def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float]:
+    down_qtm = downsample(double_butter(data.qtm_cop[:, :2], 900), data.qtm_cop_ts, 15)
+    length = min(down_qtm.shape[0], data.down_kinect_com.shape[0])
+    o = int(length * cutoff)
+
+    down_qtm = down_qtm[:length][o:-o]
+    com = data.down_kinect_com[:, :2][:length][o:-o]
+    com_un = data.down_kinect_unfiltered_com[:, :2][:length][o:-o]
+
+    corr = np.correlate(down_qtm[:, 0], com[:, 0])[0] + np.correlate(down_qtm[:, 1], com[:, 1])[0]
+    corr_un = np.correlate(down_qtm[:, 0], com_un[:, 0])[0] + np.correlate(down_qtm[:, 1], com_un[:, 1])[0]
+
+    diff = np.linalg.norm(down_qtm - com, axis=1)
+    rmse = np.sqrt(np.mean(np.power(diff, 2)))
+
+    diff_un = np.linalg.norm(down_qtm - com_un, axis=1)
+    rmse_un = np.sqrt(np.mean(np.power(diff_un, 2)))
+
+    return corr, corr_un, rmse, rmse_un
+
+
+def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_type: str, cutoff: float = 0.15) -> tuple[Path, float]:
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     RMSEs = []
     all_RMSEs = []
@@ -221,12 +243,26 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: dou
         rmse = 0
         length = data.down_kinect_joints.shape[0]
         offset = int(length * cutoff)
-        for joint in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]:
 
-            a = data.down_kinect_joints[:, int(joint), :]
-            b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), :])
+        if "constraint" in experiment_type:
+            joints = [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]
+            for joint in joints:
+                a = data.down_kinect_joints[:, int(joint), :]
+                b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), :])
 
-            # Only take rmse in account for 90% of the signal, prevent
+                # Only take rmse in account for some% of the signal, prevent
+                # weighting butterworth problems in the beginning and the end
+                diff = np.linalg.norm(b[offset:-offset] - a[offset:-offset], axis=1)
+                result = np.sqrt(np.mean(np.power(diff, 2)))
+
+                rmse += result
+
+                all_RMSEs.append(rmse)
+        elif "cop" in experiment_type:
+            a = data.down_kinect_com[:, :2]
+            b = double_butter(data.down_kinect_unfiltered_com[:, :2])
+
+            # Only take rmse in account for some% of the signal, prevent
             # weighting butterworth problems in the beginning and the end
             diff = np.linalg.norm(b[offset:-offset] - a[offset:-offset], axis=1)
             result = np.sqrt(np.mean(np.power(diff, 2)))
@@ -234,6 +270,9 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: dou
             rmse += result
 
             all_RMSEs.append(rmse)
+        else:
+            raise NotImplementedError(f"Invalid experiment_type: {experiment_type}")
+
 
         print(rmse)
         RMSEs.append(rmse)
@@ -241,7 +280,6 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: dou
 
     RMSEs = np.array(RMSEs)
     assert len(RMSEs) == len(directories)
-    breakpoint()
 
     plt.plot(np.array(factors), RMSEs, marker="X", ls="None")
     plt.show()
@@ -250,7 +288,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: dou
     print(f"Min value: {RMSEs.min()}")
     return  directories[argmin], factors[argmin]
 
-def find_best_measurement_error_factor_corr(experiment_folder: Path) -> tuple[Path, double]:
+def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: float) -> tuple[Path, float]:
     """Returns best factor path and factor."""
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     correlations = []
@@ -259,15 +297,18 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path) -> tuple[Pa
     for directory in directories:
         data = load_processed_data(directory)
 
+        length = data.down_kinect_joints.shape[0]
+        o = int(length * cutoff)
+
         correlation = 0
+
         for joint in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]:
             for i in range(3):
-                length = data.down_kinect_joints.shape[0]
                 a = data.down_kinect_joints[:, int(joint), i]
                 b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), i])
-                corr = signal.correlate(a, b)
-                correlation += corr[length-1]
-                all_correlations.append(correlation)
+                corr = np.correlate(a[o:-o], b[o:-o])[0]
+                correlation += corr
+                all_correlations.append(corr)
 
         print(correlation)
         correlations.append(correlation)
@@ -275,31 +316,64 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path) -> tuple[Pa
 
     corrs = np.array(correlations)
     assert len(corrs) == len(directories)
-    breakpoint()
 
     plt.plot(np.array(factors), corrs, marker="X", ls="None")
     plt.show()
     plt.cla()
-    plt.plot(all_correlations, marker="X", ls="None")
-    plt.show()
     argmax = np.argmax(corrs)
     return  directories[argmax], factors[argmax]
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("experiment_folder")
+    parser.add_argument("-t", "--experiment-type", dest="experiment_type", choices=["cop", "cop-wide", "constraint", "constraint-fast"])
 
     args = parser.parse_args()
+
     cutoff = 0.15
-    path, factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), cutoff)
+    path, factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), args.experiment_type, cutoff)
+
+
     print(path)
     data = load_processed_data(path)
-    o = int(data.down_kinect_joints.shape[0] * cutoff)
-    plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Kalman")
-    plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2])[o:-o], label="Butter Unfiltered")
-    plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Unfiltered")
-    plt.legend()
-    plt.show()
+
+    if args.experiment_type in ["cop", "cop-wide"]:
+        result = compare_qtm_cop_kinect_cop(data, cutoff)
+        print(result)
+    else:
+        pass
+
+
+    if args.experiment_type in ["cop", "cop-wide"]:
+        plt.cla()
+        print(f"cop {args.experiment_type}")
+        o = int(data.down_kinect_com.shape[0] * cutoff)
+        _, ax = plt.subplots(1, 2)
+        ax[0].plot(data.down_kinect_ts[o:-o], data.down_kinect_com[:, 0][o:-o], label="Kalman")
+        ax[0].plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_com[:, 0])[o:-o], label="Butter Unfiltered")
+        ax[0].plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_com[:, 0][o:-o], label="Unfiltered")
+        ax[0].set_title("X Axis")
+        ax[0].legend()
+
+        ax[1].plot(data.down_kinect_ts[o:-o], data.down_kinect_com[:, 1][o:-o], label="Kalman")
+        ax[1].plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_com[:, 1])[o:-o], label="Butter Unfiltered")
+        ax[1].plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_com[:, 1][o:-o], label="Unfiltered")
+        ax[1].set_title("Y Axis")
+        ax[1].legend()
+
+        plt.show()
+
+
+    else:
+        print(f"constraint {args.experiment_type}")
+
+        # Manual check to see if the butterworth artifacts have been cutoff
+        o = int(data.down_kinect_joints.shape[0] * cutoff)
+        plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Kalman")
+        plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2])[o:-o], label="Butter Unfiltered")
+        plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Unfiltered")
+        plt.legend()
+        plt.show()
 
     print(factor)
 
