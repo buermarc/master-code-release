@@ -210,7 +210,7 @@ def _double_butter(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 
     second_mean = once_filtered.mean()
     return np.flip(signal.sosfilt(sos, np.flip(once_filtered) - second_mean) + second_mean) + mean
 
-def find_best_measurement_error_factor_rmse(experiment_folder: Path) -> tuple[Path, double]:
+def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: double = 0.15) -> tuple[Path, double]:
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     RMSEs = []
     all_RMSEs = []
@@ -220,7 +220,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path) -> tuple[Pa
 
         rmse = 0
         length = data.down_kinect_joints.shape[0]
-        offset = int(length * 0.1)
+        offset = int(length * cutoff)
         for joint in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]:
 
             a = data.down_kinect_joints[:, int(joint), :]
@@ -246,8 +246,6 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path) -> tuple[Pa
     plt.plot(np.array(factors), RMSEs, marker="X", ls="None")
     plt.show()
     plt.cla()
-    plt.plot(all_RMSEs, marker="X", ls="None")
-    plt.show()
     argmin = np.argmin(RMSEs)
     print(f"Min value: {RMSEs.min()}")
     return  directories[argmin], factors[argmin]
@@ -292,12 +290,13 @@ def main():
     parser.add_argument("experiment_folder")
 
     args = parser.parse_args()
-    path, factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder))
+    cutoff = 0.15
+    path, factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), cutoff)
     print(path)
     data = load_processed_data(path)
-    o = int(data.down_kinect_joints.shape[0] * 0.1)
+    o = int(data.down_kinect_joints.shape[0] * cutoff)
     plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Kalman")
-    plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2][o:-o]), label="Butter Unfiltered")
+    plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2])[o:-o], label="Butter Unfiltered")
     plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Unfiltered")
     plt.legend()
     plt.show()
