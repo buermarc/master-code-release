@@ -1,0 +1,2 @@
+No average window on floor plane json
+python plot_floor.py ~/repos/kinect_mocap_studio/output_NFOV_UNBINNED_OFF_30fps_122_53.json
