@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pprint import pprint as pp
+import os
 import json
 import numpy as np
 from numpy.testing import assert_allclose
@@ -210,6 +211,34 @@ def _double_butter(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 
     second_mean = once_filtered.mean()
     return np.flip(signal.sosfilt(sos, np.flip(once_filtered) - second_mean) + second_mean) + mean
 
+def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float]:
+    kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
+
+    corr = 0
+    corr_un = 0
+
+    rmse = 0
+    rmse_un = 0
+    for kinect_joint, qtm_joint in zip(kinect_joints, [0, 1, 2]):
+        down_qtm = downsample(double_butter(data.qtm_joints[:, qtm_joint, :], 900), data.qtm_ts, 15)
+        length = min(down_qtm.shape[0], data.down_kinect_joints.shape[0])
+        o = int(length * cutoff)
+
+        down_qtm = down_qtm[:length][o:-o]
+        joints = data.down_kinect_joints[:, kinect_joint,:][:length][o:-o]
+        joints_un = data.down_kinect_unfiltered_joints[:, kinect_joint, :][:length][o:-o]
+
+        corr += np.correlate(down_qtm[:, 0], joints[:, 0])[0] + np.correlate(down_qtm[:, 1], joints[:, 1])[0] + np.correlate(down_qtm[:, 2], joints[:, 2])[0]
+        corr_un += np.correlate(down_qtm[:, 0], joints_un[:, 0])[0] + np.correlate(down_qtm[:, 1], joints_un[:, 1])[0] + np.correlate(down_qtm[:, 2], joints[:, 2])[0]
+
+        diff = np.linalg.norm(down_qtm - joints, axis=1)
+        rmse += np.sqrt(np.mean(np.power(diff, 2)))
+
+        diff_un = np.linalg.norm(down_qtm - joints_un, axis=1)
+        rmse_un += np.sqrt(np.mean(np.power(diff_un, 2)))
+
+    return corr, corr_un, rmse, rmse_un
+
 
 def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float]:
     down_qtm = downsample(double_butter(data.qtm_cop[:, :2], 900), data.qtm_cop_ts, 15)
@@ -245,10 +274,10 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
         offset = int(length * cutoff)
 
         if "constraint" in experiment_type:
-            joints = [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]
+            joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
             for joint in joints:
-                a = data.down_kinect_joints[:, int(joint), :]
-                b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), :])
+                a = data.down_kinect_joints[:, joint, :]
+                b = double_butter(data.down_kinect_unfiltered_joints[:, joint, :])
 
                 # Only take rmse in account for some% of the signal, prevent
                 # weighting butterworth problems in the beginning and the end
@@ -274,7 +303,6 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
             raise NotImplementedError(f"Invalid experiment_type: {experiment_type}")
 
 
-        print(rmse)
         RMSEs.append(rmse)
         factors.append(data.config["measurement_error_factor"])
 
@@ -282,13 +310,13 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
     assert len(RMSEs) == len(directories)
 
     plt.plot(np.array(factors), RMSEs, marker="X", ls="None")
-    plt.show()
+    plt.savefig(f"./results/experiments/factors_rmse_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     plt.cla()
     argmin = np.argmin(RMSEs)
     print(f"Min value: {RMSEs.min()}")
     return  directories[argmin], factors[argmin]
 
-def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: float) -> tuple[Path, float]:
+def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: float, experiment_type: str) -> tuple[Path, float]:
     """Returns best factor path and factor."""
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     correlations = []
@@ -318,7 +346,7 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: flo
     assert len(corrs) == len(directories)
 
     plt.plot(np.array(factors), corrs, marker="X", ls="None")
-    plt.show()
+    plt.savefig(f"./results/experiments/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     plt.cla()
     argmax = np.argmax(corrs)
     return  directories[argmax], factors[argmax]
@@ -337,16 +365,16 @@ def main():
     print(path)
     data = load_processed_data(path)
 
+    result = None
     if args.experiment_type in ["cop", "cop-wide"]:
         result = compare_qtm_cop_kinect_cop(data, cutoff)
-        print(result)
     else:
-        pass
+        result = compare_qtm_joints_kinect_joints(data, cutoff)
 
+    print(result)
 
     if args.experiment_type in ["cop", "cop-wide"]:
         plt.cla()
-        print(f"cop {args.experiment_type}")
         o = int(data.down_kinect_com.shape[0] * cutoff)
         _, ax = plt.subplots(1, 2)
         ax[0].plot(data.down_kinect_ts[o:-o], data.down_kinect_com[:, 0][o:-o], label="Kalman")
@@ -365,8 +393,6 @@ def main():
 
 
     else:
-        print(f"constraint {args.experiment_type}")
-
         # Manual check to see if the butterworth artifacts have been cutoff
         o = int(data.down_kinect_joints.shape[0] * cutoff)
         plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Kalman")
@@ -375,6 +401,7 @@ def main():
         plt.legend()
         plt.show()
 
+    print(f"experiment type: {args.experiment_type}")
     print(factor)
 
 
