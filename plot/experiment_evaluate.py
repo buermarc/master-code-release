@@ -268,6 +268,8 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
     factors = []
     for directory in directories:
         data = load_processed_data(directory)
+        if float(data.config["measurement_error_factor"]) > 1.5:
+            continue
 
         rmse = 0
         length = data.down_kinect_joints.shape[0]
@@ -307,9 +309,12 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
         factors.append(data.config["measurement_error_factor"])
 
     RMSEs = np.array(RMSEs)
-    assert len(RMSEs) == len(directories)
 
     plt.plot(np.array(factors), RMSEs, marker="X", ls="None")
+    plt.xlabel("Measurement Error Factor")
+    plt.ylabel("RMSE (Distance)")
+    plt.legend()
+    plt.title(f"Experiment: {os.path.basename(experiment_folder)} RMSE per measurement error factor")
     plt.savefig(f"./results/experiments/factors_rmse_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     plt.cla()
     argmin = np.argmin(RMSEs)
@@ -346,6 +351,10 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: flo
     assert len(corrs) == len(directories)
 
     plt.plot(np.array(factors), corrs, marker="X", ls="None")
+    plt.xlabel("Measurement Error Factor")
+    plt.ylabel("Correlation")
+    plt.legend()
+    plt.title(f"Experiment: {os.path.basename(experiment_folder)} Correlation per measurement error factor")
     plt.savefig(f"./results/experiments/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     plt.cla()
     argmax = np.argmax(corrs)
@@ -355,6 +364,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("experiment_folder")
     parser.add_argument("-t", "--experiment-type", dest="experiment_type", choices=["cop", "cop-wide", "constraint", "constraint-fast"])
+    parser.add_argument("-x", "--early-exit", dest="early_exit", action="store_true")
 
     args = parser.parse_args()
 
@@ -372,6 +382,9 @@ def main():
         result = compare_qtm_joints_kinect_joints(data, cutoff)
 
     print(result)
+
+    if args.early_exit:
+        return
 
     if args.experiment_type in ["cop", "cop-wide"]:
         plt.cla()
