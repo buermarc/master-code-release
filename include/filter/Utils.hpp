@@ -11,8 +11,11 @@
 using Eigen::MatrixXd;
 using Eigen::Tensor;
 
-std::tuple<Tensor<double, 3, Eigen::RowMajor>, int, std::vector<double>, std::vector<bool>>
+std::tuple<Tensor<double, 3, Eigen::RowMajor>, Tensor<double, 3, Eigen::RowMajor>, int, std::vector<double>, std::vector<bool>>
 load_filtered_data(std::string path, int joint_counts, int max_frames = -1);
+
+std::tuple<Tensor<double, 3, Eigen::RowMajor>, int, std::vector<double>, std::vector<bool>>
+legacy_load_filtered_data(std::string path, int joint_counts, int max_frames = -1);
 
 std::tuple<Tensor<double, 3, Eigen::RowMajor>, int, std::vector<double>, std::vector<bool>>
 load_data(std::string path, int joint_counts, int max_frames = -1);
