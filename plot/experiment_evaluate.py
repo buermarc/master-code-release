@@ -210,11 +210,12 @@ def double_butter(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 6
 
 def _double_butter(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 6, N: int = 2) -> np.ndarray:
     """Take Nx1 data and return it double filtered."""
-    mean = data.mean()
+    mean = data[0]
     sos = signal.butter(N, cut_off, fs=sample_frequency, output="sos")
     once_filtered = signal.sosfilt(sos, data - mean)
-    second_mean = once_filtered.mean()
-    return np.flip(signal.sosfilt(sos, np.flip(once_filtered) - second_mean) + second_mean) + mean
+    flip = np.flip(once_filtered)
+    second_mean = flip[0]
+    return np.flip(signal.sosfilt(sos, flip - second_mean) + second_mean) + mean
 
 def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float]:
     kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
@@ -381,13 +382,20 @@ def compare_velocities(data: Data) -> None:
     """Compare the velocities of kalman filter, to finitie velocities of qtm."""
     dqtm = downsample(data.qtm_joints, data.qtm_ts, 15)
 
-    qtm_velocities = np.zeros_like(data.qtm_joints)
-    qtm_velocities[1:-1, :] = (data.qtm_joints[2:, :] - data.qtm_joints[:-2, :]) / (1./150.)
-    qtm_velocities[0, :] = (data.qtm_joints[1, :] - data.qtm_joints[0, :]) / (1./150)
-    qtm_velocities[-1, :] = (data.qtm_joints[-1, :] - data.qtm_joints[-2, :]) / (1./150)
+    qtm_joints = data.qtm_joints
+    qtm_velocities = np.zeros_like(qtm_joints)
+    qtm_velocities[1:-1, :] = (qtm_joints[2:, :] - qtm_joints[:-2, :]) / (2*(1./150.))
+    qtm_velocities[0, :] = (qtm_joints[1, :] - qtm_joints[0, :]) / (1./150)
+    qtm_velocities[-1, :] = (qtm_joints[-1, :] - qtm_joints[-2, :]) / (1./150)
+
+    qtm_joints = double_butter(data.qtm_joints, 150)
+
+    butter_qtm_velocities = np.zeros_like(qtm_joints)
+    butter_qtm_velocities[1:-1, :] = (qtm_joints[2:, :] - qtm_joints[:-2, :]) / (2*(1./150.))
+    butter_qtm_velocities[0, :] = (qtm_joints[1, :] - qtm_joints[0, :]) / (1./150)
+    butter_qtm_velocities[-1, :] = (qtm_joints[-1, :] - qtm_joints[-2, :]) / (1./150)
 
     breakpoint()
-    butter_qtm_velocities = double_butter(qtm_velocities, 150)
 
 
     # qtm_velocities = (dqtm[1:, :] - dqtm[:-1,:] ) / (1./15.)
