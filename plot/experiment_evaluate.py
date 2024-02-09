@@ -404,15 +404,15 @@ def main():
         plt.cla()
         o = int(data.down_kinect_com.shape[0] * cutoff)
         _, ax = plt.subplots(1, 2)
-        ax[0].plot(data.down_kinect_ts[o:-o], data.down_kinect_com[:, 0][o:-o], label="Kalman")
-        ax[0].plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_com[:, 0])[o:-o], label="Butter Unfiltered")
-        ax[0].plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_com[:, 0][o:-o], label="Unfiltered")
+        ax[0].plot(data.down_kinect_ts[o:-o], data.down_kinect_com[:, 0][o:-o], label="Kalman Filtered")
+        ax[0].plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_com[:, 0])[o:-o], label="Double Butterworth Filtered")
+        ax[0].plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_com[:, 0][o:-o], label="Raw Data")
         ax[0].set_title("X Axis")
         ax[0].legend()
 
-        ax[1].plot(data.down_kinect_ts[o:-o], data.down_kinect_com[:, 1][o:-o], label="Kalman")
-        ax[1].plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_com[:, 1])[o:-o], label="Butter Unfiltered")
-        ax[1].plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_com[:, 1][o:-o], label="Unfiltered")
+        ax[1].plot(data.down_kinect_ts[o:-o], data.down_kinect_com[:, 1][o:-o], label="Kalman Filtered")
+        ax[1].plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_com[:, 1])[o:-o], label="Double Butterworth Filtered")
+        ax[1].plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_com[:, 1][o:-o], label="Raw Data")
         ax[1].set_title("Y Axis")
         ax[1].legend()
 
@@ -422,9 +422,9 @@ def main():
     else:
         # Manual check to see if the butterworth artifacts have been cutoff
         o = int(data.down_kinect_joints.shape[0] * cutoff)
-        plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Kalman")
-        plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2])[o:-o], label="Butter Unfiltered")
-        plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Unfiltered")
+        plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Kalman Filtered")
+        plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2])[o:-o], label="Double Butterworth Filtered")
+        plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Raw Data")
         plt.legend()
         plt.show()
 
