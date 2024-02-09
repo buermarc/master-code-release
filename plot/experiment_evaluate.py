@@ -71,6 +71,7 @@ class Data:
     down_kinect_ts: np.ndarray
     down_kinect_unfiltered_com: np.ndarray
     down_kinect_unfiltered_joints: np.ndarray
+    down_kinect_velocities: np.ndarray
     down_qtm_cop: np.ndarray
     down_qtm_cop_ts: np.ndarray
     down_qtm_joints: np.ndarray
@@ -80,6 +81,7 @@ class Data:
     kinect_ts: np.ndarray
     kinect_unfiltered_com: np.ndarray
     kinect_unfiltered_joints: np.ndarray
+    kinect_velocities: np.ndarray
     qtm_cop: np.ndarray
     qtm_cop_ts: np.ndarray
     qtm_joints: np.ndarray
@@ -167,6 +169,7 @@ def load_processed_data(path: Path) -> Data:
         np.load(path / "down_kinect_ts.npy"),
         np.load(path / "down_kinect_unfiltered_com.npy"),
         np.load(path / "down_kinect_unfiltered_joints.npy"),
+        np.load(path / "down_kinect_velocities.npy"),
         np.load(path / "down_qtm_cop.npy"),
         np.load(path / "down_qtm_cop_ts.npy"),
         np.load(path / "down_qtm_joints.npy"),
@@ -176,6 +179,7 @@ def load_processed_data(path: Path) -> Data:
         np.load(path / "kinect_ts.npy"),
         np.load(path / "kinect_unfiltered_com.npy"),
         np.load(path / "kinect_unfiltered_joints.npy"),
+        np.load(path / "kinect_velocities.npy"),
         np.load(path / "qtm_cop.npy"),
         np.load(path / "qtm_cop_ts.npy"),
         np.load(path / "qtm_joints.npy"),
@@ -222,7 +226,7 @@ def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[
     for kinect_joint, qtm_joint in zip(kinect_joints, [0, 1, 2]):
         down_qtm = downsample(double_butter(data.qtm_joints[:, qtm_joint, :], 900), data.qtm_ts, 15)
         length = min(down_qtm.shape[0], data.down_kinect_joints.shape[0])
-        o = int(length * cutoff)
+        o = max(int(length * cutoff), 1)
 
         down_qtm = down_qtm[:length][o:-o]
         joints = data.down_kinect_joints[:, kinect_joint,:][:length][o:-o]
@@ -243,7 +247,7 @@ def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[
 def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float]:
     down_qtm = downsample(double_butter(data.qtm_cop[:, :2], 900), data.qtm_cop_ts, 15)
     length = min(down_qtm.shape[0], data.down_kinect_com.shape[0])
-    o = int(length * cutoff)
+    o = max(int(length * cutoff), 1)
 
     down_qtm = down_qtm[:length][o:-o]
     com = data.down_kinect_com[:, :2][:length][o:-o]
@@ -268,18 +272,28 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
     factors = []
     for directory in directories:
         data = load_processed_data(directory)
-        if float(data.config["measurement_error_factor"]) > 1.5:
-            continue
+
+        #if float(data.config["measurement_error_factor"]) > 1.5:
+        #    continue
 
         rmse = 0
         length = data.down_kinect_joints.shape[0]
-        offset = int(length * cutoff)
+        offset = max(int(length * cutoff), 1)
 
         if "constraint" in experiment_type:
             joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
             for joint in joints:
                 a = data.down_kinect_joints[:, joint, :]
-                b = double_butter(data.down_kinect_unfiltered_joints[:, joint, :])
+                b = double_butter(data.down_kinect_unfiltered_joints[:, joint, :], N=2)
+
+                if 0.95 < float(data.config["measurement_error_factor"]) < 1.05 :
+                    plt.plot(data.down_kinect_ts, a[:, 0], label="kalman");
+                    plt.plot(data.down_kinect_ts, b[:, 0], label="butterworth");
+                    plt.plot(data.down_kinect_ts, data.down_kinect_unfiltered_joints[:, joint, 0], label="raw");
+                    plt.legend();
+                    plt.title(data.config["measurement_error_factor"]);
+                    plt.show();
+                    plt.cla();
 
                 # Only take rmse in account for some% of the signal, prevent
                 # weighting butterworth problems in the beginning and the end
@@ -291,7 +305,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
                 all_RMSEs.append(rmse)
         elif "cop" in experiment_type:
             a = data.down_kinect_com[:, :2]
-            b = double_butter(data.down_kinect_unfiltered_com[:, :2])
+            b = double_butter(data.down_kinect_unfiltered_com[:, :2], N=2)
 
             # Only take rmse in account for some% of the signal, prevent
             # weighting butterworth problems in the beginning and the end
@@ -368,7 +382,7 @@ def main():
 
     args = parser.parse_args()
 
-    cutoff = 0.15
+    cutoff = 0.01
     path, factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), args.experiment_type, cutoff)
 
 
