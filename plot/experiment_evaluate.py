@@ -202,6 +202,7 @@ def double_butter(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 6
         for i in range(shape[1]):
             for j in range(shape[2]):
                 result[:, i, j] = _double_butter(data[:, i, j], sample_frequency, cut_off, N)
+        return result
     else:
         print(f"shape: {shape}")
         raise NotImplementedError
@@ -286,6 +287,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
                 a = data.down_kinect_joints[:, joint, :]
                 b = double_butter(data.down_kinect_unfiltered_joints[:, joint, :], N=2)
 
+                '''
                 if 0.95 < float(data.config["measurement_error_factor"]) < 1.05 :
                     plt.plot(data.down_kinect_ts, a[:, 0], label="kalman");
                     plt.plot(data.down_kinect_ts, b[:, 0], label="butterworth");
@@ -294,6 +296,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
                     plt.title(data.config["measurement_error_factor"]);
                     plt.show();
                     plt.cla();
+                '''
 
                 # Only take rmse in account for some% of the signal, prevent
                 # weighting butterworth problems in the beginning and the end
@@ -374,6 +377,35 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: flo
     argmax = np.argmax(corrs)
     return  directories[argmax], factors[argmax]
 
+def compare_velocities(data: Data) -> None:
+    """Compare the velocities of kalman filter, to finitie velocities of qtm."""
+    dqtm = downsample(data.qtm_joints, data.qtm_ts, 15)
+
+    qtm_velocities = np.zeros_like(data.qtm_joints)
+    qtm_velocities[1:-1, :] = (data.qtm_joints[2:, :] - data.qtm_joints[:-2, :]) / (1./150.)
+    qtm_velocities[0, :] = (data.qtm_joints[1, :] - data.qtm_joints[0, :]) / (1./150)
+    qtm_velocities[-1, :] = (data.qtm_joints[-1, :] - data.qtm_joints[-2, :]) / (1./150)
+
+    breakpoint()
+    butter_qtm_velocities = double_butter(qtm_velocities, 150)
+
+
+    # qtm_velocities = (dqtm[1:, :] - dqtm[:-1,:] ) / (1./15.)
+    kinect_velocities = np.zeros((data.down_kinect_joints.shape[0], 3, 3))
+    kinect_velocities[:, 0, :] = data.down_kinect_velocities[:, int(Joint.SHOULDER_LEFT), :]
+    kinect_velocities[:, 1, :] = data.down_kinect_velocities[:, int(Joint.ELBOW_LEFT), :]
+    kinect_velocities[:, 2, :] = data.down_kinect_velocities[:, int(Joint.WRIST_LEFT), :]
+    plt.plot(np.arange(1, qtm_velocities.shape[0]+1) * (1./150.), qtm_velocities[:, 1, 2], label="qtm")
+    plt.plot(np.arange(1, qtm_velocities.shape[0]+1) * (1./150.), butter_qtm_velocities[:, 1, 2], label="butter qtm")
+    plt.plot(data.down_kinect_ts, kinect_velocities[:, 1, 2], label="kinect")
+    plt.xlabel("Time [s]")
+    plt.ylabel("Velocity [m/s]")
+    plt.title("Velocity of Joint ? - Axis ?")
+    plt.legend()
+    plt.show()
+    plt.cla()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("experiment_folder")
@@ -396,6 +428,9 @@ def main():
         result = compare_qtm_joints_kinect_joints(data, cutoff)
 
     print(result)
+
+    compare_velocities(load_processed_data(Path(args.experiment_folder) / "6"))
+    # compare_velocities(data)
 
     if args.early_exit:
         return
