@@ -187,35 +187,38 @@ def load_processed_data(path: Path) -> Data:
         json.load((path / "config.json").open(mode="r", encoding="UTF-8")),
     )
 
-def double_butter(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 6, N: int = 2) -> np.ndarray:
+def double_butter(data: np.ndarray, sample_frequency: int = 15, cutoff: int = 6, N: int = 2, once: bool = False) -> np.ndarray:
     shape = data.shape
     if len(shape) == 1:
-        return _double_butter(data, sample_frequency, cut_off, N)
+        return _double_butter(data, sample_frequency, cutoff, N, once)
     elif len(shape) == 2:
         result = np.empty_like(data)
         for i in range(shape[1]):
-            result[:, i] = _double_butter(data[:, i], sample_frequency, cut_off, N)
+            result[:, i] = _double_butter(data[:, i], sample_frequency, cutoff, N, once)
         return result
     elif len(shape) == 3:
         # Bad performance, but hopefully not so important
         result = np.empty_like(data)
         for i in range(shape[1]):
             for j in range(shape[2]):
-                result[:, i, j] = _double_butter(data[:, i, j], sample_frequency, cut_off, N)
+                result[:, i, j] = _double_butter(data[:, i, j], sample_frequency, cutoff, N, once)
         return result
     else:
         print(f"shape: {shape}")
         raise NotImplementedError
 
 
-def _double_butter(data: np.ndarray, sample_frequency: int = 15, cut_off: int = 6, N: int = 2) -> np.ndarray:
+def _double_butter(data: np.ndarray, sample_frequency: int = 15, cutoff: int = 1, N: int = 2, once: bool = False) -> np.ndarray:
     """Take Nx1 data and return it double filtered."""
     mean = data[0]
-    sos = signal.butter(N, cut_off, fs=sample_frequency, output="sos")
+    sos = signal.butter(N, cutoff, fs=sample_frequency, output="sos")
     once_filtered = signal.sosfilt(sos, data - mean)
+    if once:
+        return once_filtered + mean
     flip = np.flip(once_filtered)
     second_mean = flip[0]
     return np.flip(signal.sosfilt(sos, flip - second_mean) + second_mean) + mean
+
 
 def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float]:
     kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
@@ -267,7 +270,7 @@ def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float,
     return corr, corr_un, rmse, rmse_un
 
 
-def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_type: str, cutoff: float = 0.15) -> tuple[Path, float]:
+def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: float, experiment_type: str) -> tuple[Path, float]:
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     RMSEs = []
     all_RMSEs = []
@@ -288,15 +291,15 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
                 a = data.down_kinect_joints[:, joint, :]
                 b = double_butter(data.down_kinect_unfiltered_joints[:, joint, :], N=2)
 
+                # if  (0.3 < float(data.config["measurement_error_factor"]) < 0.35) or (1.0 < float(data.config["measurement_error_factor"]) < 1.05) or (5.00 < float(data.config["measurement_error_factor"]) < 5.05):
                 '''
-                if 0.95 < float(data.config["measurement_error_factor"]) < 1.05 :
-                    plt.plot(data.down_kinect_ts, a[:, 0], label="kalman");
-                    plt.plot(data.down_kinect_ts, b[:, 0], label="butterworth");
-                    plt.plot(data.down_kinect_ts, data.down_kinect_unfiltered_joints[:, joint, 0], label="raw");
-                    plt.legend();
-                    plt.title(data.config["measurement_error_factor"]);
-                    plt.show();
-                    plt.cla();
+                plt.plot(data.down_kinect_ts, a[:, 2], label="kalman");
+                plt.plot(data.down_kinect_ts, b[:, 2], label="butterworth");
+                plt.plot(data.down_kinect_ts, data.down_kinect_unfiltered_joints[:, joint, 2], label="raw");
+                plt.legend();
+                plt.title(data.config["measurement_error_factor"]);
+                plt.show();
+                plt.cla();
                 '''
 
                 # Only take rmse in account for some% of the signal, prevent
@@ -333,11 +336,158 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, experiment_
     plt.ylabel("RMSE (Distance)")
     plt.legend()
     plt.title(f"Experiment: {os.path.basename(experiment_folder)} RMSE per measurement error factor")
-    plt.savefig(f"./results/experiments/factors_rmse_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    # plt.savefig(f"./results/experiments/factors_rmse_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.show()
     plt.cla()
     argmin = np.argmin(RMSEs)
     print(f"Min value: {RMSEs.min()}")
     return  directories[argmin], factors[argmin]
+
+def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path, cutoff: float, experiment_type: str) -> tuple[Path, float]:
+    """Find the best measurement error factor through comparing velocities."""
+    directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
+    RMSEs = []
+    factors = []
+    once = True
+    for directory in directories:
+        data = load_processed_data(directory)
+
+        length = data.down_kinect_joints.shape[0]
+        o = int(length * cutoff)
+        factor = float(data.config['measurement_error_factor'])
+
+        rmse = 0
+        for idx, joint in enumerate([Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]):
+            for i in range(3):
+                a_vel = data.down_kinect_velocities[:, int(joint), i]
+                b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), i], cutoff=2, once=True)
+                c = data.down_kinect_unfiltered_joints[:, int(joint), i]
+
+                b_vel = np.zeros_like(b)
+                b_vel[1:-1] = (b[2:] - b[:-2]) / (2*(1./15.))
+                b_vel[0] = (b[1] - b[0]) / (1./15.)
+                b_vel[-1] = (b[-1] - b[-2]) / (1./15.)
+
+                qtm_joints = double_butter(data.qtm_joints[:, idx, i], 150)
+
+                butter_qtm_velocities = np.zeros_like(qtm_joints)
+                butter_qtm_velocities[1:-1] = (qtm_joints[2:] - qtm_joints[:-2]) / (2*(1./150.))
+                butter_qtm_velocities[0] = (qtm_joints[1] - qtm_joints[0]) / (1./150)
+                butter_qtm_velocities[-1] = (qtm_joints[-1] - qtm_joints[-2]) / (1./150)
+                d_vel = downsample(butter_qtm_velocities, data.qtm_ts, 15)
+
+                # extract finite velocity
+                # downsampled have 15 hz frequency
+                '''
+                if joint == Joint.WRIST_LEFT and once and i == 2 and 0 <= factor < 0.05:
+                    once = False
+
+                    c_vel = np.zeros_like(c)
+                    c_vel[1:-1] = (c[2:] - c[:-2]) / (2*(1./15.))
+                    c_vel[0] = (c[1] - c[0]) / (1./15.)
+                    c_vel[-1] = (c[-1] - c[-2]) / (1./15.)
+
+                    plt.plot(data.down_kinect_ts, a_vel, label="kalman vel")
+                    plt.plot(data.down_kinect_ts, b_vel, label="butter fd vel")
+                    # plt.plot(data.down_kinect_ts, c_vel, label="raw fd vel")
+                    qtm_ts = np.arange(0, d_vel.shape[0]) * (1./15.)
+                    plt.plot(qtm_ts, d_vel, label="qtm fd vel")
+                    plt.legend()
+                    plt.title(f"Error factor: {data.config['measurement_error_factor']}");
+                    plt.show();
+                '''
+
+                error = np.sqrt(np.mean(np.power(a_vel[o:-o] - b_vel[o:-o], 2)))
+                rmse += error
+
+        RMSEs.append(rmse)
+        factors.append(data.config["measurement_error_factor"])
+
+    facts = np.array(factors)
+    rmses = np.array(RMSEs)
+    idx = np.argsort(facts)
+    plt.plot(facts[idx][1:], rmses[idx][1:], marker="X", ls="None")
+    plt.xlabel("Measurement Error Factor")
+    plt.ylabel("RMSE")
+    plt.legend()
+    plt.title(f"Experiment: {os.path.basename(experiment_folder)} RMSE per measurement error factor")
+    plt.savefig(f"./results/experiments/factors_rmse_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.show()
+    plt.cla()
+    argmin = np.argmin(rmses)
+    return directories[argmin], factors[argmin]
+
+def find_best_measurement_error_factor_corr_on_velocity(experiment_folder: Path, cutoff: float, experiment_type: str) -> tuple[Path, float]:
+    """Find the best measurement error factor through comparing velocities."""
+    directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
+    correlations = []
+    all_correlations = []
+    factors = []
+    once = True
+    for directory in directories:
+        data = load_processed_data(directory)
+
+        length = data.down_kinect_joints.shape[0]
+        o = int(length * cutoff)
+        factor = float(data.config['measurement_error_factor'])
+
+        correlation = 0
+        for idx, joint in enumerate([Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]):
+            for i in range(3):
+                a_vel = data.down_kinect_velocities[:, int(joint), i]
+                b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), i], cutoff=2, once=True)
+                c = data.down_kinect_unfiltered_joints[:, int(joint), i]
+
+                b_vel = np.zeros_like(b)
+                b_vel[1:-1] = (b[2:] - b[:-2]) / (2*(1./15.))
+                b_vel[0] = (b[1] - b[0]) / (1./15.)
+                b_vel[-1] = (b[-1] - b[-2]) / (1./15.)
+
+                qtm_joints = double_butter(data.qtm_joints[:, idx, i], 150)
+
+                butter_qtm_velocities = np.zeros_like(qtm_joints)
+                butter_qtm_velocities[1:-1] = (qtm_joints[2:] - qtm_joints[:-2]) / (2*(1./150.))
+                butter_qtm_velocities[0] = (qtm_joints[1] - qtm_joints[0]) / (1./150)
+                butter_qtm_velocities[-1] = (qtm_joints[-1] - qtm_joints[-2]) / (1./150)
+                d_vel = downsample(butter_qtm_velocities, data.qtm_ts, 15)
+
+                # extract finite velocity
+                # downsampled have 15 hz frequency
+                if joint == Joint.WRIST_LEFT and once and i == 2 and 0 <= factor < 0.05:
+                    once = False
+
+                    c_vel = np.zeros_like(c)
+                    c_vel[1:-1] = (c[2:] - c[:-2]) / (2*(1./15.))
+                    c_vel[0] = (c[1] - c[0]) / (1./15.)
+                    c_vel[-1] = (c[-1] - c[-2]) / (1./15.)
+
+                    plt.plot(data.down_kinect_ts, a_vel, label="kalman vel")
+                    plt.plot(data.down_kinect_ts, b_vel, label="butter fd vel")
+                    # plt.plot(data.down_kinect_ts, c_vel, label="raw fd vel")
+                    qtm_ts = np.arange(0, d_vel.shape[0]) * (1./15.)
+                    plt.plot(qtm_ts, d_vel, label="qtm fd vel")
+                    plt.legend()
+                    plt.title(f"Error factor: {data.config['measurement_error_factor']}");
+                    plt.show();
+
+                corr = np.max(signal.correlate(a_vel[o:-o], b_vel[o:-o]))
+                correlation += corr
+                all_correlations.append(corr)
+
+        correlations.append(correlation)
+        factors.append(data.config["measurement_error_factor"])
+
+    corrs = np.array(correlations)
+    plt.plot(np.array(factors), corrs, marker="X", ls="None")
+    plt.xlabel("Measurement Error Factor")
+    plt.ylabel("Correlation")
+    plt.legend()
+    plt.title(f"Experiment: {os.path.basename(experiment_folder)} Correlation per measurement error factor")
+    # plt.savefig(f"./results/experiments/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.show()
+    argmax = np.argmax(corrs)
+    return  directories[argmax], factors[argmax]
+
 
 def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: float, experiment_type: str) -> tuple[Path, float]:
     """Returns best factor path and factor."""
@@ -380,7 +530,6 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: flo
 
 def compare_velocities(data: Data) -> None:
     """Compare the velocities of kalman filter, to finitie velocities of qtm."""
-    dqtm = downsample(data.qtm_joints, data.qtm_ts, 15)
 
     qtm_joints = data.qtm_joints
     qtm_velocities = np.zeros_like(qtm_joints)
@@ -395,10 +544,14 @@ def compare_velocities(data: Data) -> None:
     butter_qtm_velocities[0, :] = (qtm_joints[1, :] - qtm_joints[0, :]) / (1./150)
     butter_qtm_velocities[-1, :] = (qtm_joints[-1, :] - qtm_joints[-2, :]) / (1./150)
 
-    breakpoint()
+    b = double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.ELBOW_LEFT), 2], cutoff=2, once=True)
+
+    b_vel = np.zeros_like(b)
+    b_vel[1:-1] = (b[2:] - b[:-2]) / (2*(1./15.))
+    b_vel[0] = (b[1] - b[0]) / (1./15.)
+    b_vel[-1] = (b[-1] - b[-2]) / (1./15.)
 
 
-    # qtm_velocities = (dqtm[1:, :] - dqtm[:-1,:] ) / (1./15.)
     kinect_velocities = np.zeros((data.down_kinect_joints.shape[0], 3, 3))
     kinect_velocities[:, 0, :] = data.down_kinect_velocities[:, int(Joint.SHOULDER_LEFT), :]
     kinect_velocities[:, 1, :] = data.down_kinect_velocities[:, int(Joint.ELBOW_LEFT), :]
@@ -406,6 +559,7 @@ def compare_velocities(data: Data) -> None:
     plt.plot(np.arange(1, qtm_velocities.shape[0]+1) * (1./150.), qtm_velocities[:, 1, 2], label="qtm")
     plt.plot(np.arange(1, qtm_velocities.shape[0]+1) * (1./150.), butter_qtm_velocities[:, 1, 2], label="butter qtm")
     plt.plot(data.down_kinect_ts, kinect_velocities[:, 1, 2], label="kinect")
+    plt.plot(data.down_kinect_ts, b_vel, label="butter raw vel")
     plt.xlabel("Time [s]")
     plt.ylabel("Velocity [m/s]")
     plt.title("Velocity of Joint ? - Axis ?")
@@ -423,10 +577,13 @@ def main():
     args = parser.parse_args()
 
     cutoff = 0.01
-    path, factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), args.experiment_type, cutoff)
+    # path, factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), cutoff, args.experiment_type)
+    # path, factor = find_best_measurement_error_factor_corr_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
+    path, factor = find_best_measurement_error_factor_rmse_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
 
 
     print(path)
+    print(f"factor: {factor}")
     data = load_processed_data(path)
 
     result = None
@@ -437,8 +594,8 @@ def main():
 
     print(result)
 
-    compare_velocities(load_processed_data(Path(args.experiment_folder) / "6"))
-    # compare_velocities(data)
+    # compare_velocities(load_processed_data(Path(args.experiment_folder) / "6"))
+    compare_velocities(data)
 
     if args.early_exit:
         return
@@ -465,9 +622,9 @@ def main():
     else:
         # Manual check to see if the butterworth artifacts have been cutoff
         o = int(data.down_kinect_joints.shape[0] * cutoff)
-        plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Kalman Filtered")
-        plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2])[o:-o], label="Double Butterworth Filtered")
-        plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2][o:-o], label="Raw Data")
+        plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_joints[:, int(Joint.ELBOW_LEFT), 2][o:-o], label="Kalman Filtered")
+        plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.ELBOW_LEFT), 2])[o:-o], label="Double Butterworth Filtered")
+        plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_joints[:, int(Joint.ELBOW_LEFT), 2][o:-o], label="Raw Data")
         plt.legend()
         plt.show()
 
