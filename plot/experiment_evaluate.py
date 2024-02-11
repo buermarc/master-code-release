@@ -331,7 +331,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
 
     RMSEs = np.array(RMSEs)
 
-    plt.plot(np.array(factors), RMSEs, marker="X", ls="None")
+    plt.plot(np.array(factors), RMSEs, marker="X", ls="None", label="RMSE")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("RMSE (Distance)")
     plt.legend()
@@ -347,6 +347,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     """Find the best measurement error factor through comparing velocities."""
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     RMSEs = []
+    correlation_offsets = []
     factors = []
     once = True
     for directory in directories:
@@ -357,10 +358,12 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         factor = float(data.config['measurement_error_factor'])
 
         rmse = 0
+        corr_offset = 0
         for idx, joint in enumerate([Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]):
             for i in range(3):
                 a_vel = data.down_kinect_velocities[:, int(joint), i]
-                b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), i], cutoff=2, once=True)
+                # If we have a kalman filter factor then we also want to introduce butterworth filter lag
+                b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), i], cutoff=2, N=2, once=factor != 0)
                 c = data.down_kinect_unfiltered_joints[:, int(joint), i]
 
                 b_vel = np.zeros_like(b)
@@ -378,8 +381,8 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
 
                 # extract finite velocity
                 # downsampled have 15 hz frequency
-                '''
-                if joint == Joint.WRIST_LEFT and once and i == 2 and 0 <= factor < 0.05:
+
+                if joint == Joint.WRIST_LEFT and once and i == 2 and 29 <= factor < 31.05:
                     once = False
 
                     c_vel = np.zeros_like(c)
@@ -387,7 +390,9 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
                     c_vel[0] = (c[1] - c[0]) / (1./15.)
                     c_vel[-1] = (c[-1] - c[-2]) / (1./15.)
 
-                    plt.plot(data.down_kinect_ts, a_vel, label="kalman vel")
+                    off = np.argmax(signal.correlate(b_vel[o:-o], a_vel[o:-o])) - (len(a_vel) - 2*o)
+                    time = off * (1/15)
+                    plt.plot(data.down_kinect_ts + time, a_vel, label="kalman vel")
                     plt.plot(data.down_kinect_ts, b_vel, label="butter fd vel")
                     # plt.plot(data.down_kinect_ts, c_vel, label="raw fd vel")
                     qtm_ts = np.arange(0, d_vel.shape[0]) * (1./15.)
@@ -395,26 +400,59 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
                     plt.legend()
                     plt.title(f"Error factor: {data.config['measurement_error_factor']}");
                     plt.show();
-                '''
 
-                error = np.sqrt(np.mean(np.power(a_vel[o:-o] - b_vel[o:-o], 2)))
+                # Adjust for lag by shifting based on cross correlation
+                lag = np.argmax(signal.correlate(b_vel[o:-o], a_vel[o:-o])) - (len(a_vel) - 2 * o)
+
+                # Factor 0 means a real high velocity error, correlation
+                # doesn't realy provide good results
+                if factor == 0:
+                    lag = 0
+
+                if o < np.abs(lag):
+                    # print("Joint {joint} axis {i}")
+                    # print("Lag is to big, reseting it to 0")
+                    lag = 0
+
+                error = np.sqrt(np.mean(np.power(a_vel[(o+lag):-(o-lag)] - b_vel[o:-o], 2)))
                 rmse += error
+
+                if joint == Joint.WRIST_LEFT and i == 2:
+                    corr_offset += np.argmax(signal.correlate(b_vel[o:-o], a_vel[o:-o])) - (len(a_vel) - 2 * o)
 
         RMSEs.append(rmse)
         factors.append(data.config["measurement_error_factor"])
+        correlation_offsets.append(corr_offset)
 
     facts = np.array(factors)
     rmses = np.array(RMSEs)
+    argmin = np.argmin(rmses)
+
+    corrs = np.array(correlation_offsets)
     idx = np.argsort(facts)
-    plt.plot(facts[idx][1:], rmses[idx][1:], marker="X", ls="None")
+
+    plt.cla()
+    plt.plot(facts[idx][1:], rmses[idx][1:], marker="X", ls="None", label="RMSE")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("RMSE")
     plt.legend()
-    plt.title(f"Experiment: {os.path.basename(experiment_folder)} RMSE per measurement error factor")
+    plt.title(f"Experiment: {os.path.basename(experiment_folder)} RMSE per measurement error factor - Argmin: {facts[argmin]}")
     plt.savefig(f"./results/experiments/factors_rmse_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     plt.show()
     plt.cla()
-    argmin = np.argmin(rmses)
+
+    plt.plot(facts[idx][1:], corrs[idx][1:], marker="X", ls="None", label="Correlation")
+    plt.xlabel("Measurement Error Factor")
+    plt.ylabel("Correlation offset")
+    plt.legend()
+
+    jump_idx = np.argmax(corrs[idx][1:] != 0)
+    plt.title(f"{facts[idx][1:][jump_idx]} : {factors[argmin]}- Experiment: {os.path.basename(experiment_folder)} Correlation offset per measurement error factor")
+    print(f"Correlation jump {facts[idx][1:][jump_idx]} : Factor argmin {factors[argmin]}")
+
+    plt.savefig(f"./results/experiments/factors_rmse_velocity_correlation_offset_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.show()
+    plt.cla()
     return directories[argmin], factors[argmin]
 
 def find_best_measurement_error_factor_corr_on_velocity(experiment_folder: Path, cutoff: float, experiment_type: str) -> tuple[Path, float]:
@@ -478,7 +516,7 @@ def find_best_measurement_error_factor_corr_on_velocity(experiment_folder: Path,
         factors.append(data.config["measurement_error_factor"])
 
     corrs = np.array(correlations)
-    plt.plot(np.array(factors), corrs, marker="X", ls="None")
+    plt.plot(np.array(factors), corrs, marker="X", ls="None", label="Correlation")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Correlation")
     plt.legend()
@@ -518,7 +556,7 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: flo
     corrs = np.array(correlations)
     assert len(corrs) == len(directories)
 
-    plt.plot(np.array(factors), corrs, marker="X", ls="None")
+    plt.plot(np.array(factors), corrs, marker="X", ls="None", label="Correlation")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Correlation")
     plt.legend()
@@ -582,7 +620,6 @@ def main():
     path, factor = find_best_measurement_error_factor_rmse_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
 
 
-    print(path)
     print(f"factor: {factor}")
     data = load_processed_data(path)
 
