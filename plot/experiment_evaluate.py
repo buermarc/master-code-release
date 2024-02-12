@@ -363,7 +363,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
             for i in range(3):
                 a_vel = data.down_kinect_velocities[:, int(joint), i]
                 # If we have a kalman filter factor then we also want to introduce butterworth filter lag
-                b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), i], cutoff=2, N=2, once=factor != 0)
+                b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), i], cutoff=6, N=2, once=factor != 0)
                 c = data.down_kinect_unfiltered_joints[:, int(joint), i]
 
                 b_vel = np.zeros_like(b)
@@ -640,7 +640,7 @@ def main():
     if args.experiment_type in ["cop", "cop-wide"]:
         plt.cla()
         o = int(data.down_kinect_com.shape[0] * cutoff)
-        _, ax = plt.subplots(1, 2)
+        fig, ax = plt.subplots(1, 2)
         ax[0].plot(data.down_kinect_ts[o:-o], data.down_kinect_com[:, 0][o:-o], label="Kalman Filtered")
         ax[0].plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_com[:, 0])[o:-o], label="Double Butterworth Filtered")
         ax[0].plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_com[:, 0][o:-o], label="Raw Data")
@@ -652,6 +652,7 @@ def main():
         ax[1].plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_com[:, 1][o:-o], label="Raw Data")
         ax[1].set_title("Y Axis")
         ax[1].legend()
+        fig.suptitle("Compare X and Y Axis of COP and COM")
 
         plt.show()
 
@@ -663,6 +664,7 @@ def main():
         plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.ELBOW_LEFT), 2])[o:-o], label="Double Butterworth Filtered")
         plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_joints[:, int(Joint.ELBOW_LEFT), 2][o:-o], label="Raw Data")
         plt.legend()
+        plt.title("Compare Joint Position ELBOW_LEFT for Z Axis")
         plt.show()
 
     print(f"experiment type: {args.experiment_type}")
