@@ -842,8 +842,6 @@ def main():
     pool = ThreadPool(processes=2)
     joint_result = pool.apply_async(find_best_measurement_error_factor_rmse, (Path(args.experiment_folder), cutoff, args.experiment_type))
     vel_result = pool.apply_async(find_best_measurement_error_factor_rmse_on_velocity, (Path(args.experiment_folder), cutoff, args.experiment_type))
-    # joint_path, joint_rmse_factor, joint_dtw_factor, joint_fr_factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), cutoff, args.experiment_type)
-    # vel_path, vel_rmse_factor, vel_dtw_factor, vel_fr_factor = find_best_measurement_error_factor_rmse_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
 
     joint_path, joint_rmse_factor, joint_dtw_factor, joint_fr_factor = joint_result.get()
     vel_path, vel_rmse_factor, vel_dtw_factor, vel_fr_factor = vel_result.get()
