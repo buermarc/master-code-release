@@ -379,6 +379,8 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
         length = data.down_kinect_joints.shape[0]
         o = max(int(length * cutoff), 1)
         factor = float(data.config['measurement_error_factor'])
+        if factor == 0:
+            continue
 
         # if "constraint" in experiment_type:
         if True:
@@ -448,7 +450,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     idx = np.argsort(facts)
 
     plt.cla()
-    plt.plot(facts[idx][1:], rmses[idx][1:], marker="X", ls="None", label="RMSE")
+    plt.plot(facts[idx][:], rmses[idx][:], marker="X", ls="None", label="RMSE")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("RMSE")
     plt.legend()
@@ -459,14 +461,14 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     plt.cla()
 
     '''
-    plt.plot(facts[idx][1:], corrs[idx][1:], marker="X", ls="None", label="Correlation")
+    plt.plot(facts[idx][:], corrs[idx][:], marker="X", ls="None", label="Correlation")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Correlation offset")
     plt.legend()
 
-    jump_idx = np.argmax(corrs[idx][1:] != 0)
-    plt.title(f"{facts[idx][1:][jump_idx]}:{factors[rmse_argmin]}- Ex: {os.path.basename(experiment_folder)} Correlation offset : measurement error factor")
-    print(f"Correlation jump {facts[idx][1:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
+    jump_idx = np.argmax(corrs[idx][:] != 0)
+    plt.title(f"{facts[idx][:][jump_idx]}:{factors[rmse_argmin]}- Ex: {os.path.basename(experiment_folder)} Correlation offset : measurement error factor")
+    print(f"Correlation jump {facts[idx][:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
 
     plt.savefig(f"./results/experiments/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
@@ -475,7 +477,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     '''
 
     plt.cla()
-    plt.plot(facts[idx][1:], dtw_dists[idx][1:], marker="X", ls="None", label="DTW Dist")
+    plt.plot(facts[idx][:], dtw_dists[idx][:], marker="X", ls="None", label="DTW Dist")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
@@ -486,7 +488,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][1:], fr_dists[idx][1:], marker="X", ls="None", label="Frechet Dist")
+    plt.plot(facts[idx][:], fr_dists[idx][:], marker="X", ls="None", label="Frechet Dist")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Frechet Dist")
     plt.legend()
@@ -512,6 +514,9 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         length = data.down_kinect_joints.shape[0]
         o = int(length * cutoff)
         factor = float(data.config['measurement_error_factor'])
+
+        if factor == 0:
+            continue
 
         rmse = 0
         dtw_distance = 0
@@ -619,7 +624,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     idx = np.argsort(facts)
 
     plt.cla()
-    plt.plot(facts[idx][1:], rmses[idx][1:], marker="X", ls="None", label="RMSE")
+    plt.plot(facts[idx][:], rmses[idx][:], marker="X", ls="None", label="RMSE")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("RMSE")
     plt.legend()
@@ -629,14 +634,14 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         plt.show()
     plt.cla()
 
-    plt.plot(facts[idx][1:], corrs[idx][1:], marker="X", ls="None", label="Correlation")
+    plt.plot(facts[idx][:], corrs[idx][:], marker="X", ls="None", label="Correlation")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Correlation offset")
     plt.legend()
 
-    jump_idx = np.argmax(corrs[idx][1:] != 0)
-    plt.title(f"{facts[idx][1:][jump_idx]}:{factors[rmse_argmin]}- Ex: {os.path.basename(experiment_folder)} Correlation offset : measurement error factor")
-    print(f"Correlation jump {facts[idx][1:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
+    jump_idx = np.argmax(corrs[idx][:] != 0)
+    plt.title(f"{facts[idx][:][jump_idx]}:{factors[rmse_argmin]}- Ex: {os.path.basename(experiment_folder)} Correlation offset : measurement error factor")
+    print(f"Correlation jump {facts[idx][:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
 
     plt.savefig(f"./results/experiments/factors_rmse_velocity_correlation_offset_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
@@ -644,7 +649,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][1:], dtw_dists[idx][1:], marker="X", ls="None", label="DTW Dist")
+    plt.plot(facts[idx][:], dtw_dists[idx][:], marker="X", ls="None", label="DTW Dist")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
@@ -655,7 +660,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][1:], fr_dists[idx][1:], marker="X", ls="None", label="Frechet Dist")
+    plt.plot(facts[idx][:], fr_dists[idx][:], marker="X", ls="None", label="Frechet Dist")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Frechet Dist")
     plt.legend()
@@ -765,7 +770,7 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: flo
         factors.append(data.config["measurement_error_factor"])
 
     corrs = np.array(correlations)
-    assert len(corrs) == len(directories)
+    # assert len(corrs) == len(directories)
 
     plt.plot(np.array(factors), corrs, marker="X", ls="None", label="Correlation")
     plt.xlabel("Measurement Error Factor")
