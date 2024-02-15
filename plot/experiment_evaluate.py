@@ -6,6 +6,8 @@ import numpy as np
 from numpy.testing import assert_allclose
 import argparse
 from dataclasses import dataclass
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pathlib import Path
 from enum import IntEnum
@@ -384,6 +386,9 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
             assert_allclose(data.down_kinect_joints, data.down_kinect_unfiltered_joints)
             continue
 
+        if factor > 10:
+            continue
+
         # if "constraint" in experiment_type:
         if True:
             joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
@@ -452,11 +457,12 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     idx = np.argsort(facts)
 
     plt.cla()
-    plt.plot(facts[idx][:], rmses[idx][:], marker="X", ls="None", label="RMSE")
+    plt.plot(facts[idx][:], rmses[idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+    plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("RMSE")
     plt.legend()
-    plt.title(f"Ex: {os.path.basename(experiment_folder)} RMSE : measurement error factor - Argmin: {facts[rmse_argmin]}")
+    plt.title(f"Ex: {os.path.basename(experiment_folder)} - RMSE pro Measurement Error Factor")
     plt.savefig(f"./results/experiments/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
@@ -479,22 +485,24 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     '''
 
     plt.cla()
-    plt.plot(facts[idx][:], dtw_dists[idx][:], marker="X", ls="None", label="DTW Dist")
+    plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+    plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6)
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
-    plt.title(f"Ex: {os.path.basename(experiment_folder)} DTW Dist : measurement error factor - Argmin: {facts[dtw_argmin]}")
+    plt.title(f"Ex: {os.path.basename(experiment_folder)} - DTW Dist. pro Measurement Error Factor")
     plt.savefig(f"./results/experiments/factors_dtw_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][:], fr_dists[idx][:], marker="X", ls="None", label="Frechet Dist")
+    plt.plot(facts[idx][:], fr_dists[idx][:], label="Frechet Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+    plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin Frechet Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6)
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Frechet Dist")
     plt.legend()
-    plt.title(f"Ex: {os.path.basename(experiment_folder)} Frechet Dist : measurement error factor - Argmin: {facts[fr_argmin]}")
+    plt.title(f"Ex: {os.path.basename(experiment_folder)} - Frechet Dist. pro Measurement Error Factor")
     plt.savefig(f"./results/experiments/factors_frechet_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
@@ -518,6 +526,9 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         factor = float(data.config['measurement_error_factor'])
 
         if factor == 0:
+            continue
+
+        if factor > 15:
             continue
 
         rmse = 0
@@ -626,16 +637,18 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     idx = np.argsort(facts)
 
     plt.cla()
-    plt.plot(facts[idx][:], rmses[idx][:], marker="X", ls="None", label="RMSE")
+    plt.plot(facts[idx][:], rmses[idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+    plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("RMSE")
     plt.legend()
-    plt.title(f"Ex: {os.path.basename(experiment_folder)} RMSE : measurement error factor - Argmin: {facts[rmse_argmin]}")
+    plt.title(f"Ex: {os.path.basename(experiment_folder)} - RMSE pro Measurement Error Factor")
     plt.savefig(f"./results/experiments/factors_rmse_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
 
+    '''
     plt.plot(facts[idx][:], corrs[idx][:], marker="X", ls="None", label="Correlation")
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Correlation offset")
@@ -649,24 +662,27 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     if SHOW:
         plt.show()
     plt.cla()
+    '''
 
     plt.cla()
-    plt.plot(facts[idx][:], dtw_dists[idx][:], marker="X", ls="None", label="DTW Dist")
+    plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+    plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6)
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
-    plt.title(f"Ex: {os.path.basename(experiment_folder)} DTW Dist : measurement error factor - Argmin: {facts[dtw_argmin]}")
+    plt.title(f"Ex: {os.path.basename(experiment_folder)} - DTW Dist. pro Measurement Error Factor")
     plt.savefig(f"./results/experiments/factors_dtw_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][:], fr_dists[idx][:], marker="X", ls="None", label="Frechet Dist")
+    plt.plot(facts[idx][:], fr_dists[idx][:], label="Frechet Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+    plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin Frechet Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6)
     plt.xlabel("Measurement Error Factor")
     plt.ylabel("Frechet Dist")
     plt.legend()
-    plt.title(f"Ex: {os.path.basename(experiment_folder)} Frechet dist : measurement error factor - Argmin: {facts[fr_argmin]}")
+    plt.title(f"Ex: {os.path.basename(experiment_folder)} - Frechet Dist. pro Measurement Error Factor")
     plt.savefig(f"./results/experiments/factors_frechet_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
@@ -839,6 +855,17 @@ def main():
 
     cutoff = 0.01
     # path, factor = find_best_measurement_error_factor_corr_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
+
+    data = load_processed_data(Path(args.experiment_folder) / "0")
+    print(f"Ex: {os.path.basename(args.experiment_folder)}")
+    print(f"Var X: {data.qtm_cop[:, 0].var()}")
+    print(f"Var Y: {data.qtm_cop[:, 1].var()}")
+    if data.qtm_cop[:, 0].var() > 0.001 and data.qtm_cop[:, 1].var() > 0.001:
+        args.experiment_type = "cop"
+    else:
+        args.experiment_type = "constraint"
+
+    print(f"Extracted experiment type: {args.experiment_type}")
 
     pool = ThreadPool(processes=2)
     joint_result = pool.apply_async(find_best_measurement_error_factor_rmse, (Path(args.experiment_folder), cutoff, args.experiment_type))
