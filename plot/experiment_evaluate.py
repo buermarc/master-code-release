@@ -381,41 +381,42 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
         o = max(int(length * cutoff), 1)
         factor = float(data.config['measurement_error_factor'])
         if factor == 0:
+            assert_allclose(data.down_kinect_joints, data.down_kinect_unfiltered_joints)
             continue
 
         # if "constraint" in experiment_type:
         if True:
             joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
             for joint in joints:
-                for i in range(3):
-                    a = data.down_kinect_joints[:, joint, i][o:-o]
-                    b = double_butter(data.down_kinect_unfiltered_joints[:, joint, i], once=factor != 0)[o:-o]
+                a = data.down_kinect_joints[:, joint, :][o:-o]
+                b = double_butter(data.down_kinect_unfiltered_joints[:, joint, :], once=factor != 0)[o:-o]
 
-                    # if  (0.3 < float(data.config["measurement_error_factor"]) < 0.35) or (1.0 < float(data.config["measurement_error_factor"]) < 1.05) or (5.00 < float(data.config["measurement_error_factor"]) < 5.05):
-                    '''
-                    plt.plot(data.down_kinect_ts, a[:, 2], label="kalman");
-                    plt.plot(data.down_kinect_ts, b[:, 2], label="butterworth");
-                    plt.plot(data.down_kinect_ts, data.down_kinect_unfiltered_joints[:, joint, 2], label="raw");
-                    plt.legend();
-                    plt.title(data.config["measurement_error_factor"]);
-                    plt.show();
-                    plt.cla();
-                    '''
+                # if  (0.3 < float(data.config["measurement_error_factor"]) < 0.35) or (1.0 < float(data.config["measurement_error_factor"]) < 1.05) or (5.00 < float(data.config["measurement_error_factor"]) < 5.05):
+                '''
+                plt.plot(data.down_kinect_ts, a[:, 2], label="kalman");
+                plt.plot(data.down_kinect_ts, b[:, 2], label="butterworth");
+                plt.plot(data.down_kinect_ts, data.down_kinect_unfiltered_joints[:, joint, 2], label="raw");
+                plt.legend();
+                plt.title(data.config["measurement_error_factor"]);
+                plt.show();
+                plt.cla();
+                '''
 
-                    # Only take rmse in account for some% of the signal, prevent
-                    # weighting butterworth problems in the beginning and the end
+                # Only take rmse in account for some% of the signal, prevent
+                # weighting butterworth problems in the beginning and the end
 
-                    # diff = np.linalg.norm(b[o:-o] - a[o:-o], axis=1)
-                    diff = b - a
-                    error = np.sqrt(np.mean(np.power(diff, 2)))
-                    rmse += error
+                # diff = np.linalg.norm(b[o:-o] - a[o:-o], axis=1)
+                # diff = b - a
+                diff = np.linalg.norm(b[o:-o] - a[o:-o], axis=1)
+                error = np.sqrt(np.mean(np.power(diff, 2)))
+                rmse += error
 
-                    result = dtw.dtw(a, b, keep_internals=True, step_pattern=dtw.rabinerJuangStepPattern(6, "c"))
-                    dtw_distance += result.distance
+                result = dtw.dtw(a, b, keep_internals=True, step_pattern=dtw.rabinerJuangStepPattern(6, "c"))
+                dtw_distance += result.distance
 
-                    p = np.column_stack((data.down_kinect_ts[o:-o], a))
-                    q = np.column_stack((data.down_kinect_ts[o:-o], b))
-                    fr_distance += frechet_dist(p, q)
+                p = np.column_stack((data.down_kinect_ts[o:-o], a))
+                q = np.column_stack((data.down_kinect_ts[o:-o], b))
+                fr_distance += frechet_dist(p, q)
 
 
         elif "cop" in experiment_type:
@@ -524,88 +525,88 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         fr_distance = 0
         corr_offset = 0
         for idx, joint in enumerate([Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]):
-            for i in range(3):
-                a_vel = data.down_kinect_velocities[:, int(joint), i]
-                # If we have a kalman filter factor then we also want to introduce butterworth filter lag
-                b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), i], cutoff=6, N=2, once=factor != 0)
-                c = data.down_kinect_unfiltered_joints[:, int(joint), i]
+            a_vel = data.down_kinect_velocities[:, int(joint), :]
+            # If we have a kalman filter factor then we also want to introduce butterworth filter lag
+            b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), :], cutoff=6, N=2, once=factor != 0)
+            c = data.down_kinect_unfiltered_joints[:, int(joint), :]
 
-                b_vel = np.zeros_like(b)
-                b_vel[1:-1] = (b[2:] - b[:-2]) / (2*(1./15.))
-                b_vel[0] = (b[1] - b[0]) / (1./15.)
-                b_vel[-1] = (b[-1] - b[-2]) / (1./15.)
+            b_vel = np.zeros_like(b)
+            b_vel[1:-1] = (b[2:] - b[:-2]) / (2*(1./15.))
+            b_vel[0] = (b[1] - b[0]) / (1./15.)
+            b_vel[-1] = (b[-1] - b[-2]) / (1./15.)
 
-                qtm_joints = double_butter(data.qtm_joints[:, idx, i], 150)
+            qtm_joints = double_butter(data.qtm_joints[:, idx, :], 150)
 
-                butter_qtm_velocities = np.zeros_like(qtm_joints)
-                butter_qtm_velocities[1:-1] = (qtm_joints[2:] - qtm_joints[:-2]) / (2*(1./150.))
-                butter_qtm_velocities[0] = (qtm_joints[1] - qtm_joints[0]) / (1./150)
-                butter_qtm_velocities[-1] = (qtm_joints[-1] - qtm_joints[-2]) / (1./150)
-                d_vel = downsample(butter_qtm_velocities, data.qtm_ts, 15)
+            butter_qtm_velocities = np.zeros_like(qtm_joints)
+            butter_qtm_velocities[1:-1] = (qtm_joints[2:] - qtm_joints[:-2]) / (2*(1./150.))
+            butter_qtm_velocities[0] = (qtm_joints[1] - qtm_joints[0]) / (1./150)
+            butter_qtm_velocities[-1] = (qtm_joints[-1] - qtm_joints[-2]) / (1./150)
+            d_vel = downsample(butter_qtm_velocities, data.qtm_ts, 15)
 
-                # extract finite velocity
-                # downsampled have 15 hz frequency
+            # extract finite velocity
+            # downsampled have 15 hz frequency
 
-                '''
-                if joint == Joint.WRIST_LEFT and once and i == 2 and 0 <= factor < 1.05:
-                    once = False
+            '''
+            if joint == Joint.WRIST_LEFT and once and i == 2 and 0 <= factor < 1.05:
+                once = False
 
-                    c_vel = np.zeros_like(c)
-                    c_vel[1:-1] = (c[2:] - c[:-2]) / (2*(1./15.))
-                    c_vel[0] = (c[1] - c[0]) / (1./15.)
-                    c_vel[-1] = (c[-1] - c[-2]) / (1./15.)
+                c_vel = np.zeros_like(c)
+                c_vel[1:-1] = (c[2:] - c[:-2]) / (2*(1./15.))
+                c_vel[0] = (c[1] - c[0]) / (1./15.)
+                c_vel[-1] = (c[-1] - c[-2]) / (1./15.)
 
-                    off = np.argmax(signal.correlate(b_vel[o:-o], a_vel[o:-o])) - (len(a_vel) - 2*o)
-                    time = off * (1/15)
-                    plt.plot(data.down_kinect_ts + time, a_vel, label="kalman vel")
-                    plt.plot(data.down_kinect_ts, b_vel, label="butter fd vel")
-                    # plt.plot(data.down_kinect_ts, c_vel, label="raw fd vel")
-                    qtm_ts = np.arange(0, d_vel.shape[0]) * (1./15.)
-                    plt.plot(qtm_ts, d_vel, label="qtm fd vel")
-                    plt.legend()
-                    plt.title(f"Error factor: {data.config['measurement_error_factor']}");
-                    plt.show();
-                    plt.cla();
-                    result = dtw.dtw(a_vel, b_vel, keep_internals=True, step_pattern=dtw.rabinerJuangStepPattern(6, "c"))
+                off = np.argmax(signal.correlate(b_vel[o:-o], a_vel[o:-o])) - (len(a_vel) - 2*o)
+                time = off * (1/15)
+                plt.plot(data.down_kinect_ts + time, a_vel, label="kalman vel")
+                plt.plot(data.down_kinect_ts, b_vel, label="butter fd vel")
+                # plt.plot(data.down_kinect_ts, c_vel, label="raw fd vel")
+                qtm_ts = np.arange(0, d_vel.shape[0]) * (1./15.)
+                plt.plot(qtm_ts, d_vel, label="qtm fd vel")
+                plt.legend()
+                plt.title(f"Error factor: {data.config['measurement_error_factor']}");
+                plt.show();
+                plt.cla();
+                result = dtw.dtw(a_vel, b_vel, keep_internals=True, step_pattern=dtw.rabinerJuangStepPattern(6, "c"))
 
-                    result.plot(type="twoway",offset=-2)
-                    plt.show()
-                    plt.cla()
-                '''
+                result.plot(type="twoway",offset=-2)
+                plt.show()
+                plt.cla()
+            '''
 
-                '''
-                # Adjust for lag by shifting based on cross correlation
-                lag = np.argmax(signal.correlate(b_vel[o:-o], a_vel[o:-o])) - (len(a_vel) - 2 * o)
+            '''
+            # Adjust for lag by shifting based on cross correlation
+            lag = np.argmax(signal.correlate(b_vel[o:-o], a_vel[o:-o])) - (len(a_vel) - 2 * o)
 
-                # Factor 0 means a real high velocity error, correlation
-                # doesn't realy provide good results
-                if factor == 0:
-                    lag = 0
-
-                if o < np.abs(lag):
-                    # print("Joint {joint} axis {i}")
-                    # print("Lag is to big, reseting it to 0")
-                    lag = 0
-                '''
-
-                # disabel lag
+            # Factor 0 means a real high velocity error, correlation
+            # doesn't realy provide good results
+            if factor == 0:
                 lag = 0
 
-                error = np.sqrt(np.mean(np.power(a_vel[(o+lag):-(o-lag)] - b_vel[o:-o], 2)))
-                rmse += error
+            if o < np.abs(lag):
+                # print("Joint {joint} axis {i}")
+                # print("Lag is to big, reseting it to 0")
+                lag = 0
+            '''
 
-                result = dtw.dtw(a_vel, b_vel, keep_internals=True, step_pattern=dtw.rabinerJuangStepPattern(6, "c"))
-                dtw_distance += result.distance
+            # disabel lag
+            lag = 0
 
-                # p = np.column_stack((np.arange(0, len(a_vel))[:20], a_vel[:20]))
-                # q = np.column_stack((np.arange(0, len(b_vel))[:20], b_vel[:20]))
-                # fr_distance += frdist(p, q)
-                p = np.column_stack((data.down_kinect_ts, a_vel))
-                q = np.column_stack((data.down_kinect_ts, b_vel))
-                fr_distance += frechet_dist(p, q)
+            diff = np.linalg.norm(b_vel[o:-o] - a_vel[o:-o], axis=1)
+            error = np.sqrt(np.mean(np.power(diff, 2)))
+            rmse += error
 
-                if joint == Joint.WRIST_LEFT and i == 2:
-                    corr_offset += np.argmax(signal.correlate(b_vel[o:-o], a_vel[o:-o])) - (len(a_vel) - 2 * o)
+            result = dtw.dtw(a_vel, b_vel, keep_internals=True, step_pattern=dtw.rabinerJuangStepPattern(6, "c"))
+            dtw_distance += result.distance
+
+            # p = np.column_stack((np.arange(0, len(a_vel))[:20], a_vel[:20]))
+            # q = np.column_stack((np.arange(0, len(b_vel))[:20], b_vel[:20]))
+            # fr_distance += frdist(p, q)
+            p = np.column_stack((data.down_kinect_ts, a_vel))
+            q = np.column_stack((data.down_kinect_ts, b_vel))
+            fr_distance += frechet_dist(p, q)
+
+            if joint == Joint.WRIST_LEFT:
+                corr_offset += np.argmax(signal.correlate(b_vel[o:-o], a_vel[o:-o])) - (len(a_vel) - 2 * o)
 
         RMSEs.append(rmse)
         dtw_distances.append(dtw_distance)
