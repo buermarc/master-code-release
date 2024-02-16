@@ -435,7 +435,7 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutof
 
     plt.cla()
     plt.plot(ts, a, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
-    plt.plot(ts, a_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
+    # plt.plot(ts, a_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
     plt.plot(ts, butter_a_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
     plt.xlabel("Time [s]")
     plt.ylabel("Distance [m]")
@@ -446,7 +446,7 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutof
 
     plt.cla()
     plt.plot(ts, b, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
-    plt.plot(ts, b_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
+    # plt.plot(ts, b_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
     plt.plot(ts, butter_b_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
     plt.xlabel("Time [s]")
     plt.ylabel("Distance [m]")
@@ -1070,7 +1070,7 @@ def main():
     print(f"dtw factor: {joint_dtw_factor}")
     print(f"fr factor: {joint_fr_factor}")
     # data = load_processed_data(vel_path)
-    data = load_processed_data(find_factor_path(15, Path(args.experiment_folder)))
+    data = load_processed_data(find_factor_path(3, Path(args.experiment_folder)))
 
     result = None
     if args.experiment_type in ["cop", "cop-wide"]:
