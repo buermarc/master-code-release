@@ -178,8 +178,7 @@ class Data:
     qtm_ts: np.ndarray
     config: dict[str, str]
 
-
-Joint = IntEnum("Joint", [
+_JOINTS = [
     "PELVIS",
     "SPINE_NAVEL",
     "SPINE_CHEST",
@@ -212,7 +211,12 @@ Joint = IntEnum("Joint", [
     "EAR_LEFT",
     "EYE_RIGHT",
     "EAR_RIGHT",
-], start = 0)
+]
+Joint = IntEnum("Joint", _JOINTS, start = 0)
+
+def j2str(idx: int) -> str:
+    return _JOINTS[idx]
+
 
 @numba.jit(nopython=True)
 def _downsample(data: np.ndarray, timestamps: np.ndarray, target_frequency: int, downsampled_values: np.ndarray) -> np.ndarray:
@@ -310,81 +314,111 @@ def _double_butter(data: np.ndarray, sample_frequency: int = 15, cutoff: int = 1
     return np.flip(signal.sosfilt(sos, flip - second_mean) + second_mean) + mean
 
 
-def plot_joints_for_different_factors(ex_name: str, factors: list[float], datas: list[Data], cutoff: float) -> None:
+def plot_velocities_for_different_factors(ex_name: str, factors: list[float], datas: list[Data], cutoff: float, plotsuffix: str = "") -> None:
     kinect_joints = [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]
 
     data = datas[0]
 
     qtm_ts = data.qtm_ts
 
-    for qtm_idx, joint in enumerate(kinect_joints):
-        fig, ax = plt.subplots(3, 1)
-        data = datas[0]
-        for i in range(0, 3):
+    labels = ["X", "Y", "Z"]
+    for i, label in enumerate(labels):
+        for qtm_idx, joint in enumerate(kinect_joints):
+            data = datas[0]
             qtm_line = double_butter(data.qtm_joints[:, qtm_idx, i], sample_frequency=150)
-            ax[i].plot(qtm_ts, qtm_line, label=f"Qualisys", alpha=0.3, markevery=500, marker='.')
-        for factor, data in zip(factors, datas):
-            # For all three axis
-            for i in range(0, 3):
-                kinect_ts = data.down_kinect_ts
-                line = data.down_kinect_joints[:, int(joint), i]
-                ax[i].plot(kinect_ts, line, label=f"Kalman Kinect with Factor: {factor}", markevery=50, marker=".", alpha=0.3)
+            q_vel = np.zeros_like(qtm_line)
+            q_vel[1:-1] = (qtm_line[2:] - qtm_line[:-2]) / (2*(1./150.))
+            q_vel[0] = (qtm_line[1] - qtm_line[0]) / (1./150)
+            q_vel[-1] = (qtm_line[-1] - qtm_line[-2]) / (1./150)
+
+            plt.plot(qtm_ts, q_vel, label=f"Qualisys", alpha=0.8, marker="x", markevery=500)
+            for factor, data in zip(factors, datas):
+                kinect_ts = data.kinect_ts
+                line = data.kinect_velocities[:, int(joint), i]
+                plt.plot(kinect_ts, line, label=f"Kalman Kinect with Factor: {factor}", markevery=50, marker=".", alpha=0.3)
+
+            plt.legend()
+            plt.xlabel("Time [s]")
+            plt.ylabel(f"{label} Axis [m]")
+
+            plt.title(f"Velocity of {j2str(joint)} with different Measurement Error Factors")
+            plt.savefig(f"./results/experiments/joint_velocities/{j2str(joint)}_axis_{label}_{ex_name}_{plotsuffix}.pdf")
+            plt.cla()
 
 
-        for i, label in enumerate(["X", "Y", "Z"]):
-            ax[i].legend()
-            ax[i].set_xlabel("Time [s]")
-            ax[i].set_ylabel(f"{label} Axis [m]")
+def plot_joints_for_different_factors(ex_name: str, factors: list[float], datas: list[Data], cutoff: float, plotsuffix: str = "") -> None:
+    kinect_joints = [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]
 
-        fig.suptitle(f"Trajectiories of {str(joint)} with different Measurement Error Factors")
-        fig.savefig(f"./results/experiments/joint_trajectories/{str(joint)}_{ex_name}.pdf")
+    data = datas[0]
 
-def plot_cop_x_y_for_different_factors(ex_name: str, factors: list[float], datas: list[Data], cutoff: float) -> None:
+    qtm_ts = data.qtm_ts
+
+    labels = ["X", "Y", "Z"]
+    for i, label in enumerate(labels):
+        for qtm_idx, joint in enumerate(kinect_joints):
+            data = datas[0]
+            qtm_line = double_butter(data.qtm_joints[:, qtm_idx, i], sample_frequency=150)
+            plt.plot(qtm_ts, qtm_line, label=f"Qualisys", alpha=0.3)
+            for factor, data in zip(factors, datas):
+                kinect_ts = data.kinect_ts
+                line = data.kinect_joints[:, int(joint), i]
+                plt.plot(kinect_ts, line, label=f"Kalman Kinect with Factor: {factor}", markevery=50, marker=".", alpha=0.3)
+
+
+            plt.legend()
+            plt.xlabel("Time [s]")
+            plt.ylabel(f"{label} Axis [m]")
+
+            plt.title(f"Trajectiories of {j2str(joint)} with different Measurement Error Factors")
+            plt.savefig(f"./results/experiments/joint_trajectories/{j2str(joint)}_axis_{label}_{ex_name}_{plotsuffix}.pdf")
+            plt.cla()
+
+def plot_cop_x_y_for_different_factors(ex_name: str, factors: list[float], datas: list[Data], cutoff: float, plotsuffix: str = "") -> None:
 
     data = datas[0]
 
     qtm_ts = data.qtm_cop_ts
 
-    fig, ax = plt.subplots(1, 2)
     data = datas[0]
-    for i in range(0, 2):
-        qtm_line = double_butter(data.qtm_cop[:, i], sample_frequency=900)
-        ax[i].plot(qtm_ts, qtm_line, label=f"Qualisys", markevery=900, marker=".", alpha=0.3)
-    for factor, data in zip(factors, datas):
-        # For all three axis
-        for i in range(0, 2):
-            kinect_ts = data.down_kinect_ts
-            line = data.down_kinect_com[:, i]
-            ax[i].plot(kinect_ts, line, label=f"Kalman Kinect with Factor: {factor}", markevery=50, marker=".", alpha=0.3)
-
-
     for i, label in enumerate(["X", "Y"]):
-        ax[i].legend()
-        ax[i].set_xlabel("Time [s]")
-        ax[i].set_ylabel(f"{label} Axis [m]")
+        qtm_line = double_butter(data.qtm_cop[:, i], sample_frequency=900)
+        plt.plot(qtm_ts, qtm_line, label=f"Qualisys", alpha=0.3)
 
-    fig.suptitle(f"Trajectiories of COM and COP with different Measurement Error Factors")
-    fig.savefig(f"./results/experiments/cop_trajectories/{ex_name}.pdf")
+        for factor, data in zip(factors, datas):
+            # For all three axis
+            kinect_ts = data.kinect_ts
+            line = data.kinect_com[:, i]
+            plt.plot(kinect_ts, line, label=f"Kalman Kinect with Factor: {factor}", markevery=50, marker=".", alpha=0.3)
+
+        plt.legend()
+        plt.xlabel("Time [s]")
+        plt.ylabel(f"{label} Axis [m]")
+
+        plt.suptitle(f"Trajectiories of COM and COP with different Measurement Error Factors")
+        plt.savefig(f"./results/experiments/cop_trajectories/{ex_name}_axis_{label}_{plotsuffix}.pdf")
+        plt.cla()
 
 
 
 def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutoff: float) -> None:
     kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
 
-    length = data.down_kinect_joints.shape[0]
+    length = data.kinect_joints.shape[0]
     o = max(int(length * cutoff), 1)
 
-    shoulder = data.down_kinect_joints[:, kinect_joints[0], :][o:-o]
-    shoulder_un = data.down_kinect_unfiltered_joints[:, kinect_joints[0], :][o:-o]
-    butter_shoulder_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joints[0], :])[o:-o]
+    ts = data.kinect_ts[o:-o]
 
-    elbow = data.down_kinect_joints[:, kinect_joints[1], :][o:-o]
-    elbow_un = data.down_kinect_unfiltered_joints[:, kinect_joints[1], :][o:-o]
-    butter_elbow_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joints[1], :])[o:-o]
+    shoulder = data.kinect_joints[:, kinect_joints[0], :][o:-o]
+    shoulder_un = data.kinect_unfiltered_joints[:, kinect_joints[0], :][o:-o]
+    butter_shoulder_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[0], :])[o:-o]
 
-    wrist = data.down_kinect_joints[:, kinect_joints[2], :][o:-o]
-    wrist_un = data.down_kinect_unfiltered_joints[:, kinect_joints[2], :][o:-o]
-    butter_wrist_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joints[2], :])[o:-o]
+    elbow = data.kinect_joints[:, kinect_joints[1], :][o:-o]
+    elbow_un = data.kinect_unfiltered_joints[:, kinect_joints[1], :][o:-o]
+    butter_elbow_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[1], :])[o:-o]
+
+    wrist = data.kinect_joints[:, kinect_joints[2], :][o:-o]
+    wrist_un = data.kinect_unfiltered_joints[:, kinect_joints[2], :][o:-o]
+    butter_wrist_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[2], :])[o:-o]
 
     a = np.linalg.norm(shoulder - elbow, axis=1)
     b = np.linalg.norm(elbow - wrist, axis=1)
@@ -400,9 +434,9 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutof
     print(f"butter_a_un mean: {butter_a_un.mean()}, butter_b_un mean: {butter_b_un.mean()}, butter_a_un.var: {butter_a_un.var()}, butter_b_un.var: {butter_b_un.var()}")
 
     plt.cla()
-    plt.plot(a, label="Kalman Filtered", color="steelblue", alpha=0.5)
-    plt.plot(a_un, label="Raw Data", color="olive", alpha=0.5)
-    plt.plot(butter_a_un, label="Butterworth Filtered", color="darkorange", alpha=0.5)
+    plt.plot(ts, a, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
+    plt.plot(ts, a_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
+    plt.plot(ts, butter_a_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
     plt.xlabel("Time [s]")
     plt.ylabel("Distance [m]")
     plt.legend()
@@ -410,9 +444,10 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutof
     plt.savefig(f"./results/experiments/joint_segment_lengths/shoulder-elbow_{ex_name}.pdf")
     plt.cla()
 
-    plt.plot(b, label="Kalman Filtered", color="steelblue", alpha=0.5)
-    plt.plot(b_un, label="Raw Data", color="olive", alpha=0.5)
-    plt.plot(butter_b_un, label="Butterworth Filtered", color="darkorange", alpha=0.5)
+    plt.cla()
+    plt.plot(ts, b, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
+    plt.plot(ts, b_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
+    plt.plot(ts, butter_b_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
     plt.xlabel("Time [s]")
     plt.ylabel("Distance [m]")
     plt.legend()
@@ -994,6 +1029,7 @@ def main():
     os.makedirs("./results/experiments/determine_factor/", exist_ok=True)
     os.makedirs("./results/experiments/joint_segment_lengths/", exist_ok=True)
     os.makedirs("./results/experiments/joint_trajectories/", exist_ok=True)
+    os.makedirs("./results/experiments/joint_velocities/", exist_ok=True)
     os.makedirs("./results/experiments/cop_trajectories/", exist_ok=True)
 
     global SHOW
@@ -1033,7 +1069,8 @@ def main():
     print(f"rmse factor: {joint_rmse_factor}")
     print(f"dtw factor: {joint_dtw_factor}")
     print(f"fr factor: {joint_fr_factor}")
-    data = load_processed_data(vel_path)
+    # data = load_processed_data(vel_path)
+    data = load_processed_data(find_factor_path(15, Path(args.experiment_folder)))
 
     result = None
     if args.experiment_type in ["cop", "cop-wide"]:
@@ -1042,15 +1079,26 @@ def main():
         result = compare_qtm_joints_kinect_joints(data, cutoff)
         plot_constrained_segment_joint_length_change(ex_name, data, cutoff)
 
+    print(result)
+
 
     best_factor = vel_dtw_factor
     factors = [0.5, 15, best_factor]
     datas = [load_processed_data(find_factor_path(factor, Path(args.experiment_folder))) for factor in factors]
 
+    best_factor  = 15.
+    best_factors = [best_factor]
+    best_datas = [load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))]
+
     if args.experiment_type in ["cop", "cop-wide"]:
         plot_cop_x_y_for_different_factors(ex_name, factors, datas, cutoff)
+        plot_cop_x_y_for_different_factors(ex_name, best_factors, best_datas, cutoff, "best")
     else:
         plot_joints_for_different_factors(ex_name, factors, datas, cutoff)
+        plot_velocities_for_different_factors(ex_name, factors, datas, cutoff)
+
+        plot_joints_for_different_factors(ex_name, best_factors, best_datas, cutoff, "best")
+        plot_velocities_for_different_factors(ex_name, best_factors, best_datas, cutoff, "best")
 
     print(result)
 
