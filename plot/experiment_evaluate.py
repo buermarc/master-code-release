@@ -310,7 +310,126 @@ def _double_butter(data: np.ndarray, sample_frequency: int = 15, cutoff: int = 1
     return np.flip(signal.sosfilt(sos, flip - second_mean) + second_mean) + mean
 
 
-def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float]:
+def plot_joints_for_different_factors(ex_name: str, factors: list[float], datas: list[Data], cutoff: float) -> None:
+    kinect_joints = [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]
+
+    data = datas[0]
+
+    qtm_ts = data.qtm_ts
+
+    for qtm_idx, joint in enumerate(kinect_joints):
+        fig, ax = plt.subplots(3, 1)
+        data = datas[0]
+        for i in range(0, 3):
+            qtm_line = double_butter(data.qtm_joints[:, qtm_idx, i], sample_frequency=150)
+            ax[i].plot(qtm_ts, qtm_line, label=f"Qualisys", alpha=0.3, markevery=500, marker='.')
+        for factor, data in zip(factors, datas):
+            # For all three axis
+            for i in range(0, 3):
+                kinect_ts = data.down_kinect_ts
+                line = data.down_kinect_joints[:, int(joint), i]
+                ax[i].plot(kinect_ts, line, label=f"Kalman Kinect with Factor: {factor}", markevery=50, marker=".", alpha=0.3)
+
+
+        for i, label in enumerate(["X", "Y", "Z"]):
+            ax[i].legend()
+            ax[i].set_xlabel("Time [s]")
+            ax[i].set_ylabel(f"{label} Axis [m]")
+
+        fig.suptitle(f"Trajectiories of {str(joint)} with different Measurement Error Factors")
+        fig.savefig(f"./results/experiments/joint_trajectories/{str(joint)}_{ex_name}.pdf")
+
+def plot_cop_x_y_for_different_factors(ex_name: str, factors: list[float], datas: list[Data], cutoff: float) -> None:
+
+    data = datas[0]
+
+    qtm_ts = data.qtm_cop_ts
+
+    fig, ax = plt.subplots(1, 2)
+    data = datas[0]
+    for i in range(0, 2):
+        qtm_line = double_butter(data.qtm_cop[:, i], sample_frequency=900)
+        ax[i].plot(qtm_ts, qtm_line, label=f"Qualisys", markevery=900, marker=".", alpha=0.3)
+    for factor, data in zip(factors, datas):
+        # For all three axis
+        for i in range(0, 2):
+            kinect_ts = data.down_kinect_ts
+            line = data.down_kinect_com[:, i]
+            ax[i].plot(kinect_ts, line, label=f"Kalman Kinect with Factor: {factor}", markevery=50, marker=".", alpha=0.3)
+
+
+    for i, label in enumerate(["X", "Y"]):
+        ax[i].legend()
+        ax[i].set_xlabel("Time [s]")
+        ax[i].set_ylabel(f"{label} Axis [m]")
+
+    fig.suptitle(f"Trajectiories of COM and COP with different Measurement Error Factors")
+    fig.savefig(f"./results/experiments/cop_trajectories/{ex_name}.pdf")
+
+
+
+def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutoff: float) -> None:
+    kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
+
+    length = data.down_kinect_joints.shape[0]
+    o = max(int(length * cutoff), 1)
+
+    shoulder = data.down_kinect_joints[:, kinect_joints[0], :][o:-o]
+    shoulder_un = data.down_kinect_unfiltered_joints[:, kinect_joints[0], :][o:-o]
+    butter_shoulder_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joints[0], :])[o:-o]
+
+    elbow = data.down_kinect_joints[:, kinect_joints[1], :][o:-o]
+    elbow_un = data.down_kinect_unfiltered_joints[:, kinect_joints[1], :][o:-o]
+    butter_elbow_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joints[1], :])[o:-o]
+
+    wrist = data.down_kinect_joints[:, kinect_joints[2], :][o:-o]
+    wrist_un = data.down_kinect_unfiltered_joints[:, kinect_joints[2], :][o:-o]
+    butter_wrist_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joints[2], :])[o:-o]
+
+    a = np.linalg.norm(shoulder - elbow, axis=1)
+    b = np.linalg.norm(elbow - wrist, axis=1)
+
+    a_un = np.linalg.norm(shoulder_un - elbow_un, axis=1)
+    b_un = np.linalg.norm(elbow_un - wrist_un, axis=1)
+
+    butter_a_un = np.linalg.norm(butter_shoulder_un - butter_elbow_un, axis=1)
+    butter_b_un = np.linalg.norm(butter_elbow_un - butter_wrist_un, axis=1)
+
+    print("Kalman")
+    print(f"a mean: {a.mean()}, b mean: {b.mean()}, a.var: {a.var()}, b.var: {b.var()}")
+    print(f"butter_a_un mean: {butter_a_un.mean()}, butter_b_un mean: {butter_b_un.mean()}, butter_a_un.var: {butter_a_un.var()}, butter_b_un.var: {butter_b_un.var()}")
+
+    plt.cla()
+    plt.plot(a, label="Kalman Filtered", color="steelblue", alpha=0.5)
+    plt.plot(a_un, label="Raw Data", color="olive", alpha=0.5)
+    plt.plot(butter_a_un, label="Butterworth Filtered", color="darkorange", alpha=0.5)
+    plt.xlabel("Time [s]")
+    plt.ylabel("Distance [m]")
+    plt.legend()
+    plt.title("Segment Length Distance over Time for Shoulder and Elbow")
+    plt.savefig(f"./results/experiments/joint_segment_lengths/shoulder-elbow_{ex_name}.pdf")
+    plt.cla()
+
+    plt.plot(b, label="Kalman Filtered", color="steelblue", alpha=0.5)
+    plt.plot(b_un, label="Raw Data", color="olive", alpha=0.5)
+    plt.plot(butter_b_un, label="Butterworth Filtered", color="darkorange", alpha=0.5)
+    plt.xlabel("Time [s]")
+    plt.ylabel("Distance [m]")
+    plt.legend()
+    plt.title("Segment Length Distance over Time for Elbow and Wrist")
+    plt.savefig(f"./results/experiments/joint_segment_lengths/elbow-wrist_{ex_name}.pdf")
+    plt.cla()
+
+def find_factor_path(factor: float, path: Path) -> Path:
+    directories = [element for element in path.iterdir() if element.is_dir()]
+    for directory in directories:
+        with (directory / "config.json").open(mode="r", encoding="UTF-8") as _f:
+            if round(factor, 1) == round(json.load(_f)["measurement_error_factor"], 1):
+                return directory
+    raise ValueError("Factor not found")
+
+
+def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
     kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
 
     corr = 0
@@ -318,6 +437,13 @@ def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[
 
     rmse = 0
     rmse_un = 0
+
+    dtw_dist = 0
+    dtw_dist_un = 0
+
+    fr_dist = 0
+    fr_dist_un = 0
+
     for kinect_joint, qtm_joint in zip(kinect_joints, [0, 1, 2]):
         down_qtm = downsample(double_butter(data.qtm_joints[:, qtm_joint, :], 900), data.qtm_ts, 15)
         length = min(down_qtm.shape[0], data.down_kinect_joints.shape[0])
@@ -325,7 +451,7 @@ def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[
 
         down_qtm = down_qtm[:length][o:-o]
         joints = data.down_kinect_joints[:, kinect_joint,:][:length][o:-o]
-        joints_un = data.down_kinect_unfiltered_joints[:, kinect_joint, :][:length][o:-o]
+        joints_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joint, :])[:length][o:-o]
 
         corr += np.correlate(down_qtm[:, 0], joints[:, 0])[0] + np.correlate(down_qtm[:, 1], joints[:, 1])[0] + np.correlate(down_qtm[:, 2], joints[:, 2])[0]
         corr_un += np.correlate(down_qtm[:, 0], joints_un[:, 0])[0] + np.correlate(down_qtm[:, 1], joints_un[:, 1])[0] + np.correlate(down_qtm[:, 2], joints[:, 2])[0]
@@ -336,17 +462,23 @@ def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[
         diff_un = np.linalg.norm(down_qtm - joints_un, axis=1)
         rmse_un += np.sqrt(np.mean(np.power(diff_un, 2)))
 
-    return corr, corr_un, rmse, rmse_un
+        dtw_dist += dtw.dtw(down_qtm, joints, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+        dtw_dist_un += dtw.dtw(down_qtm, joints_un, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+        fr_dist += frechet_dist(down_qtm, joints)
+        fr_dist_un += frechet_dist(down_qtm, joints_un)
+
+    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 
-def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float]:
+def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
     down_qtm = downsample(double_butter(data.qtm_cop[:, :2], 900), data.qtm_cop_ts, 15)
     length = min(down_qtm.shape[0], data.down_kinect_com.shape[0])
     o = max(int(length * cutoff), 1)
 
     down_qtm = down_qtm[:length][o:-o]
     com = data.down_kinect_com[:, :2][:length][o:-o]
-    com_un = data.down_kinect_unfiltered_com[:, :2][:length][o:-o]
+    com_un = double_butter(data.down_kinect_unfiltered_com[:, :2][:length])[o:-o]
 
     corr = np.correlate(down_qtm[:, 0], com[:, 0])[0] + np.correlate(down_qtm[:, 1], com[:, 1])[0]
     corr_un = np.correlate(down_qtm[:, 0], com_un[:, 0])[0] + np.correlate(down_qtm[:, 1], com_un[:, 1])[0]
@@ -357,7 +489,13 @@ def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float,
     diff_un = np.linalg.norm(down_qtm - com_un, axis=1)
     rmse_un = np.sqrt(np.mean(np.power(diff_un, 2)))
 
-    return corr, corr_un, rmse, rmse_un
+    dtw_dist = dtw.dtw(down_qtm, com, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+    dtw_dist_un = dtw.dtw(down_qtm, com_un, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+    fr_dist = frechet_dist(down_qtm, com)
+    fr_dist_un = frechet_dist(down_qtm, com_un)
+
+    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 
 def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: float, experiment_type: str) -> tuple[Path, float, float, float]:
@@ -386,7 +524,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
             assert_allclose(data.down_kinect_joints, data.down_kinect_unfiltered_joints)
             continue
 
-        if factor > 10:
+        if factor > 1:
             continue
 
         # if "constraint" in experiment_type:
@@ -424,7 +562,8 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
                 fr_distance += frechet_dist(p, q)
 
 
-        elif "cop" in experiment_type:
+        '''
+        if False:
             a = data.down_kinect_com[:, :2]
             b = double_butter(data.down_kinect_unfiltered_com[:, :2], N=2)
 
@@ -437,6 +576,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
 
         else:
             raise NotImplementedError(f"Invalid experiment_type: {experiment_type}")
+        '''
 
 
         RMSEs.append(rmse)
@@ -463,7 +603,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     plt.ylabel("RMSE")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - RMSE pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/determine_factor/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -478,7 +618,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     plt.title(f"{facts[idx][:][jump_idx]}:{factors[rmse_argmin]}- Ex: {os.path.basename(experiment_folder)} Correlation offset : measurement error factor")
     print(f"Correlation jump {facts[idx][:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
 
-    plt.savefig(f"./results/experiments/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/determine_factor/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -491,7 +631,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - DTW Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/factors_dtw_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/determine_factor/factors_dtw_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -503,7 +643,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     plt.ylabel("Frechet Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - Frechet Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/factors_frechet_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/determine_factor/factors_frechet_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -528,7 +668,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         if factor == 0:
             continue
 
-        if factor > 15:
+        if factor > 1:
             continue
 
         rmse = 0
@@ -643,7 +783,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.ylabel("RMSE")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - RMSE pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/factors_rmse_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/determine_factor/factors_rmse_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -658,7 +798,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.title(f"{facts[idx][:][jump_idx]}:{factors[rmse_argmin]}- Ex: {os.path.basename(experiment_folder)} Correlation offset : measurement error factor")
     print(f"Correlation jump {facts[idx][:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
 
-    plt.savefig(f"./results/experiments/factors_rmse_velocity_correlation_offset_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/determine_factor/factors_rmse_velocity_correlation_offset_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -671,7 +811,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - DTW Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/factors_dtw_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/determine_factor/factors_dtw_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -683,7 +823,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.ylabel("Frechet Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - Frechet Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/factors_frechet_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/determine_factor/factors_frechet_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -755,7 +895,7 @@ def find_best_measurement_error_factor_corr_on_velocity(experiment_folder: Path,
     plt.ylabel("Correlation")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} Correlation per measurement error factor")
-    # plt.savefig(f"./results/experiments/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    # plt.savefig(f"./results/experiments/determine_factor/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     plt.show()
     argmax = np.argmax(corrs)
     return  directories[argmax], factors[argmax]
@@ -795,7 +935,7 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: flo
     plt.ylabel("Correlation")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} Correlation per measurement error factor")
-    plt.savefig(f"./results/experiments/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/determine_factor/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     plt.cla()
     argmax = np.argmax(corrs)
     return  directories[argmax], factors[argmax]
@@ -850,6 +990,12 @@ def main():
 
     args = parser.parse_args()
 
+    os.makedirs("./results/experiments/", exist_ok=True)
+    os.makedirs("./results/experiments/determine_factor/", exist_ok=True)
+    os.makedirs("./results/experiments/joint_segment_lengths/", exist_ok=True)
+    os.makedirs("./results/experiments/joint_trajectories/", exist_ok=True)
+    os.makedirs("./results/experiments/cop_trajectories/", exist_ok=True)
+
     global SHOW
     SHOW = args.show
 
@@ -857,7 +1003,8 @@ def main():
     # path, factor = find_best_measurement_error_factor_corr_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
 
     data = load_processed_data(Path(args.experiment_folder) / "0")
-    print(f"Ex: {os.path.basename(args.experiment_folder)}")
+    ex_name = os.path.basename(args.experiment_folder)
+    print(f"Ex: {ex_name}")
     print(f"Var X: {data.qtm_cop[:, 0].var()}")
     print(f"Var Y: {data.qtm_cop[:, 1].var()}")
     if data.qtm_cop[:, 0].var() > 0.001 and data.qtm_cop[:, 1].var() > 0.001:
@@ -893,6 +1040,17 @@ def main():
         result = compare_qtm_cop_kinect_cop(data, cutoff)
     else:
         result = compare_qtm_joints_kinect_joints(data, cutoff)
+        plot_constrained_segment_joint_length_change(ex_name, data, cutoff)
+
+
+    best_factor = vel_dtw_factor
+    factors = [0.5, 15, best_factor]
+    datas = [load_processed_data(find_factor_path(factor, Path(args.experiment_folder))) for factor in factors]
+
+    if args.experiment_type in ["cop", "cop-wide"]:
+        plot_cop_x_y_for_different_factors(ex_name, factors, datas, cutoff)
+    else:
+        plot_joints_for_different_factors(ex_name, factors, datas, cutoff)
 
     print(result)
 
