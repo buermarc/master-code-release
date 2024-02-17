@@ -77,7 +77,7 @@ public:
         MatrixXd predicted_state = Adn * corrected_state;
         // std::cout << "predicted_state" << std::endl;
         // std::cout << predicted_state << std::endl;
-        MatrixXd predicted_errors = Adn * corrected_errors * AdnT + Gdn * corrected_errors(1, 1) * GdnT;
+        MatrixXd predicted_errors = Adn * corrected_errors * AdnT + Gdn * system_noise * GdnT;
         // std::cout << "predicted_errors" << std::endl;
         // std::cout << predicted_errors << std::endl;
 
