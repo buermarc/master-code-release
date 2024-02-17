@@ -1,4 +1,5 @@
 from __future__ import annotations
+import time
 from pprint import pprint as pp
 import os
 import json
@@ -401,59 +402,68 @@ def plot_cop_x_y_for_different_factors(ex_name: str, factors: list[float], datas
 
 
 def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutoff: float) -> None:
-    kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
+    segment_a = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
+    segment_b = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
+    segment_c = [int(element) for element in [Joint.HIP_LEFT, Joint.KNEE_LEFT, Joint.ANKLE_LEFT]]
+    segment_d = [int(element) for element in [Joint.HIP_RIGHT, Joint.KNEE_RIGHT, Joint.ANKLE_RIGHT]]
 
-    length = data.kinect_joints.shape[0]
-    o = max(int(length * cutoff), 1)
+    for kinect_joints in [segment_a, segment_b, segment_c, segment_d]:
+        segment_name = "_".join([str(i) for i in kinect_joints])
 
-    ts = data.kinect_ts[o:-o]
+        length = data.kinect_joints.shape[0]
+        o = max(int(length * cutoff), 1)
 
-    shoulder = data.kinect_joints[:, kinect_joints[0], :][o:-o]
-    shoulder_un = data.kinect_unfiltered_joints[:, kinect_joints[0], :][o:-o]
-    butter_shoulder_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[0], :])[o:-o]
+        ts = data.kinect_ts[o:-o]
 
-    elbow = data.kinect_joints[:, kinect_joints[1], :][o:-o]
-    elbow_un = data.kinect_unfiltered_joints[:, kinect_joints[1], :][o:-o]
-    butter_elbow_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[1], :])[o:-o]
+        shoulder = data.kinect_joints[:, kinect_joints[0], :][o:-o]
+        shoulder_un = data.kinect_unfiltered_joints[:, kinect_joints[0], :][o:-o]
+        butter_shoulder_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[0], :])[o:-o]
 
-    wrist = data.kinect_joints[:, kinect_joints[2], :][o:-o]
-    wrist_un = data.kinect_unfiltered_joints[:, kinect_joints[2], :][o:-o]
-    butter_wrist_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[2], :])[o:-o]
+        elbow = data.kinect_joints[:, kinect_joints[1], :][o:-o]
+        elbow_un = data.kinect_unfiltered_joints[:, kinect_joints[1], :][o:-o]
+        butter_elbow_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[1], :])[o:-o]
 
-    a = np.linalg.norm(shoulder - elbow, axis=1)
-    b = np.linalg.norm(elbow - wrist, axis=1)
+        wrist = data.kinect_joints[:, kinect_joints[2], :][o:-o]
+        wrist_un = data.kinect_unfiltered_joints[:, kinect_joints[2], :][o:-o]
+        butter_wrist_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[2], :])[o:-o]
 
-    a_un = np.linalg.norm(shoulder_un - elbow_un, axis=1)
-    b_un = np.linalg.norm(elbow_un - wrist_un, axis=1)
+        a = np.linalg.norm(shoulder - elbow, axis=1)
+        b = np.linalg.norm(elbow - wrist, axis=1)
 
-    butter_a_un = np.linalg.norm(butter_shoulder_un - butter_elbow_un, axis=1)
-    butter_b_un = np.linalg.norm(butter_elbow_un - butter_wrist_un, axis=1)
+        a_un = np.linalg.norm(shoulder_un - elbow_un, axis=1)
+        b_un = np.linalg.norm(elbow_un - wrist_un, axis=1)
 
-    print("Kalman")
-    print(f"a mean: {a.mean()}, b mean: {b.mean()}, a.var: {a.var()}, b.var: {b.var()}")
-    print(f"butter_a_un mean: {butter_a_un.mean()}, butter_b_un mean: {butter_b_un.mean()}, butter_a_un.var: {butter_a_un.var()}, butter_b_un.var: {butter_b_un.var()}")
+        butter_a_un = np.linalg.norm(butter_shoulder_un - butter_elbow_un, axis=1)
+        butter_b_un = np.linalg.norm(butter_elbow_un - butter_wrist_un, axis=1)
 
-    plt.cla()
-    plt.plot(ts, a, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
-    # plt.plot(ts, a_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
-    plt.plot(ts, butter_a_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
-    plt.xlabel("Time [s]")
-    plt.ylabel("Distance [m]")
-    plt.legend()
-    plt.title("Segment Length Distance over Time for Shoulder and Elbow")
-    plt.savefig(f"./results/experiments/joint_segment_lengths/shoulder-elbow_{ex_name}.pdf")
-    plt.cla()
+        print(f"Segment {segment_name}")
+        print("Kalman")
+        print(f"a mean: {a.mean()}, b mean: {b.mean()}, a.var: {a.var()}, b.var: {b.var()}")
+        print(f"butter_a_un mean: {butter_a_un.mean()}, butter_b_un mean: {butter_b_un.mean()}, butter_a_un.var: {butter_a_un.var()}, butter_b_un.var: {butter_b_un.var()}")
 
-    plt.cla()
-    plt.plot(ts, b, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
-    # plt.plot(ts, b_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
-    plt.plot(ts, butter_b_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
-    plt.xlabel("Time [s]")
-    plt.ylabel("Distance [m]")
-    plt.legend()
-    plt.title("Segment Length Distance over Time for Elbow and Wrist")
-    plt.savefig(f"./results/experiments/joint_segment_lengths/elbow-wrist_{ex_name}.pdf")
-    plt.cla()
+        plt.cla()
+        plt.plot(ts, a, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
+        # plt.plot(ts, a_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
+        plt.plot(ts, butter_a_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
+        plt.xlabel("Time [s]")
+        plt.ylabel("Distance [m]")
+        plt.legend()
+        plt.title("Segment Length Distance over Time for Upper Segment")
+        plt.savefig(f"./results/experiments/joint_segment_lengths/{segment_name}_upper_segment_{ex_name}.pdf")
+        plt.cla()
+        time.sleep(1)
+
+        plt.cla()
+        plt.plot(ts, b, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
+        # plt.plot(ts, b_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
+        plt.plot(ts, butter_b_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
+        plt.xlabel("Time [s]")
+        plt.ylabel("Distance [m]")
+        plt.legend()
+        plt.title("Segment Length Distance over Time for Lower Segment")
+        plt.savefig(f"./results/experiments/joint_segment_lengths/{segment_name}_lower_segment_{ex_name}.pdf")
+        plt.cla()
+        time.sleep(1)
 
 def find_factor_path(factor: float, path: Path) -> Path:
     directories = [element for element in path.iterdir() if element.is_dir()]
@@ -559,7 +569,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
             assert_allclose(data.down_kinect_joints, data.down_kinect_unfiltered_joints)
             continue
 
-        if factor > 1:
+        if factor > 15:
             continue
 
         # if "constraint" in experiment_type:
@@ -703,7 +713,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         if factor == 0:
             continue
 
-        if factor > 1:
+        if factor > 15:
             continue
 
         rmse = 0
@@ -1070,19 +1080,19 @@ def main():
     print(f"dtw factor: {joint_dtw_factor}")
     print(f"fr factor: {joint_fr_factor}")
     # data = load_processed_data(vel_path)
-    data = load_processed_data(find_factor_path(3, Path(args.experiment_folder)))
+    data = load_processed_data(find_factor_path(10, Path(args.experiment_folder)))
 
     result = None
     if args.experiment_type in ["cop", "cop-wide"]:
         result = compare_qtm_cop_kinect_cop(data, cutoff)
     else:
         result = compare_qtm_joints_kinect_joints(data, cutoff)
-        plot_constrained_segment_joint_length_change(ex_name, data, cutoff)
 
+    plot_constrained_segment_joint_length_change(ex_name, data, cutoff)
     print(result)
 
 
-    best_factor = vel_dtw_factor
+    best_factor = (joint_rmse_factor + 2*joint_dtw_factor + joint_fr_factor + vel_rmse_factor + 2*vel_dtw_factor + vel_fr_factor) / 8
     factors = [0.5, 15, best_factor]
     datas = [load_processed_data(find_factor_path(factor, Path(args.experiment_folder))) for factor in factors]
 
