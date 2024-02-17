@@ -1,4 +1,5 @@
 #include "filter/adaptive/AdaptivePointFilter3D.hpp"
+#include "filter/AbstractSkeletonFilter.hpp"
 #include <Eigen/Dense>
 #include <algorithm>
 #include <array>
@@ -179,10 +180,13 @@ int filter_data_with_constrained_skeleton_filter()
     std::string var_path("./_matlab/stand_b2_t1_NFOV_UNBINNED_720P_30fps.json");
     int joint_count = 32;
     auto [var_joints, _n_frames, _timestamps, _is_null] = load_data(var_path, joint_count);
-    auto var = _get_measurement_error(var_joints, joint_count, 209, 339);
+    // auto var = _get_measurement_error(var_joints, joint_count, 209, 339);
+    auto var = get_cached_measurement_error();
 
     std::string data_path("./_matlab/sts_NFOV_UNBINNED_720P_30fps.json");
-    auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count, 870);
+    data_path = "/home/orb/Documents/recording/output_NFOV_UNBINNED_OFF_30fps_117_1.json";
+    auto [joints, n_frames, timestamps, is_null] = load_data(data_path, joint_count);
+    std::cout << "n_frames: " << n_frames << std::endl;
 
     if (std::find(is_null.begin(), is_null.end(), true) != is_null.end()) {
         std::cerr << "found null" << std::endl;
@@ -193,9 +197,10 @@ int filter_data_with_constrained_skeleton_filter()
         initial_points.push_back(Point<double>(
             joints(0, joint, 0), joints(0, joint, 1), joints(0, joint, 2)));
     }
-    // ConstrainedSkeletonFilter<double> filter(32, var, get_azure_kinect_com_matrix());
-    AdaptiveConstrainedSkeletonFilter<double, BarPointFilter> filter(32, var, get_azure_kinect_com_matrix());
-    filter.init(initial_points, timestamps[0]);
+    ConstrainedSkeletonFilterBuilder<double> builder(32, 10.0);
+    std::shared_ptr<AbstractSkeletonFilter<double>> filter = builder.build();
+    // AdaptiveConstrainedSkeletonFilter<double, BarPointFilter> filter(32, var, get_azure_kinect_com_matrix());
+    filter->init(initial_points, timestamps[0]);
 
     std::vector<std::vector<Point<double>>> filtered_values;
     std::vector<std::vector<Point<double>>> unfiltered_values;
@@ -226,7 +231,7 @@ int filter_data_with_constrained_skeleton_filter()
         }
 
         auto start = std::chrono::high_resolution_clock::now();
-        auto [values, velocities] = filter.step(current_joint_positions, timestamps[frame_idx]);
+        auto [values, velocities] = filter->step(current_joint_positions, timestamps[frame_idx]);
         auto stop = std::chrono::high_resolution_clock::now();
 
         unfiltered_values.push_back(current_joint_positions);
@@ -372,6 +377,7 @@ int filter_data_with_constrained_skeleton_filter()
     return 0;
 }
 
+/*
 int filter_data_with_skeleton_filter()
 {
     std::cout << get_azure_kinect_com_matrix() << std::endl;
@@ -549,6 +555,7 @@ int filter_data_with_skeleton_filter()
     //     std::cout << timestamp << std::endl;
     // }
 }
+*/
 
 /*
 void tensor()
