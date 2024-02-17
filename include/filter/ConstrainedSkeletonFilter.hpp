@@ -203,7 +203,10 @@ public:
         /// Prediction step
         MatrixXd predicted_state = Adn * corrected_projected_state;
         // system_noise => process model noise 9x9
-        auto velocity_var = corrected_projected_errors(seq(9, 18), seq(9, 18));
+        std::cout << corrected_projected_errors.rows() << std::endl;
+        std::cout << corrected_projected_errors.cols() << std::endl;
+        auto velocity_var = corrected_projected_errors(seq(9, 17), seq(9, 17));
+        std::cout << velocity_var << std::endl;
         MatrixXd predicted_errors = Adn * corrected_projected_errors * AdnT + Gdn * velocity_var * GdnT;
 
         /// Correction step:
