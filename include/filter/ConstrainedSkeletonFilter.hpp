@@ -203,7 +203,8 @@ public:
         /// Prediction step
         MatrixXd predicted_state = Adn * corrected_projected_state;
         // system_noise => process model noise 9x9
-        MatrixXd predicted_errors = Adn * corrected_projected_errors * AdnT + Gdn * system_noise * GdnT;
+        auto velocity_var = corrected_projected_errors(seq(9, 18), seq(9, 18));
+        MatrixXd predicted_errors = Adn * corrected_projected_errors * AdnT + Gdn * velocity_var * GdnT;
 
         /// Correction step:
         /// calculate kalman gain and use to apply the residual
