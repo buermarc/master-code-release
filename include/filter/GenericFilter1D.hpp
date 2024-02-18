@@ -57,11 +57,14 @@ public:
         // Hard coded sub A = [1, Ts; 0, 1]
         MatrixXd Adn = Ad.replicate(1, 1);
         Adn(0, 1) = time_diff;
+        Adn(0, 2) = std::pow(time_diff, 2) / 2;
+        Adn(1, 2) = time_diff;
 
         // Again: hard coded sub G = [Ts^2/2; Ts]
         MatrixXd Gdn = G.replicate(1, 1);
         Gdn(0, 0) = std::pow(time_diff, 2) / 2;
         Gdn(1, 0) = time_diff;
+        Gdn(2, 0) = 1;
 
         auto AdnT = Adn.transpose();
         auto GdnT = Gdn.transpose();
@@ -116,7 +119,7 @@ public:
             corrected_state = predicted_state + K_value * innovation;
             // std::cout << "corrected_state" << std::endl;
             // std::cout << corrected_state << std::endl;
-            auto eye = MatrixXd::Identity(2, 2);
+            auto eye = MatrixXd::Identity(3, 3);
             corrected_errors = (eye - K_value * C) * predicted_errors;
             // std::cout << "corrected_errors" << std::endl;
             // std::cout << corrected_errors << std::endl;

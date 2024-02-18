@@ -61,25 +61,24 @@ public:
 
     void init(Point<Value> initial_point)
     {
-        auto initial_errors = MatrixXd(2, 2);
-        initial_errors(0, 0) = 1;
-        initial_errors(0, 1) = 0;
-        initial_errors(1, 0) = 0;
-        initial_errors(1, 1) = 1;
+        auto initial_errors = MatrixXd::Identity(3, 3);
 
-        auto initial_state_x = MatrixXd(2, 1);
+        auto initial_state_x = MatrixXd(3, 1);
         initial_state_x(0, 0) = initial_point.x;
         initial_state_x(1, 0) = 0;
+        initial_state_x(2, 0) = 0;
         x_filter.init(initial_state_x, initial_errors);
 
-        auto initial_state_y = MatrixXd(2, 1);
+        auto initial_state_y = MatrixXd(3, 1);
         initial_state_y(0, 0) = initial_point.y;
         initial_state_y(1, 0) = 0;
+        initial_state_y(2, 0) = 0;
         y_filter.init(initial_state_y, initial_errors);
 
-        auto initial_state_z = MatrixXd(2, 1);
+        auto initial_state_z = MatrixXd(3, 1);
         initial_state_z(0, 0) = initial_point.z;
         initial_state_z(1, 0) = 0;
+        initial_state_z(2, 0) = 0;
         z_filter.init(initial_state_z, initial_errors);
     }
 
