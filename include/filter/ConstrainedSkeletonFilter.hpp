@@ -53,24 +53,24 @@ public:
     // measurement_errors => var
     static RigidJointConstructFilter3<Value> default_init(std::vector<int> joints, MatrixXd measurement_errors)
     {
-        auto eye = [](int size) { return MatrixXd::Identity(size, size); };
-        auto zero = [](int size) { return MatrixXd::Zero(size, size); };
 
-        MatrixXd Al(18, 18);
-        MatrixXd first_al(9, 18);
-        MatrixXd second_al(9, 18);
+        MatrixXd Al(27, 27);
+        MatrixXd first_al(9, 27);
+        MatrixXd second_al(9, 27);
+        MatrixXd third_al(9, 27);
 
-        first_al << zero(9), eye(9);
-        second_al << zero(9), zero(9);
+        first_al << zero(9), eye(9), zero(9);
+        second_al << zero(9), zero(9), eye(9);
+        third_al << zero(9), zero(9), zero(9);
 
-        Al << first_al, second_al;
+        Al << first_al, second_al, third_al;
 
-        MatrixXd Cl(9, 18);
-        MatrixXd Gl(18, 9);
+        MatrixXd Cl(9, 27);
+        MatrixXd Gl(27, 9);
         // Gld = [(Ts^2/2)*eye(9,9); Ts*eye(9,9)]; % considering that acceleration has normal ditribution with zero mean, See truck example in wikipedia and Machthaler und Dingler (2017)
 
-        Cl << eye(9), zero(9);
-        Gl << eye(9), eye(9);
+        Cl << eye(9), zero(9), zero(9);
+        // Gl << eye(9), eye(9); // Won't be using it anyway
 
         MatrixXd phi_1(9, 9);
         MatrixXd phi_2(9, 9);
@@ -106,18 +106,22 @@ public:
         Value threshold = 5;
 
         auto sub_ad = [](MatrixXd Ad, Value time_diff) {
-            MatrixXd result(18, 18);
+            MatrixXd result = MatrixXd::Zero(27, 27);
             MatrixXd first = Ad.array() * time_diff;
-            MatrixXd second = ((1 - Ad.array()) * Ad.exp().array());
+            MatrixXd second = eye(27);
+            for (int i = 0; i < 9; ++i) {
+                first(i, 18+i) =  std::pow(time_diff, 2) / 2;
+            }
             result = first + second;
             return result;
         };
 
         auto sub_gd = [](MatrixXd Gd, Value time_diff) {
-            MatrixXd result(18, 9);
+            MatrixXd result(27, 9);
             MatrixXd first = MatrixXd::Identity(9, 9) * (std::pow(time_diff, 2) / 2);
             MatrixXd second = MatrixXd::Identity(9, 9) * time_diff;
-            result << first, second;
+            MatrixXd third = MatrixXd::Identity(9, 9);
+            result << first, second, third;
             return result;
         };
 
@@ -188,9 +192,6 @@ public:
          * provides the correct measurements for the joints.
          */
         // measurement should be ? 3x1 mxn rowxcol
-        auto eye = [](int size) { return MatrixXd::Identity(size, size); };
-        auto zero = [](int size) { return MatrixXd::Zero(size, size); };
-
         MatrixXd Adn;
         Adn = sub_ad(Ad, time_diff);
 
@@ -211,7 +212,7 @@ public:
         auto pseudo_inv = tmp.completeOrthogonalDecomposition().pseudoInverse();
         MatrixXd K_value = predicted_errors * CT * pseudo_inv;
         MatrixXd corrected_state = predicted_state + K_value * (measurement - (C * predicted_state));
-        MatrixXd corrected_errors = (eye(18) - K_value * C) * predicted_errors;
+        MatrixXd corrected_errors = (eye(27) - K_value * C) * predicted_errors;
 
         /// Projection step:
         /// Probably something like: project the corrected state and errors
@@ -226,13 +227,15 @@ public:
         MatrixXd eye_9 = eye(9);
         MatrixXd zero_9 = zero(9);
 
-        MatrixXd tmp_result(18, 18);
+        MatrixXd tmp_result(27, 27);
 
-        MatrixXd first(9, 18);
-        MatrixXd second(9, 18);
-        first << eye_9, zero_9;
-        second << zero_9, (eye_9 - (phi_T * (phi * phi_T).inverse() * phi));
-        tmp_result << first, second;
+        MatrixXd first(9, 27);
+        MatrixXd second(9, 27);
+        MatrixXd third(9, 27);
+        first << eye_9, zero_9, zero_9;
+        second << zero_9, (eye_9 - (phi_T * (phi * phi_T).inverse() * phi)), zero_9;
+        third << zero_9, zero_9, eye_9;
+        tmp_result << first, second, third;
 
         corrected_projected_state = tmp_result * corrected_state;
 
@@ -302,7 +305,7 @@ public:
 
         for (auto& [_, filter] : joint_group_filters) {
             auto joints = filter.get_joints();
-            MatrixXd initial_state(18, 1);
+            MatrixXd initial_state(27, 1);
             int i = 0;
             for (auto joint : joints) {
                 Point<Value> point = initial_points[joint];
@@ -312,8 +315,8 @@ public:
                 ++i;
             }
             // Fill velocities with zero
-            initial_state << initial_state(seq(0, 8), 0), MatrixXd::Zero(9, 1);
-            MatrixXd initial_error = MatrixXd::Identity(18, 18);
+            initial_state << initial_state(seq(0, 8), 0), MatrixXd::Zero(18, 1);
+            MatrixXd initial_error = MatrixXd::Identity(27, 27);
             filter.init(initial_state, initial_error);
         }
 
@@ -333,7 +336,6 @@ public:
     std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values,
         Value new_time) override
     {
-        // std::cout << "Timestamp: " << new_time << std::endl;
         std::vector<Point<Value>> positions(32);
         std::vector<Point<Value>> velocities(32);
         std::fill(positions.begin(), positions.end(), Point(0.0, 0.0, 0.0));

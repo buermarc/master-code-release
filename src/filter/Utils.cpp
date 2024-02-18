@@ -9,6 +9,9 @@ using json = nlohmann::json;
 using Eigen::MatrixXd;
 using Eigen::Tensor;
 
+MatrixXd eye(int size) { return MatrixXd::Identity(size, size); }
+MatrixXd zero(int size) { return MatrixXd::Zero(size, size); }
+
 std::tuple<Tensor<double, 3, Eigen::RowMajor>, Tensor<double, 3, Eigen::RowMajor>, int, std::vector<double>, std::vector<bool>>
 load_filtered_data(std::string path, int joint_counts, int max_frames)
 {

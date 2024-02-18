@@ -55,9 +55,6 @@ public:
     // measurement_errors => var
     static AdaptiveRigidJointConstructFilter3<Value> default_init(std::vector<int> joints, MatrixXd measurement_errors)
     {
-        auto eye = [](int size) { return MatrixXd::Identity(size, size); };
-        auto zero = [](int size) { return MatrixXd::Zero(size, size); };
-
         MatrixXd Al(18, 18);
         MatrixXd first_al(9, 18);
         MatrixXd second_al(9, 18);
@@ -179,9 +176,6 @@ public:
          * provides the correct measurements for the joints.
          */
         // measurement should be ? 3x1 mxn rowxcol
-        auto eye = [](int size) { return MatrixXd::Identity(size, size); };
-        auto zero = [](int size) { return MatrixXd::Zero(size, size); };
-
         MatrixXd Adn;
         Adn = sub_ad(Ad, time_diff);
 

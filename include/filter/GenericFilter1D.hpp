@@ -124,7 +124,7 @@ public:
             // std::cout << "corrected_errors" << std::endl;
             // std::cout << corrected_errors << std::endl;
         } else {
-            // std::cout << "use prediction" << std::endl;
+            std::cout << "use prediction" << std::endl;
             corrected_state = predicted_state;
             corrected_errors = predicted_errors;
         }

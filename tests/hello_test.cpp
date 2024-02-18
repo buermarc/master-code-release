@@ -76,9 +76,6 @@ TEST(RigidJointConstructFilter3InitTests, BasicAssertions)
     MatrixXd phi_1(9, 9);
     MatrixXd phi_2(9, 9);
 
-    auto eye = [](int size) { return MatrixXd::Identity(size, size); };
-    auto zero = [](int size) { return MatrixXd::Zero(size, size); };
-
     phi_1 << eye(3), -1 * eye(3), zero(3), -1 * eye(3), eye(3), zero(3), zero(3), zero(3), zero(3);
     phi_2 << zero(3), zero(3), zero(3), zero(3), eye(3), -1 * eye(3), zero(3), -1 * eye(3), eye(3);
 

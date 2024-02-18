@@ -7,7 +7,7 @@ using Eigen::MatrixXd;
 std::tuple<MatrixXd, MatrixXd, MatrixXd> let_matricies_appear_magically()
 {
     // Hard coded sub A = [1, Ts; 0, 1]
-    MatrixXd A = MatrixXd::Ones(3, 3);
+    MatrixXd A = MatrixXd::Identity(3, 3);
     // A(0, 0) = 0;
     // A(0, 1) = 1;
     // A(1, 0) = 0;
