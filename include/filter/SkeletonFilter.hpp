@@ -30,6 +30,7 @@ public:
         std::vector<Point<Value>> system_noises, int m_n_joints, double factor,
         Value threshold, MatrixXd MM)
         : n_joints(m_n_joints)
+        , AbstractSkeletonFilter<Value>()
     {
         this->set_filter_type("SkeletonFilter");
         this->set_measurement_error_factor(factor);
@@ -47,7 +48,7 @@ public:
         MatrixXd MM,
         int threshold = 10)
         : n_joints(m_n_joints)
-        , SkeletonStabilityMetrics<Value>()
+        , AbstractSkeletonFilter<Value>()
     {
         double factor_system_noise = 1.0 / 3;
         double vmax = 10.0 * factor_system_noise;
