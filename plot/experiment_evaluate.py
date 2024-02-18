@@ -1080,7 +1080,7 @@ def main():
     print(f"dtw factor: {joint_dtw_factor}")
     print(f"fr factor: {joint_fr_factor}")
     # data = load_processed_data(vel_path)
-    data = load_processed_data(find_factor_path(10, Path(args.experiment_folder)))
+    data = load_processed_data(find_factor_path(15, Path(args.experiment_folder)))
 
     result = None
     if args.experiment_type in ["cop", "cop-wide"]:
