@@ -8,7 +8,7 @@ from numpy.testing import assert_allclose
 import argparse
 from dataclasses import dataclass
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pathlib import Path
 from enum import IntEnum
@@ -1032,6 +1032,8 @@ def main():
     parser.add_argument("-t", "--experiment-type", dest="experiment_type", choices=["cop", "cop-wide", "constraint", "constraint-fast"])
     parser.add_argument("-x", "--early-exit", dest="early_exit", action="store_true")
     parser.add_argument("-s", "--show", dest="show", action="store_true", default=False)
+    parser.add_argument("-c", "--compare", dest="compare", action="store_true", default=False)
+    parser.add_argument("-f", "--second-folder", dest="second_folder")
 
     args = parser.parse_args()
 
@@ -1044,6 +1046,27 @@ def main():
 
     global SHOW
     SHOW = args.show
+
+    if args.compare:
+        idx = 2
+        for error in [25]:
+            data1 = load_processed_data(find_factor_path(error, Path(args.experiment_folder)))
+            data2 = load_processed_data(find_factor_path(error, Path(args.second_folder)))
+
+            a = data1.kinect_joints[:, int(Joint.HEAD), idx]
+            b = data2.kinect_joints[:, int(Joint.HEAD), idx]
+
+            plt.plot(data1.kinect_ts, a, label=f"Simple {error}")
+            plt.plot(data2.kinect_ts, b, label=f"Extended {error}")
+
+        data1 = load_processed_data(find_factor_path(0, Path(args.experiment_folder)))
+        a = data1.down_kinect_unfiltered_joints[:, int(Joint.HEAD), idx]
+        plt.plot(data1.down_kinect_ts, double_butter(a), label=f"Raw")
+
+        plt.legend()
+        plt.show()
+
+        return
 
     cutoff = 0.01
     # path, factor = find_best_measurement_error_factor_corr_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
