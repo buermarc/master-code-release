@@ -1047,22 +1047,27 @@ def main():
     global SHOW
     SHOW = args.show
 
+    axss = ["X", "Y", "Z"]
     if args.compare:
+        joint = int(Joint.HEAD)
         idx = 2
         for error in [25]:
             data1 = load_processed_data(find_factor_path(error, Path(args.experiment_folder)))
             data2 = load_processed_data(find_factor_path(error, Path(args.second_folder)))
 
-            a = data1.kinect_joints[:, int(Joint.HEAD), idx]
-            b = data2.kinect_joints[:, int(Joint.HEAD), idx]
+            a = data1.kinect_joints[:, int(joint), idx]
+            b = data2.kinect_joints[:, int(joint), idx]
 
-            plt.plot(data1.kinect_ts, a, label=f"Simple {error}")
-            plt.plot(data2.kinect_ts, b, label=f"Extended {error}")
+            plt.plot(data1.kinect_ts, a, "-", label=f"Without acceleration - lambda: {error}", alpha=0.8)
+            plt.plot(data2.kinect_ts, b, label=f"With acceleration - lambda: {error}", alpha=0.8)
 
         data1 = load_processed_data(find_factor_path(0, Path(args.experiment_folder)))
-        a = data1.down_kinect_unfiltered_joints[:, int(Joint.HEAD), idx]
-        plt.plot(data1.down_kinect_ts, double_butter(a), label=f"Raw")
+        a = data1.down_kinect_unfiltered_joints[:, int(joint), idx]
+        plt.plot(data1.down_kinect_ts, double_butter(a), "--", label=f"Raw", alpha=0.8)
 
+        plt.xlabel("Time [s]")
+        plt.ylabel(f"Axis {axss[idx]} [m]")
+        plt.title(j2str(joint))
         plt.legend()
         plt.show()
 
