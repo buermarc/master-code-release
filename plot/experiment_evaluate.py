@@ -8,7 +8,7 @@ from numpy.testing import assert_allclose
 import argparse
 from dataclasses import dataclass
 import matplotlib
-# matplotlib.use('Agg')
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pathlib import Path
 from enum import IntEnum
@@ -439,12 +439,13 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutof
         print(f"Segment {segment_name}")
         print("Kalman")
         print(f"a mean: {a.mean()}, b mean: {b.mean()}, a.var: {a.var()}, b.var: {b.var()}")
+        print(f"a_un mean: {a_un.mean()}, b_un mean: {b_un.mean()}, a_un.var: {a_un.var()}, b_un.var: {b_un.var()}")
         print(f"butter_a_un mean: {butter_a_un.mean()}, butter_b_un mean: {butter_b_un.mean()}, butter_a_un.var: {butter_a_un.var()}, butter_b_un.var: {butter_b_un.var()}")
 
         plt.cla()
         plt.plot(ts, a, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
-        # plt.plot(ts, a_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
-        plt.plot(ts, butter_a_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
+        plt.plot(ts, a_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
+        # plt.plot(ts, butter_a_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
         plt.xlabel("Time [s]")
         plt.ylabel("Distance [m]")
         plt.legend()
@@ -455,8 +456,8 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutof
 
         plt.cla()
         plt.plot(ts, b, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
-        # plt.plot(ts, b_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
-        plt.plot(ts, butter_b_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
+        plt.plot(ts, b_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
+        # plt.plot(ts, butter_b_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
         plt.xlabel("Time [s]")
         plt.ylabel("Distance [m]")
         plt.legend()
@@ -1108,7 +1109,10 @@ def main():
     print(f"dtw factor: {joint_dtw_factor}")
     print(f"fr factor: {joint_fr_factor}")
     # data = load_processed_data(vel_path)
-    data = load_processed_data(find_factor_path(15, Path(args.experiment_folder)))
+    best_factor = (joint_rmse_factor + joint_dtw_factor + joint_fr_factor + vel_rmse_factor + vel_dtw_factor + vel_fr_factor) / 6
+    print(f"best factor: {best_factor}")
+
+    data = load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))
 
     result = None
     if args.experiment_type in ["cop", "cop-wide"]:
@@ -1120,7 +1124,6 @@ def main():
     print(result)
 
 
-    best_factor = (joint_rmse_factor + 2*joint_dtw_factor + joint_fr_factor + vel_rmse_factor + 2*vel_dtw_factor + vel_fr_factor) / 8
     factors = [0.5, 15, best_factor]
     datas = [load_processed_data(find_factor_path(factor, Path(args.experiment_folder))) for factor in factors]
 
