@@ -8,7 +8,7 @@ from numpy.testing import assert_allclose
 import argparse
 from dataclasses import dataclass
 import matplotlib
-matplotlib.use('Agg')
+# matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from pathlib import Path
 from enum import IntEnum
@@ -474,6 +474,64 @@ def find_factor_path(factor: float, path: Path) -> Path:
                 return directory
     raise ValueError("Factor not found")
 
+def compare_qtm_joints_kinect_joints_vel(data: Data, cutoff: float) -> tuple[float, float, float, float, float, float, float, float]:
+    kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
+
+    corr = 0
+    corr_un = 0
+
+    rmse = 0
+    rmse_un = 0
+
+    dtw_dist = 0
+    dtw_dist_un = 0
+
+    fr_dist = 0
+    fr_dist_un = 0
+
+    for kinect_joint, qtm_joint in zip(kinect_joints, [0, 1, 2]):
+
+        qtm_joints = double_butter(data.qtm_joints[:, qtm_joint, :], sample_frequency=150)
+        butter_qtm_velocities = np.zeros_like(qtm_joints)
+        butter_qtm_velocities[1:-1] = (qtm_joints[2:] - qtm_joints[:-2]) / (2*(1./150.))
+        butter_qtm_velocities[0] = (qtm_joints[1] - qtm_joints[0]) / (1./150)
+        butter_qtm_velocities[-1] = (qtm_joints[-1] - qtm_joints[-2]) / (1./150)
+
+        down_qtm_vel = downsample(butter_qtm_velocities, data.qtm_ts, 15)
+
+        joints_vel = data.down_kinect_velocities[:, kinect_joint,:]
+        joints_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joint, :])
+
+        joints_un_vel = np.zeros_like(joints_un)
+        joints_un_vel[1:-1] = (joints_un[2:] - joints_un[:-2]) / (2*(1./15.))
+        joints_un_vel[0] = (joints_un[1] - joints_un[0]) / (1./15.)
+        joints_un_vel[-1] = (joints_un[-1] - joints_un[-2]) / (1./15.)
+
+        length = min(down_qtm_vel.shape[0], joints_vel.shape[0])
+        o = max(int(length * cutoff), 1)
+
+        breakpoint()
+        down_qtm_vel = down_qtm_vel[:length][o:-o]
+        joints_vel = joints_vel[:length][o:-o]
+        joints_un_vel = joints_un_vel[:length][o:-o]
+
+        corr += np.correlate(down_qtm_vel[:, 0], joints_vel[:, 0])[0] + np.correlate(down_qtm_vel[:, 1], joints_vel[:, 1])[0] + np.correlate(down_qtm_vel[:, 2], joints_vel[:, 2])[0]
+        corr_un += np.correlate(down_qtm_vel[:, 0], joints_un_vel[:, 0])[0] + np.correlate(down_qtm_vel[:, 1], joints_un_vel[:, 1])[0] + np.correlate(down_qtm_vel[:, 2], joints_vel[:, 2])[0]
+
+        diff = np.linalg.norm(down_qtm_vel - joints_vel, axis=1)
+        rmse += np.sqrt(np.mean(np.power(diff, 2)))
+
+        diff_un = np.linalg.norm(down_qtm_vel - joints_un_vel, axis=1)
+        rmse_un += np.sqrt(np.mean(np.power(diff_un, 2)))
+
+        dtw_dist += dtw.dtw(down_qtm_vel, joints_vel, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+        dtw_dist_un += dtw.dtw(down_qtm_vel, joints_un_vel, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+        fr_dist += frechet_dist(down_qtm_vel, joints_vel)
+        fr_dist_un += frechet_dist(down_qtm_vel, joints_un_vel)
+
+    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+
 
 def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
     kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
@@ -517,6 +575,25 @@ def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[
     return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 
+'''
+def compare_qtm_cop_kinect_cop_vel(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
+    a = double_butter(data.down_kinect_unfiltered_com[:, :2], cutoff=6)
+    b = data.down_kinect_com[:, :2]
+    c = data.down_kinect_unfiltered_joints[:, int(joint), :]
+
+    b_vel = np.zeros_like(b)
+    b_vel[1:-1] = (b[2:] - b[:-2]) / (2*(1./15.))
+    b_vel[0] = (b[1] - b[0]) / (1./15.)
+    b_vel[-1] = (b[-1] - b[-2]) / (1./15.)
+
+    qtm_joints = double_butter(data.qtm_joints[:, idx, :], 150)
+
+    butter_qtm_velocities = np.zeros_like(qtm_joints)
+    butter_qtm_velocities[1:-1] = (qtm_joints[2:] - qtm_joints[:-2]) / (2*(1./150.))
+    butter_qtm_velocities[0] = (qtm_joints[1] - qtm_joints[0]) / (1./150)
+    butter_qtm_velocities[-1] = (qtm_joints[-1] - qtm_joints[-2]) / (1./150)
+    d_vel = downsample(butter_qtm_velocities, data.qtm_ts, 15)
+'''
 def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
     down_qtm = downsample(double_butter(data.qtm_cop[:, :2], 900), data.qtm_cop_ts, 15)
     length = min(down_qtm.shape[0], data.down_kinect_com.shape[0])
@@ -1089,12 +1166,17 @@ def main():
 
     print(f"Extracted experiment type: {args.experiment_type}")
 
+    '''
     pool = ThreadPool(processes=2)
     joint_result = pool.apply_async(find_best_measurement_error_factor_rmse, (Path(args.experiment_folder), cutoff, args.experiment_type))
     vel_result = pool.apply_async(find_best_measurement_error_factor_rmse_on_velocity, (Path(args.experiment_folder), cutoff, args.experiment_type))
 
     joint_path, joint_rmse_factor, joint_dtw_factor, joint_fr_factor = joint_result.get()
     vel_path, vel_rmse_factor, vel_dtw_factor, vel_fr_factor = vel_result.get()
+    '''
+
+    joint_path, joint_rmse_factor, joint_dtw_factor, joint_fr_factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), cutoff, args.experiment_type)
+    vel_path, vel_rmse_factor, vel_dtw_factor, vel_fr_factor = find_best_measurement_error_factor_rmse_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
 
 
 
@@ -1114,14 +1196,21 @@ def main():
 
     data = load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))
 
-    result = None
+    joint_result = None
+    vel_result = None
     if args.experiment_type in ["cop", "cop-wide"]:
-        result = compare_qtm_cop_kinect_cop(data, cutoff)
+        joint_result = compare_qtm_cop_kinect_cop(data, cutoff)
+        # vel_result = compare_qtm_cop_kinect_cop_vel(data, cutoff)
     else:
-        result = compare_qtm_joints_kinect_joints(data, cutoff)
+        joint_result = compare_qtm_joints_kinect_joints(data, cutoff)
+        vel_result = compare_qtm_joints_kinect_joints_vel(data, cutoff)
 
     plot_constrained_segment_joint_length_change(ex_name, data, cutoff)
-    print(result)
+    print("Joints")
+    print(joint_result)
+
+    print("Velocities")
+    print(vel_result)
 
 
     factors = [0.5, 15, best_factor]
@@ -1140,8 +1229,6 @@ def main():
 
         plot_joints_for_different_factors(ex_name, best_factors, best_datas, cutoff, "best")
         plot_velocities_for_different_factors(ex_name, best_factors, best_datas, cutoff, "best")
-
-    print(result)
 
     # compare_velocities(load_processed_data(Path(args.experiment_folder) / "6"))
     compare_velocities(data)
