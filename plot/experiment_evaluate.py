@@ -22,6 +22,8 @@ from multiprocessing.pool import ThreadPool
 
 SHOW = False
 
+FILTER_NAME = ""
+
 # Adapted from https://github.com/cjekel/similarity_measures to support jit
 # compilation using numba
 def frechet_dist(exp_data, num_data, p=2):
@@ -347,7 +349,7 @@ def plot_velocities_for_different_factors(ex_name: str, factors: list[float], da
             plt.ylabel(f"{label} Axis [m]")
 
             plt.title(f"Velocity of {j2str(joint)} with different Measurement Error Factors")
-            plt.savefig(f"./results/experiments/joint_velocities/{j2str(joint)}_axis_{label}_{ex_name}_{plotsuffix}.pdf")
+            plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_velocities/{j2str(joint)}_axis_{label}_{ex_name}_{plotsuffix}.pdf")
             plt.cla()
 
 
@@ -375,7 +377,7 @@ def plot_joints_for_different_factors(ex_name: str, factors: list[float], datas:
             plt.ylabel(f"{label} Axis [m]")
 
             plt.title(f"Trajectiories of {j2str(joint)} with different Measurement Error Factors")
-            plt.savefig(f"./results/experiments/joint_trajectories/{j2str(joint)}_axis_{label}_{ex_name}_{plotsuffix}.pdf")
+            plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_trajectories/{j2str(joint)}_axis_{label}_{ex_name}_{plotsuffix}.pdf")
             plt.cla()
 
 def plot_cop_x_y_for_different_factors(ex_name: str, factors: list[float], datas: list[Data], cutoff: float, plotsuffix: str = "") -> None:
@@ -400,7 +402,7 @@ def plot_cop_x_y_for_different_factors(ex_name: str, factors: list[float], datas
         plt.ylabel(f"{label} Axis [m]")
 
         plt.suptitle(f"Trajectiories of COM and COP with different Measurement Error Factors")
-        plt.savefig(f"./results/experiments/cop_trajectories/{ex_name}_axis_{label}_{plotsuffix}.pdf")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/cop_trajectories/{ex_name}_axis_{label}_{plotsuffix}.pdf")
         plt.cla()
 
 
@@ -454,7 +456,7 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutof
         plt.ylabel("Distance [m]")
         plt.legend()
         plt.title("Segment Length Distance over Time for Upper Segment")
-        plt.savefig(f"./results/experiments/joint_segment_lengths/{segment_name}_upper_segment_{ex_name}.pdf")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/{segment_name}_upper_segment_{ex_name}.pdf")
         plt.cla()
         time.sleep(1)
 
@@ -466,7 +468,7 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutof
         plt.ylabel("Distance [m]")
         plt.legend()
         plt.title("Segment Length Distance over Time for Lower Segment")
-        plt.savefig(f"./results/experiments/joint_segment_lengths/{segment_name}_lower_segment_{ex_name}.pdf")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/{segment_name}_lower_segment_{ex_name}.pdf")
         plt.cla()
         time.sleep(1)
 
@@ -867,7 +869,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     plt.ylabel("RMSE")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - RMSE pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/determine_factor/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -882,7 +884,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     plt.title(f"{facts[idx][:][jump_idx]}:{factors[rmse_argmin]}- Ex: {os.path.basename(experiment_folder)} Correlation offset : measurement error factor")
     print(f"Correlation jump {facts[idx][:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
 
-    plt.savefig(f"./results/experiments/determine_factor/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -895,7 +897,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - DTW Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/determine_factor/factors_dtw_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_dtw_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -907,7 +909,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     plt.ylabel("Frechet Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - Frechet Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/determine_factor/factors_frechet_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_frechet_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1049,7 +1051,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.ylabel("RMSE")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - RMSE pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/determine_factor/factors_rmse_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1064,7 +1066,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.title(f"{facts[idx][:][jump_idx]}:{factors[rmse_argmin]}- Ex: {os.path.basename(experiment_folder)} Correlation offset : measurement error factor")
     print(f"Correlation jump {facts[idx][:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
 
-    plt.savefig(f"./results/experiments/determine_factor/factors_rmse_velocity_correlation_offset_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_velocity_correlation_offset_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1077,7 +1079,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - DTW Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/determine_factor/factors_dtw_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_dtw_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1089,7 +1091,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.ylabel("Frechet Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - Frechet Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/determine_factor/factors_frechet_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_frechet_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1161,7 +1163,7 @@ def find_best_measurement_error_factor_corr_on_velocity(experiment_folder: Path,
     plt.ylabel("Correlation")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} Correlation per measurement error factor")
-    # plt.savefig(f"./results/experiments/determine_factor/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    # plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     plt.show()
     argmax = np.argmax(corrs)
     return  directories[argmax], factors[argmax]
@@ -1201,7 +1203,7 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: flo
     plt.ylabel("Correlation")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} Correlation per measurement error factor")
-    plt.savefig(f"./results/experiments/determine_factor/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     plt.cla()
     argmax = np.argmax(corrs)
     return  directories[argmax], factors[argmax]
@@ -1258,21 +1260,24 @@ def main():
 
     args = parser.parse_args()
 
-    os.makedirs("./results/experiments/", exist_ok=True)
-    os.makedirs("./results/experiments/determine_factor/", exist_ok=True)
-    os.makedirs("./results/experiments/joint_segment_lengths/", exist_ok=True)
-    os.makedirs("./results/experiments/joint_trajectories/", exist_ok=True)
-    os.makedirs("./results/experiments/joint_velocities/", exist_ok=True)
-    os.makedirs("./results/experiments/cop_trajectories/", exist_ok=True)
+    global SHOW
+    SHOW = args.show
+
+    global FILTER_NAME
+    FILTER_NAME = os.path.basename(os.path.dirname(args.experiment_folder))
+
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/", exist_ok=True)
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/determine_factor/", exist_ok=True)
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/", exist_ok=True)
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_trajectories/", exist_ok=True)
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_velocities/", exist_ok=True)
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/cop_trajectories/", exist_ok=True)
 
     '''
     data = load_processed_data(find_factor_path(100, Path(args.experiment_folder)))
     cutoff = 0.01
     vel_result = compare_qtm_joints_kinect_joints_vel(data, cutoff)
     '''
-
-    global SHOW
-    SHOW = args.show
 
     axss = ["X", "Y", "Z"]
     if args.compare:
@@ -1341,7 +1346,7 @@ def main():
     print(f"fr factor: {joint_fr_factor}")
     # data = load_processed_data(vel_path)
     best_factor = (((joint_fr_factor + vel_rmse_factor + vel_dtw_factor + vel_fr_factor) / 3 ) // 5 ) * 5
-    best_factor = 30
+    best_factor = 100
     print(f"best factor: {best_factor}")
 
     data = load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))
