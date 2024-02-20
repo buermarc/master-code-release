@@ -78,6 +78,7 @@ add_library(
     SHARED
     src/filter/com.cpp
     src/filter/PointFilter3D.cpp
+    src/filter/SimplePointFilter3D.cpp
     src/filter/Utils.cpp
     src/filter/ConstrainedSkeletonFilter.cpp
 )
