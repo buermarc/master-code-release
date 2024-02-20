@@ -158,6 +158,7 @@ def old_main():
 @dataclass
 class Data:
     down_kinect_com: np.ndarray
+    down_kinect_com_velocities: np.ndarray
     down_kinect_joints: np.ndarray
     down_kinect_ts: np.ndarray
     down_kinect_unfiltered_com: np.ndarray
@@ -168,6 +169,7 @@ class Data:
     down_qtm_joints: np.ndarray
     down_qtm_ts: np.ndarray
     kinect_com: np.ndarray
+    kinect_com_velocities: np.ndarray
     kinect_joints: np.ndarray
     kinect_ts: np.ndarray
     kinect_unfiltered_com: np.ndarray
@@ -260,6 +262,7 @@ def downsample(data: np.ndarray, timestamps: np.ndarray, target_frequency: int) 
 def load_processed_data(path: Path) -> Data:
     return Data(
         np.load(path / "down_kinect_com.npy"),
+        np.load(path / "down_kinect_com_velocities.npy"),
         np.load(path / "down_kinect_joints.npy"),
         np.load(path / "down_kinect_ts.npy"),
         np.load(path / "down_kinect_unfiltered_com.npy"),
@@ -270,6 +273,7 @@ def load_processed_data(path: Path) -> Data:
         np.load(path / "down_qtm_joints.npy"),
         np.load(path / "down_qtm_ts.npy"),
         np.load(path / "kinect_com.npy"),
+        np.load(path / "kinect_com_velocities.npy"),
         np.load(path / "kinect_joints.npy"),
         np.load(path / "kinect_ts.npy"),
         np.load(path / "kinect_unfiltered_com.npy"),
@@ -531,9 +535,70 @@ def compare_qtm_joints_kinect_joints_vel(data: Data, cutoff: float) -> tuple[flo
 
     return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
+def compare_qtm_joints_kinect_joints_vel_inverted_right(data: Data, cutoff: float) -> tuple[float, float, float, float, float, float, float, float]:
+    kinect_joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
+
+    corr = 0
+    corr_un = 0
+
+    rmse = 0
+    rmse_un = 0
+
+    dtw_dist = 0
+    dtw_dist_un = 0
+
+    fr_dist = 0
+    fr_dist_un = 0
+
+    for kinect_joint, qtm_joint in zip(kinect_joints, [0, 1, 2]):
+
+        qtm_joints = double_butter(data.qtm_joints[:, qtm_joint, :], sample_frequency=150)
+        butter_qtm_velocities = np.zeros_like(qtm_joints)
+        butter_qtm_velocities[1:-1] = (qtm_joints[2:] - qtm_joints[:-2]) / (2*(1./150.))
+        butter_qtm_velocities[0] = (qtm_joints[1] - qtm_joints[0]) / (1./150)
+        butter_qtm_velocities[-1] = (qtm_joints[-1] - qtm_joints[-2]) / (1./150)
+
+        down_qtm_vel = downsample(butter_qtm_velocities, data.qtm_ts, 15)
+
+        joints_vel = data.down_kinect_velocities[:, kinect_joint,:]
+        joints_vel[:, 0] *= -1
+        # joints_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joint, :])
+
+        joints_un = data.down_kinect_unfiltered_joints[:, kinect_joint, :]
+        joints_un[:, 0] -= 2*data.down_kinect_com[:, 0]
+        joints_un = double_butter(joints_un)
+
+        joints_un_vel = np.zeros_like(joints_un)
+        joints_un_vel[1:-1] = (joints_un[2:] - joints_un[:-2]) / (2*(1./15.))
+        joints_un_vel[0] = (joints_un[1] - joints_un[0]) / (1./15.)
+        joints_un_vel[-1] = (joints_un[-1] - joints_un[-2]) / (1./15.)
+
+        length = min(down_qtm_vel.shape[0], joints_vel.shape[0])
+        o = max(int(length * cutoff), 1)
+
+        down_qtm_vel = down_qtm_vel[:length][o:-o]
+        joints_vel = joints_vel[:length][o:-o]
+        joints_un_vel = joints_un_vel[:length][o:-o]
+
+        corr += np.correlate(down_qtm_vel[:, 0], joints_vel[:, 0])[0] + np.correlate(down_qtm_vel[:, 1], joints_vel[:, 1])[0] + np.correlate(down_qtm_vel[:, 2], joints_vel[:, 2])[0]
+        corr_un += np.correlate(down_qtm_vel[:, 0], joints_un_vel[:, 0])[0] + np.correlate(down_qtm_vel[:, 1], joints_un_vel[:, 1])[0] + np.correlate(down_qtm_vel[:, 2], joints_vel[:, 2])[0]
+
+        diff = np.linalg.norm(down_qtm_vel - joints_vel, axis=1)
+        rmse += np.sqrt(np.mean(np.power(diff, 2)))
+
+        diff_un = np.linalg.norm(down_qtm_vel - joints_un_vel, axis=1)
+        rmse_un += np.sqrt(np.mean(np.power(diff_un, 2)))
+
+        dtw_dist += dtw.dtw(down_qtm_vel, joints_vel, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+        dtw_dist_un += dtw.dtw(down_qtm_vel, joints_un_vel, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+        fr_dist += frechet_dist(down_qtm_vel, joints_vel)
+        fr_dist_un += frechet_dist(down_qtm_vel, joints_un_vel)
+
+    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
-    kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
+    kinect_joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
 
     corr = 0
     corr_un = 0
@@ -553,6 +618,7 @@ def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[
         o = max(int(length * cutoff), 1)
 
         down_qtm = down_qtm[:length][o:-o]
+
         joints = data.down_kinect_joints[:, kinect_joint,:][:length][o:-o]
         joints_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joint, :])[:length][o:-o]
 
@@ -574,25 +640,101 @@ def compare_qtm_joints_kinect_joints(data: Data, cutoff: float = 0.15) -> tuple[
     return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 
-'''
+
+def compare_qtm_joints_kinect_joints_inverted_right(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
+    kinect_joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
+
+    corr = 0
+    corr_un = 0
+
+    rmse = 0
+    rmse_un = 0
+
+    dtw_dist = 0
+    dtw_dist_un = 0
+
+    fr_dist = 0
+    fr_dist_un = 0
+
+    for kinect_joint, qtm_joint in zip(kinect_joints, [0, 1, 2]):
+        down_qtm = downsample(double_butter(data.qtm_joints[:, qtm_joint, :], 900), data.qtm_ts, 15)
+        length = min(down_qtm.shape[0], data.down_kinect_joints.shape[0])
+        o = max(int(length * cutoff), 1)
+
+        down_qtm = down_qtm[:length][o:-o]
+
+        # joints = data.down_kinect_joints[:, kinect_joint,:][:length][o:-o]
+        # joints_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joint, :])[:length][o:-o]
+
+        joints = data.down_kinect_joints[:, kinect_joint,:]
+        joints[:, 0] -= 2*data.down_kinect_com[:, 0]
+        joints = joints[:length][o:-o]
+        joints_un = data.down_kinect_unfiltered_joints[:, kinect_joint, :]
+        joints_un[:, 0] -= 2*data.down_kinect_com[:, 0]
+        joints_un = double_butter(joints_un)[:length][o:-o]
+
+        corr += np.correlate(down_qtm[:, 0], joints[:, 0])[0] + np.correlate(down_qtm[:, 1], joints[:, 1])[0] + np.correlate(down_qtm[:, 2], joints[:, 2])[0]
+        corr_un += np.correlate(down_qtm[:, 0], joints_un[:, 0])[0] + np.correlate(down_qtm[:, 1], joints_un[:, 1])[0] + np.correlate(down_qtm[:, 2], joints[:, 2])[0]
+
+        diff = np.linalg.norm(down_qtm - joints, axis=1)
+        rmse += np.sqrt(np.mean(np.power(diff, 2)))
+
+        diff_un = np.linalg.norm(down_qtm - joints_un, axis=1)
+        rmse_un += np.sqrt(np.mean(np.power(diff_un, 2)))
+
+        dtw_dist += dtw.dtw(down_qtm, joints, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+        dtw_dist_un += dtw.dtw(down_qtm, joints_un, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+        fr_dist += frechet_dist(down_qtm, joints)
+        fr_dist_un += frechet_dist(down_qtm, joints_un)
+
+    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+
+
+
 def compare_qtm_cop_kinect_cop_vel(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
-    a = double_butter(data.down_kinect_unfiltered_com[:, :2], cutoff=6)
-    b = data.down_kinect_com[:, :2]
-    c = data.down_kinect_unfiltered_joints[:, int(joint), :]
+    a = double_butter(data.qtm_cop[:, :2], sample_frequency=900, cutoff=6)
+    qtm_vel = np.zeros_like(a)
+    qtm_vel[1:-1] = (a[2:] - a[:-2]) / (2*(1./900.))
+    qtm_vel[0] = (a[1] - a[0]) / (1./900)
+    qtm_vel[-1] = (a[-1] - a[-2]) / (1./900)
 
-    b_vel = np.zeros_like(b)
-    b_vel[1:-1] = (b[2:] - b[:-2]) / (2*(1./15.))
-    b_vel[0] = (b[1] - b[0]) / (1./15.)
-    b_vel[-1] = (b[-1] - b[-2]) / (1./15.)
+    qtm_vel = downsample(qtm_vel, data.qtm_cop_ts, 15)
 
-    qtm_joints = double_butter(data.qtm_joints[:, idx, :], 150)
+    kalman_vel = data.down_kinect_com_velocities[:, :2]
 
-    butter_qtm_velocities = np.zeros_like(qtm_joints)
-    butter_qtm_velocities[1:-1] = (qtm_joints[2:] - qtm_joints[:-2]) / (2*(1./150.))
-    butter_qtm_velocities[0] = (qtm_joints[1] - qtm_joints[0]) / (1./150)
-    butter_qtm_velocities[-1] = (qtm_joints[-1] - qtm_joints[-2]) / (1./150)
-    d_vel = downsample(butter_qtm_velocities, data.qtm_ts, 15)
-'''
+    raw = double_butter(data.down_kinect_unfiltered_com)[:, :2]
+    raw_vel = np.zeros_like(raw)
+    raw_vel[1:-1] = (raw[2:] - raw[:-2]) / (2*(1./15.))
+    raw_vel[0] = (raw[1] - raw[0]) / (1./15.)
+    raw_vel[-1] = (raw[-1] - raw[-2]) / (1./15.)
+
+    length = min(data.qtm_cop.shape[0], data.down_kinect_com.shape[0])
+
+    qtm_vel = qtm_vel[:length]
+    kalman_vel = kalman_vel[:length]
+    raw_vel = raw_vel[:length]
+
+    corr = np.correlate(qtm_vel[:, 0], kalman_vel[:, 0])[0] + np.correlate(qtm_vel[:, 1], kalman_vel[:, 1])[0]
+    corr_un = np.correlate(qtm_vel[:, 0], raw_vel[:, 0])[0] + np.correlate(qtm_vel[:, 1], raw_vel[:, 1])[0]
+
+    diff = np.linalg.norm(qtm_vel - kalman_vel, axis=1)
+    rmse = np.sqrt(np.mean(np.power(diff, 2)))
+
+    diff_un = np.linalg.norm(qtm_vel - raw_vel, axis=1)
+    rmse_un = np.sqrt(np.mean(np.power(diff_un, 2)))
+
+    dtw_dist = dtw.dtw(qtm_vel, kalman_vel, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+    dtw_dist_un = dtw.dtw(qtm_vel, raw_vel, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+    fr_dist = frechet_dist(qtm_vel, kalman_vel)
+    fr_dist_un = frechet_dist(qtm_vel, raw_vel)
+
+    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+
+
+
+
 def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
     down_qtm = downsample(double_butter(data.qtm_cop[:, :2], 900), data.qtm_cop_ts, 15)
     length = min(down_qtm.shape[0], data.down_kinect_com.shape[0])
@@ -1199,25 +1341,36 @@ def main():
     print(f"fr factor: {joint_fr_factor}")
     # data = load_processed_data(vel_path)
     best_factor = (((joint_fr_factor + vel_rmse_factor + vel_dtw_factor + vel_fr_factor) / 3 ) // 5 ) * 5
+    best_factor = 30
     print(f"best factor: {best_factor}")
 
     data = load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))
 
     joint_result = None
     vel_result = None
+    joint_result_inverted_right = None
+    vel_result_inverted_right = None
     if args.experiment_type in ["cop", "cop-wide"]:
         joint_result = compare_qtm_cop_kinect_cop(data, cutoff)
-        # vel_result = compare_qtm_cop_kinect_cop_vel(data, cutoff)
+        vel_result = compare_qtm_cop_kinect_cop_vel(data, cutoff)
     else:
+        joint_result_inverted_right = compare_qtm_joints_kinect_joints_inverted_right(data, cutoff)
+        vel_result_inverted_right = compare_qtm_joints_kinect_joints_vel_inverted_right(data, cutoff)
         joint_result = compare_qtm_joints_kinect_joints(data, cutoff)
         vel_result = compare_qtm_joints_kinect_joints_vel(data, cutoff)
 
     plot_constrained_segment_joint_length_change(ex_name, data, cutoff)
     print("Joints")
+    print("Left")
     print(joint_result)
+    print("Inverted Right")
+    print(joint_result_inverted_right)
 
     print("Velocities")
+    print("Left")
     print(vel_result)
+    print("Inverted Right")
+    print(vel_result_inverted_right)
 
 
     factors = [5, 50, best_factor]
