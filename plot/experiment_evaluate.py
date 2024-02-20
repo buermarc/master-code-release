@@ -510,7 +510,6 @@ def compare_qtm_joints_kinect_joints_vel(data: Data, cutoff: float) -> tuple[flo
         length = min(down_qtm_vel.shape[0], joints_vel.shape[0])
         o = max(int(length * cutoff), 1)
 
-        breakpoint()
         down_qtm_vel = down_qtm_vel[:length][o:-o]
         joints_vel = joints_vel[:length][o:-o]
         joints_un_vel = joints_un_vel[:length][o:-o]
@@ -647,15 +646,15 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
             assert_allclose(data.down_kinect_joints, data.down_kinect_unfiltered_joints)
             continue
 
-        if factor > 15:
-            continue
+        # if factor > 1:
+        #     continue
 
         # if "constraint" in experiment_type:
         if True:
-            joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
+            joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
             for joint in joints:
                 a = data.down_kinect_joints[:, joint, :][o:-o]
-                b = double_butter(data.down_kinect_unfiltered_joints[:, joint, :], once=factor != 0)[o:-o]
+                b = double_butter(data.down_kinect_unfiltered_joints[:, joint, :], cutoff=6, once=factor != 0)[o:-o]
 
                 # if  (0.3 < float(data.config["measurement_error_factor"]) < 0.35) or (1.0 < float(data.config["measurement_error_factor"]) < 1.05) or (5.00 < float(data.config["measurement_error_factor"]) < 5.05):
                 '''
@@ -791,23 +790,25 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         if factor == 0:
             continue
 
-        if factor > 15:
-            continue
+        # if factor > 1:
+        #     continue
 
         rmse = 0
         dtw_distance = 0
         fr_distance = 0
         corr_offset = 0
-        for idx, joint in enumerate([Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]):
+        for idx, joint in enumerate([Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]):
             a_vel = data.down_kinect_velocities[:, int(joint), :]
             # If we have a kalman filter factor then we also want to introduce butterworth filter lag
-            b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), :], cutoff=6, N=2, once=factor != 0)
+            b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), :], cutoff=4, N=2, once=False)
             c = data.down_kinect_unfiltered_joints[:, int(joint), :]
 
             b_vel = np.zeros_like(b)
             b_vel[1:-1] = (b[2:] - b[:-2]) / (2*(1./15.))
             b_vel[0] = (b[1] - b[0]) / (1./15.)
             b_vel[-1] = (b[-1] - b[-2]) / (1./15.)
+
+            # b_vel = double_butter(b_vel, sample_frequency=15, cutoff=6)
 
             qtm_joints = double_butter(data.qtm_joints[:, idx, :], 150)
 
@@ -1122,6 +1123,12 @@ def main():
     os.makedirs("./results/experiments/joint_velocities/", exist_ok=True)
     os.makedirs("./results/experiments/cop_trajectories/", exist_ok=True)
 
+    '''
+    data = load_processed_data(find_factor_path(100, Path(args.experiment_folder)))
+    cutoff = 0.01
+    vel_result = compare_qtm_joints_kinect_joints_vel(data, cutoff)
+    '''
+
     global SHOW
     SHOW = args.show
 
@@ -1191,7 +1198,7 @@ def main():
     print(f"dtw factor: {joint_dtw_factor}")
     print(f"fr factor: {joint_fr_factor}")
     # data = load_processed_data(vel_path)
-    best_factor = (joint_rmse_factor + joint_dtw_factor + joint_fr_factor + vel_rmse_factor + vel_dtw_factor + vel_fr_factor) / 6
+    best_factor = (((joint_fr_factor + vel_rmse_factor + vel_dtw_factor + vel_fr_factor) / 3 ) // 5 ) * 5
     print(f"best factor: {best_factor}")
 
     data = load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))
@@ -1213,10 +1220,9 @@ def main():
     print(vel_result)
 
 
-    factors = [0.5, 15, best_factor]
+    factors = [5, 50, best_factor]
     datas = [load_processed_data(find_factor_path(factor, Path(args.experiment_folder))) for factor in factors]
 
-    best_factor  = 15.
     best_factors = [best_factor]
     best_datas = [load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))]
 
