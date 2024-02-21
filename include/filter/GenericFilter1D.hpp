@@ -130,4 +130,98 @@ public:
         }
         return std::make_tuple(corrected_state(0, 0), corrected_state(1, 0));
     }
+    std::tuple<Value, Value, Value> step_(Value value, Value time_diff)
+    {
+        // Hard coded sub A = [1, Ts; 0, 1]
+        MatrixXd Adn = Ad.replicate(1, 1);
+        Adn(0, 1) = time_diff;
+        Adn(0, 2) = std::pow(time_diff, 2) / 2;
+        Adn(1, 2) = time_diff;
+
+        // Again: hard coded sub G = [Ts^2/2; Ts]
+        MatrixXd Gdn = G.replicate(1, 1);
+        Gdn(0, 0) = std::pow(time_diff, 2) / 2;
+        Gdn(1, 0) = time_diff;
+        Gdn(2, 0) = 1;
+        Gdn(0, 0) = time_diff;
+        Gdn(1, 0) = 1;
+        Gdn(2, 0) = 1;
+
+        Gdn = MatrixXd::Zero(3 ,3);
+        Gdn(0, 0) = std::pow(time_diff, 5) / 20.0;
+        Gdn(0, 1) = std::pow(time_diff, 4) / 8.0;
+        Gdn(0, 2) = std::pow(time_diff, 3) / 6.0;
+
+        Gdn(1, 0) = std::pow(time_diff, 4) / 8.0;
+        Gdn(1, 1) = std::pow(time_diff, 3) / 3.0;
+        Gdn(1, 2) = std::pow(time_diff, 2) / 2.0;
+
+        Gdn(2, 0) = std::pow(time_diff, 3) / 6.0;
+        Gdn(2, 1) = std::pow(time_diff, 2) / 2.0;
+        Gdn(2, 2) = time_diff;
+
+        auto AdnT = Adn.transpose();
+        auto GdnT = Gdn.transpose();
+
+        // std::cout << "Adn" << std::endl;
+        // std::cout << Adn << std::endl;
+        // std::cout << std::endl;
+
+        // std::cout << "Gdn" << std::endl;
+        // std::cout << Gdn << std::endl;
+        // std::cout << std::endl;
+
+        MatrixXd predicted_state = Adn * corrected_state;
+        // std::cout << "predicted_state" << std::endl;
+        // std::cout << predicted_state << std::endl;
+        MatrixXd predicted_errors = Adn * corrected_errors * AdnT + Gdn * system_noise;
+        // std::cout << "predicted_errors" << std::endl;
+        // std::cout << predicted_errors << std::endl;
+
+        Value innovation = value - (C * predicted_state).array()(0); // residual
+        // std::cout << "innovation" << std::endl;
+        // std::cout << innovation << std::endl;
+        // std::cout << std::endl;
+        Value innovation_covariance = (C * predicted_errors * CT).array()(0) + measurement_noise;
+        // std::cout << "innovation_covariance" << std::endl;
+        // std::cout << innovation_covariance << std::endl;
+        // std::cout << std::endl;
+        Value sigma_value = std::sqrt(innovation_covariance);
+        // std::cout << "sigma_value" << std::endl;
+        // std::cout << sigma_value << std::endl;
+        // std::cout << std::endl;
+        Value innovation_norm = innovation / sigma_value;
+        // std::cout << "innovation_norm" << std::endl;
+        // std::cout << innovation_norm << std::endl;
+        // std::cout << std::endl;
+
+        MatrixXd measurement_noise_matrix(1, 1);
+        measurement_noise_matrix(0, 0) = measurement_noise;
+        if (std::abs(innovation_norm) < threshold) {
+            // // std::cout << "use correction" << std::endl;
+            //  We are recalculating tmp but that is fine as it still a bit
+            //  different as we are using matrices here
+            MatrixXd tmp = C * predicted_errors * CT + measurement_noise_matrix;
+            // TODO: if we have just one value we could also just use a simple
+            // inversion instead of a pseudo inverse
+            auto pseudo_inv = tmp.completeOrthogonalDecomposition().pseudoInverse();
+            // std::cout << "pseudo_inv==1/innovation_covariance" << std::endl;
+            // std::cout << pseudo_inv << "==" << 1 / innovation_covariance << std::endl;
+            MatrixXd K_value = predicted_errors * CT * (1 / innovation_covariance);
+            // std::cout << "K_value" << std::endl;
+            // std::cout << K_value << std::endl;
+            corrected_state = predicted_state + K_value * innovation;
+            // std::cout << "corrected_state" << std::endl;
+            // std::cout << corrected_state << std::endl;
+            auto eye = MatrixXd::Identity(3, 3);
+            corrected_errors = (eye - K_value * C) * predicted_errors;
+            // std::cout << "corrected_errors" << std::endl;
+            // std::cout << corrected_errors << std::endl;
+        } else {
+            std::cout << "use prediction" << std::endl;
+            corrected_state = predicted_state;
+            corrected_errors = predicted_errors;
+        }
+        return std::make_tuple(corrected_state(0, 0), corrected_state(1, 0), predicted_state(0, 0));
+    }
 };

@@ -109,6 +109,35 @@ public:
         last_time = new_time;
         return std::make_tuple(positions, velocities);
     }
+
+    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>, std::vector<Point<Value>>> step_(std::vector<Point<Value>> values, Value new_time) override
+    {
+        if (!initialized) {
+            init(values, new_time);
+            return std::make_tuple(values, std::vector<Point<Value>>());
+        }
+
+        std::vector<Point<Value>> positions;
+        std::vector<Point<Value>> velocities;
+        std::vector<Point<Value>> predictions;
+        auto time_diff = new_time - last_time;
+        // FIXME: Not nice using a 0..n_joints loop and push_back at the same time
+        for (int i = 0; i < n_joints; ++i) {
+            auto [position, velocity, prediction] = joint_filters[i].step_(values[i], time_diff);
+            positions.push_back(position);
+            velocities.push_back(velocity);
+            predictions.push_back(prediction);
+        }
+
+        SkeletonStabilityMetrics<Value>::store_step(positions, velocities);
+
+        if (this->saver_enabled()) {
+            this->save_step(new_time, values, positions, velocities, predictions);
+        }
+
+        last_time = new_time;
+        return std::make_tuple(positions, velocities, predictions);
+    }
 };
 
 template <typename Value>

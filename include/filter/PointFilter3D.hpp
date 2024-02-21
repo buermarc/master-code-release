@@ -94,4 +94,18 @@ public:
         std::tie(position.z, velocity.z) = z_filter.step(value.z, time_diff);
         return std::make_tuple(position, velocity);
     }
+
+    std::tuple<Point<Value>, Point<Value>, Point<Value>> step_(Point<Value> value, Value time_diff)
+    {
+        Point<Value> position;
+        Point<Value> velocity;
+        Point<Value> prediction;
+        // std::cout << "x axis" << std::endl;
+        std::tie(position.x, velocity.x, prediction.x) = x_filter.step_(value.x, time_diff);
+        // std::cout << "y axis" << std::endl;
+        std::tie(position.y, velocity.y, prediction.y) = y_filter.step_(value.y, time_diff);
+        // std::cout << "z axis" << std::endl;
+        std::tie(position.z, velocity.z, prediction.z) = z_filter.step_(value.z, time_diff);
+        return std::make_tuple(position, velocity, prediction);
+    }
 };

@@ -12,6 +12,7 @@ public:
     virtual Value time_diff(Value timestamp) = 0;
     virtual void init(std::vector<Point<Value>> initial_points, Value initial_time) = 0;
     virtual std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>> step(std::vector<Point<Value>> values, Value new_time) = 0;
+    virtual std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>, std::vector<Point<Value>>> step_(std::vector<Point<Value>> values, Value new_time) = 0;
 };
 
 template <typename Value>

@@ -1,4 +1,4 @@
-#pragma once
+#pragma oncem_filtered_velocities
 #include <algorithm>
 #include <filter/com.hpp>
 #include <fstream>
@@ -21,6 +21,7 @@ class SkeletonSaver {
     vvp m_unfiltered_positions;
     vvp m_filtered_positions;
     vvp m_filtered_velocities;
+    vvp m_predictions;
     bool m_enabled;
 
     std::string m_filter_type_name = "Unset";
@@ -33,20 +34,22 @@ public:
     {
     }
 
-    SkeletonSaver(vV timestamps, vp unfiltered_positions, vp filtered_positions, vp filtered_velocities)
+    SkeletonSaver(vV timestamps, vp unfiltered_positions, vp filtered_positions, vp filtered_velocities, vp predictions)
         : m_timestamps(timestamps)
         , m_unfiltered_positions(unfiltered_positions)
         , m_filtered_positions(filtered_positions)
         , m_filtered_velocities(filtered_velocities)
+        , m_predictions(predictions)
     {
     }
 
-    void save_step(Value timestamp, vp unfiltered_positions, vp filtered_positions, vp filtered_velocities)
+    void save_step(Value timestamp, vp unfiltered_positions, vp filtered_positions, vp filtered_velocities, vp predictions = vp())
     {
         m_timestamps.push_back(timestamp);
         m_unfiltered_positions.push_back(unfiltered_positions);
         m_filtered_positions.push_back(filtered_positions);
         m_filtered_velocities.push_back(filtered_velocities);
+        m_predictions.push_back(predictions);
     }
 
     bool saver_enabled()
@@ -84,6 +87,11 @@ public:
         return m_filtered_velocities;
     }
 
+    vvp get_predictions()
+    {
+        return m_predictions;
+    }
+
     void set_filter_type(std::string name )
     {
         this->m_filter_type_name = name;
@@ -106,6 +114,7 @@ public:
         _json["unfiltered_positions"] = m_unfiltered_positions;
         _json["filtered_positions"] = m_filtered_positions;
         _json["filtered_velocities"] = m_filtered_velocities;
+        _json["predictions"] = m_predictions;
         _json["filter_type"] = m_filter_type_name;
         _json["measurement_error_factor"] = m_measurement_error_factor;
         return _json;
