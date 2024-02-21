@@ -368,6 +368,15 @@ public:
         last_time = new_time;
         return std::make_tuple(positions, velocities);
     }
+
+    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>, std::vector<Point<Value>>> step_(std::vector<Point<Value>> values,
+        Value new_time) override
+    {
+        std::vector<Point<Value>> positions;
+        std::vector<Point<Value>> velocities;
+        std::vector<Point<Value>> projected;
+        return std::make_tuple(positions, velocities, projected);
+    }
 };
 
 template <typename Value>

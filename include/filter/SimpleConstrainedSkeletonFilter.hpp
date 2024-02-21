@@ -376,7 +376,7 @@ public:
 
         if (this->saver_enabled()) {
             std::vector<Point<Value>> velocities(initial_points.size());
-            this->save_step(initial_time, initial_points, initial_points, velocities);
+            this->save_step(initial_time, initial_points, initial_points, velocities, initial_points);
         }
 
         last_time = initial_time;
@@ -449,6 +449,7 @@ public:
         std::vector<Point<Value>> predictions(32);
         std::fill(positions.begin(), positions.end(), Point(0.0, 0.0, 0.0));
         std::fill(velocities.begin(), velocities.end(), Point(0.0, 0.0, 0.0));
+        std::fill(predictions.begin(), predictions.end(), Point(0.0, 0.0, 0.0));
 
         auto time_diff = new_time - last_time;
 

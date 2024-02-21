@@ -244,67 +244,6 @@ public:
         return corrected_projected_state;
     }
 
-    MatrixXd step(MatrixXd measurement, Value time_diff)
-    {
-        /**
-         * We make a step for **ONE** rigid joint construct, meaning a
-         * combination of point_a, point_b, and point_c.
-         *
-         * We assume that however provides us with the measurement vector
-         * provides the correct measurements for the joints.
-         */
-        // measurement should be ? 3x1 mxn rowxcol
-        MatrixXd Adn;
-        Adn = sub_ad(Ad, time_diff);
-
-        MatrixXd Gdn;
-        Gdn = sub_gd(Gd, time_diff);
-
-        auto AdnT = Adn.transpose();
-        auto GdnT = Gdn.transpose();
-
-        /// Prediction step
-        MatrixXd predicted_state = Adn * corrected_projected_state;
-        // system_noise => process model noise 9x9
-        MatrixXd predicted_errors = Adn * corrected_projected_errors * AdnT + Gdn * system_noise * GdnT;
-
-        /// Correction step:
-        /// calculate kalman gain and use to apply the residual
-        MatrixXd tmp = C * predicted_errors * CT + measurement_noise;
-        auto pseudo_inv = tmp.completeOrthogonalDecomposition().pseudoInverse();
-        MatrixXd K_value = predicted_errors * CT * pseudo_inv;
-        MatrixXd corrected_state = predicted_state + K_value * (measurement - (C * predicted_state));
-        MatrixXd corrected_errors = (eye(27) - K_value * C) * predicted_errors;
-
-        /// Projection step:
-        /// Probably something like: project the corrected state and errors
-        /// into the wanted solution space that is acecptable
-
-        auto sub_corrected_state_T = corrected_state(seq(0, 8), 0).transpose();
-        MatrixXd phi(2, 9); // Should be (2, 9)
-        // concat the two calculations
-        phi << sub_corrected_state_T * phi_1, sub_corrected_state_T * phi_2;
-        MatrixXd phi_T = phi.transpose();
-
-        MatrixXd eye_9 = eye(9);
-        MatrixXd zero_9 = zero(9);
-
-        MatrixXd tmp_result(27, 27);
-
-        MatrixXd first(9, 27);
-        MatrixXd second(9, 27);
-        MatrixXd third(9, 27);
-        first << eye_9, zero_9, zero_9;
-        second << zero_9, (eye_9 - (phi_T * (phi * phi_T).inverse() * phi)), zero_9;
-        third << zero_9, zero_9, eye_9;
-        tmp_result << first, second, third;
-
-        corrected_projected_state = tmp_result * corrected_state;
-
-        corrected_projected_errors = tmp_result * corrected_errors;
-
-        return corrected_projected_state;
-    }
     std::tuple<MatrixXd, MatrixXd> step_(MatrixXd measurement, Value time_diff)
     {
         /**
@@ -449,7 +388,7 @@ public:
 
         if (this->saver_enabled()) {
             std::vector<Point<Value>> velocities(initial_points.size());
-            this->save_step(initial_time, initial_points, initial_points, velocities);
+            this->save_step(initial_time, initial_points, initial_points, velocities, initial_points);
         }
 
         last_time = initial_time;
@@ -514,7 +453,7 @@ public:
         return std::make_tuple(positions, velocities);
     }
 
-    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>, std::vector<double>> step_(std::vector<Point<Value>> values,
+    std::tuple<std::vector<Point<Value>>, std::vector<Point<Value>>, std::vector<Point<double>>> step_(std::vector<Point<Value>> values,
         Value new_time) override
     {
         std::vector<Point<Value>> positions(32);
@@ -522,6 +461,7 @@ public:
         std::vector<Point<Value>> predictions(32);
         std::fill(positions.begin(), positions.end(), Point(0.0, 0.0, 0.0));
         std::fill(velocities.begin(), velocities.end(), Point(0.0, 0.0, 0.0));
+        std::fill(predictions.begin(), predictions.end(), Point(0.0, 0.0, 0.0));
 
         auto time_diff = new_time - last_time;
 
@@ -575,7 +515,7 @@ public:
         }
 
         last_time = new_time;
-        return std::make_tuple(positions, velocities);
+        return std::make_tuple(positions, velocities, predictions);
     }
 };
 

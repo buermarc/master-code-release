@@ -114,7 +114,7 @@ public:
     {
         if (!initialized) {
             init(values, new_time);
-            return std::make_tuple(values, std::vector<Point<Value>>());
+            return std::make_tuple(values, std::vector<Point<Value>>(), std::vector<Point<Value>>());
         }
 
         std::vector<Point<Value>> positions;

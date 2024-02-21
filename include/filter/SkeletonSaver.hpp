@@ -1,4 +1,4 @@
-#pragma oncem_filtered_velocities
+#pragma once
 #include <algorithm>
 #include <filter/com.hpp>
 #include <fstream>
