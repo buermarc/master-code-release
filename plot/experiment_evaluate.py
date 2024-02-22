@@ -106,6 +106,13 @@ def _frechet_dist(ca, c, n, m):
                            c[i, j])
     return ca[n-1, m-1]
 
+def central_diff(data: np.ndarray, frequency: float):
+    data_vel = np.zeros_like(data)
+    data_vel[1:-1] = (data[2:] - data[:-2]) / (2*(1./frequency))
+    data_vel[0] = (data[1] - data[0]) / (1./frequency)
+    data_vel[-1] = (data[-1] - data[-2]) / (1./frequency)
+    return data_vel
+
 def old_main():
     parser = argparse.ArgumentParser()
     parser.add_argument("experiment_folder")
@@ -162,6 +169,7 @@ class Data:
     down_kinect_com: np.ndarray
     down_kinect_com_velocities: np.ndarray
     down_kinect_joints: np.ndarray
+    down_kinect_predictions: np.ndarray
     down_kinect_ts: np.ndarray
     down_kinect_unfiltered_com: np.ndarray
     down_kinect_unfiltered_joints: np.ndarray
@@ -173,6 +181,7 @@ class Data:
     kinect_com: np.ndarray
     kinect_com_velocities: np.ndarray
     kinect_joints: np.ndarray
+    kinect_predictions: np.ndarray
     kinect_ts: np.ndarray
     kinect_unfiltered_com: np.ndarray
     kinect_unfiltered_joints: np.ndarray
@@ -266,6 +275,7 @@ def load_processed_data(path: Path) -> Data:
         np.load(path / "down_kinect_com.npy"),
         np.load(path / "down_kinect_com_velocities.npy"),
         np.load(path / "down_kinect_joints.npy"),
+        np.load(path / "down_kinect_predictions.npy"),
         np.load(path / "down_kinect_ts.npy"),
         np.load(path / "down_kinect_unfiltered_com.npy"),
         np.load(path / "down_kinect_unfiltered_joints.npy"),
@@ -277,6 +287,7 @@ def load_processed_data(path: Path) -> Data:
         np.load(path / "kinect_com.npy"),
         np.load(path / "kinect_com_velocities.npy"),
         np.load(path / "kinect_joints.npy"),
+        np.load(path / "kinect_predictions.npy"),
         np.load(path / "kinect_ts.npy"),
         np.load(path / "kinect_unfiltered_com.npy"),
         np.load(path / "kinect_unfiltered_joints.npy"),
@@ -337,6 +348,9 @@ def plot_velocities_for_different_factors(ex_name: str, factors: list[float], da
             q_vel[1:-1] = (qtm_line[2:] - qtm_line[:-2]) / (2*(1./150.))
             q_vel[0] = (qtm_line[1] - qtm_line[0]) / (1./150)
             q_vel[-1] = (qtm_line[-1] - qtm_line[-2]) / (1./150)
+
+            q_vel_function = central_diff(qtm_line, 150)
+            assert_allclose(q_vel, q_vel_function)
 
             plt.plot(qtm_ts, q_vel, label=f"Qualisys", alpha=0.8, marker="x", markevery=500)
             for factor, data in zip(factors, datas):
@@ -1249,6 +1263,96 @@ def compare_velocities(data: Data) -> None:
     plt.cla()
 
 
+def determine_minimum_against_ground_truth(args):
+    ranges = np.arange(0, 100, 2.5)
+    corr_a = []
+    corr_b = []
+    corr_c = []
+
+    frechet_a = []
+    frechet_b = []
+    frechet_c = []
+
+    dtw_a = []
+    dtw_b = []
+    dtw_c = []
+
+    lsed_a = []
+    lsed_b = []
+    lsed_c = []
+
+    for i in ranges:
+        data1 = load_processed_data(find_factor_path(i, Path(args.experiment_folder)))
+        data2 = load_processed_data(find_factor_path(i, Path(args.second_folder)))
+        # plt.plot(data1.kinect_ts, data1.kinect_joints[:, int(Joint.WRIST_LEFT), 2], label="1 joints")
+        plt.plot(data2.kinect_ts, data2.kinect_joints[:, int(Joint.WRIST_LEFT), 2], label="2 joints")
+        plt.plot(data2.kinect_ts, data2.kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2], label="raw")
+        #plt.plot(data1.kinect_ts, data1.kinect_predictions[:, int(Joint.WRIST_LEFT), 2], label="1 predict")
+        #plt.plot(data2.kinect_ts, data2.kinect_predictions[:, int(Joint.WRIST_LEFT), 2], label="2 predict")
+        plt.plot(data1.qtm_ts, data1.qtm_joints[:, 2, 2], label="truth")
+        plt.legend()
+        plt.cla()
+
+        # plt.show()
+
+        d_q = downsample(double_butter(data1.qtm_joints[:, 2, 2], 150), data1.qtm_ts, 15)
+        d_a = downsample(data1.kinect_joints[:, int(Joint.WRIST_LEFT), 2], data1.kinect_ts, 15)
+        d_b = downsample(data2.kinect_joints[:, int(Joint.WRIST_LEFT), 2], data2.kinect_ts, 15)
+        d_c = downsample(data1.kinect_unfiltered_joints[:, int(Joint.WRIST_LEFT), 2], data1.kinect_ts, 15)
+        length = min(d_a.shape[0], d_b.shape[0])
+
+        d_q = d_q[:length]
+
+        d_a = d_a[:length]
+        d_b = d_b[:length]
+        d_c = d_c[:length]
+
+        corr_a.append(np.corrcoef(d_a, d_q)[0, 1])
+        corr_b.append(np.corrcoef(d_b, d_q)[0, 1])
+        corr_c.append(np.corrcoef(d_c, d_q)[0, 1])
+
+        ts = np.arange(len(d_a))
+        d_q = np.column_stack((ts, d_q))
+        d_a = np.column_stack((ts, d_a))
+        d_b = np.column_stack((ts, d_b))
+        d_c = np.column_stack((ts, d_c))
+
+        frechet_a.append(frechet_dist(d_a, d_q))
+        frechet_b.append(frechet_dist(d_b, d_q))
+        frechet_c.append(frechet_dist(d_c, d_q))
+
+        dtw_a.append(dtw.dtw(d_a, d_q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance)
+        dtw_b.append(dtw.dtw(d_b, d_q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance)
+        dtw_c.append(dtw.dtw(d_c, d_q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance)
+
+        lsed_a.append(np.sqrt(np.mean(np.power(d_a[:, 1] - d_q[:, 1], 2), axis=0)))
+        lsed_b.append(np.sqrt(np.mean(np.power(d_b[:, 1] - d_q[:, 1], 2), axis=0)))
+        lsed_c.append(np.sqrt(np.mean(np.power(d_c[:, 1] - d_q[:, 1], 2), axis=0)))
+
+    corr_mean = np.array(corr_c).mean()
+    plt.plot(corr_a / corr_mean, label="filter with acc correlation")
+    plt.plot(corr_b / corr_mean, label="filter wo acc correlation")
+    plt.plot(corr_a / corr_mean, label="raw correlation")
+
+    frechet_mean = np.array(frechet_c).mean()
+    plt.plot(frechet_a / frechet_mean, label="filter with acc frechet")
+    plt.plot(frechet_b / frechet_mean, label="filter wo acc frechet")
+    plt.plot(frechet_c / frechet_mean, label="raw frechet")
+
+    dtw_mean = np.array(dtw_c).mean()
+    plt.plot(dtw_a / dtw_mean, label="filter with acc dtw")
+    plt.plot(dtw_b / dtw_mean, label="filter wo acc dtw")
+    plt.plot(dtw_c / dtw_mean, label="raw dtw")
+
+    lsed_mean = np.array(lsed_c).mean()
+    plt.plot(lsed_a / lsed_mean, label="filter with acc lsed")
+    plt.plot(lsed_b / lsed_mean, label="filter wo acc lsed")
+    plt.plot(lsed_c / lsed_mean, label="raw lsed")
+
+    plt.legend()
+    plt.show()
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("experiment_folder")
@@ -1273,8 +1377,11 @@ def main():
     os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_velocities/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/cop_trajectories/", exist_ok=True)
 
+    if args.second_folder:
+        determine_minimum_against_ground_truth(args)
+    exit(0)
+
     '''
-    data = load_processed_data(find_factor_path(100, Path(args.experiment_folder)))
     cutoff = 0.01
     vel_result = compare_qtm_joints_kinect_joints_vel(data, cutoff)
     '''
@@ -1505,6 +1612,10 @@ def test():
     plt.show()
     breakpoint()
     '''
+
+def compare_filter_type(experiment_path_a: Path, experiment_path_b: Path) -> None:
+    pass
+
 
 if __name__ == "__main__":
     main()
