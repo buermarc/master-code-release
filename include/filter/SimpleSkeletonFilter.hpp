@@ -70,7 +70,7 @@ public:
         }
         if (this->saver_enabled()) {
             std::vector<Point<Value>> velocities(initial_points.size());
-            this->save_step(initial_time, initial_points, initial_points, velocities);
+            this->save_step(initial_time, initial_points, initial_points, velocities, initial_points);
         }
         last_time = initial_time;
         initialized = true;
