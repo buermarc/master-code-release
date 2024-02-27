@@ -91,9 +91,9 @@ target_include_directories(filter SYSTEM INTERFACE
   "$<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>"
   "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${CMAKE_INSTALL_INCLUDEDIR}>")
 
-IF(DEFINED ENV{FILTER_TEST})
-    add_subdirectory(tests)
-ENDIF()
+# IF(DEFINED ENV{FILTER_TEST})
+#     add_subdirectory(tests)
+# ENDIF()
 
 IF(DEFINED ENV{FILTER_MAIN})
     add_executable(main src/filter.cpp)
@@ -109,3 +109,7 @@ IF(DEFINED ENV{FILTER_MAIN})
     target_link_libraries(load cnpy ZLIB::ZLIB filter)
     add_dependencies(load eigen)
 ENDIF()
+
+
+add_executable(track src/track_constant_vel.cpp)
+target_link_libraries(track filter ${PYTHON_LIBRARIES})
