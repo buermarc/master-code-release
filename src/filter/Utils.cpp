@@ -163,6 +163,11 @@ load_data(std::string path, int joint_counts, int max_frames)
         }
 
         auto joint_positions = data["frames"][i]["bodies"][0]["joint_positions"];
+        if (joint_positions.is_null()) {
+            is_null[i] = true;
+            std::cout << "Did find null, continue." << std::endl;
+            continue;
+        }
         for (int j = 0; j < joint_counts; ++j) {
             joints(i, j, 0) = joint_positions[j][0];
             joints(i, j, 1) = joint_positions[j][1];
