@@ -164,6 +164,30 @@ def old_main():
     plt.show()
     plt.cla()
 
+
+@dataclass
+class TheiaData:
+    config: dict[str, str]
+    down_kinect_com: np.ndarray
+    down_kinect_com_velocities: np.ndarray
+    down_kinect_joints: np.ndarray
+    down_kinect_predictions: np.ndarray
+    down_kinect_ts: np.ndarray
+    down_kinect_unfiltered_com: np.ndarray
+    down_kinect_unfiltered_joints: np.ndarray
+    down_kinect_velocities: np.ndarray
+    down_theia_tensor: np.ndarray
+    kinect_com: np.ndarray
+    kinect_com_velocities: np.ndarray
+    kinect_joints: np.ndarray
+    kinect_predictions: np.ndarray
+    kinect_ts: np.ndarray
+    kinect_unfiltered_com: np.ndarray
+    kinect_unfiltered_joints: np.ndarray
+    kinect_velocities: np.ndarray
+    theia_tensor: np.ndarray
+
+
 @dataclass
 class Data:
     down_kinect_com: np.ndarray
@@ -191,6 +215,28 @@ class Data:
     qtm_joints: np.ndarray
     qtm_ts: np.ndarray
     config: dict[str, str]
+
+_THEIA_JOINTS = [
+    "HEAD",
+    "SHOULDER_LEFT",
+    "ELBOW_LEFT",
+    "WRIST_LEFT",
+    "SHOULDER_RIGHT",
+    "ELBOW_RIGHT",
+    "WRIST_RIGHT",
+    "HIP_LEFT",
+    "KNEE_LEFT",
+    "ANKLE_LEFT",
+    "FOOT_LEFT",
+    "HIP_RIGHT",
+    "KNEE_RIGHT",
+    "ANKLE_RIGHT",
+    "FOOT_RIGHT",
+    "COM",
+    "COM_VEL",
+]
+TheiaJoint = IntEnum("TheiaJoint", _THEIA_JOINTS, start = 0)
+
 
 _JOINTS = [
     "PELVIS",
@@ -268,6 +314,35 @@ def downsample(data: np.ndarray, timestamps: np.ndarray, target_frequency: int) 
     _downsample(data, timestamps, target_frequency, downsampled_values)
 
     return downsampled_values
+
+def cond_load_data(path: Path) -> Data | TheiaData:
+    if (path / "theia_tensor.npy").exists():
+        return load_processed_theia_data(path)
+    else:
+        return load_processed_data(path)
+
+def load_processed_theia_data(path: Path) -> TheiaData:
+    return TheiaData(
+        json.load((path / "config.json").open(mode="r", encoding="UTF-8")),
+        np.load(path / "down_kinect_com.npy"),
+        np.load(path / "down_kinect_com_velocities.npy"),
+        np.load(path / "down_kinect_joints.npy"),
+        np.load(path / "down_kinect_predictions.npy"),
+        np.load(path / "down_kinect_ts.npy"),
+        np.load(path / "down_kinect_unfiltered_com.npy"),
+        np.load(path / "down_kinect_unfiltered_joints.npy"),
+        np.load(path / "down_kinect_velocities.npy"),
+        np.load(path / "down_theia_tensor.npy"),
+        np.load(path / "kinect_com.npy"),
+        np.load(path / "kinect_com_velocities.npy"),
+        np.load(path / "kinect_joints.npy"),
+        np.load(path / "kinect_predictions.npy"),
+        np.load(path / "kinect_ts.npy"),
+        np.load(path / "kinect_unfiltered_com.npy"),
+        np.load(path / "kinect_unfiltered_joints.npy"),
+        np.load(path / "kinect_velocities.npy"),
+        np.load(path / "theia_tensor.npy"),
+    )
 
 
 def load_processed_data(path: Path) -> Data:
@@ -787,7 +862,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     factors = []
 
     for directory in tqdm(directories):
-        data = load_processed_data(directory)
+        data = cond_load_data(directory)
 
         #if float(data.config["measurement_error_factor"]) > 1.5:
         #    continue
@@ -939,7 +1014,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     factors = []
     once = True
     for directory in tqdm(directories):
-        data = load_processed_data(directory)
+        data = cond_load_data(directory)
 
         length = data.down_kinect_joints.shape[0]
         o = int(length * cutoff)
@@ -968,6 +1043,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
 
             # b_vel = double_butter(b_vel, sample_frequency=15, cutoff=6)
 
+            '''
             qtm_joints = double_butter(data.qtm_joints[:, idx, :], 150)
 
             butter_qtm_velocities = np.zeros_like(qtm_joints)
@@ -975,6 +1051,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
             butter_qtm_velocities[0] = (qtm_joints[1] - qtm_joints[0]) / (1./150)
             butter_qtm_velocities[-1] = (qtm_joints[-1] - qtm_joints[-2]) / (1./150)
             d_vel = downsample(butter_qtm_velocities, data.qtm_ts, 15)
+            '''
 
             # extract finite velocity
             # downsampled have 15 hz frequency
@@ -1379,7 +1456,6 @@ def main():
 
     if args.second_folder:
         determine_minimum_against_ground_truth(args)
-    exit(0)
 
     '''
     cutoff = 0.01
@@ -1415,15 +1491,19 @@ def main():
     cutoff = 0.01
     # path, factor = find_best_measurement_error_factor_corr_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
 
-    data = load_processed_data(Path(args.experiment_folder) / "0")
     ex_name = os.path.basename(args.experiment_folder)
-    print(f"Ex: {ex_name}")
-    print(f"Var X: {data.qtm_cop[:, 0].var()}")
-    print(f"Var Y: {data.qtm_cop[:, 1].var()}")
-    if data.qtm_cop[:, 0].var() > 0.001 and data.qtm_cop[:, 1].var() > 0.001:
-        args.experiment_type = "cop"
-    else:
+    theia = "s300" in ex_name
+    if theia:
         args.experiment_type = "constraint"
+    else:
+        data = load_processed_data(Path(args.experiment_folder) / "0")
+        print(f"Ex: {ex_name}")
+        print(f"Var X: {data.qtm_cop[:, 0].var()}")
+        print(f"Var Y: {data.qtm_cop[:, 1].var()}")
+        if data.qtm_cop[:, 0].var() > 0.001 and data.qtm_cop[:, 1].var() > 0.001:
+            args.experiment_type = "cop"
+        else:
+            args.experiment_type = "constraint"
 
     print(f"Extracted experiment type: {args.experiment_type}")
 
@@ -1455,6 +1535,12 @@ def main():
     best_factor = (((joint_fr_factor + vel_rmse_factor + vel_dtw_factor + vel_fr_factor) / 3 ) // 5 ) * 5
     best_factor = 100
     print(f"best factor: {best_factor}")
+
+    if theia:
+        results = compare_theia_joints_kinect_joints(load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder))))
+        print("Theia Results:")
+        print(results)
+        return
 
     data = load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))
 
@@ -1612,6 +1698,53 @@ def test():
     plt.show()
     breakpoint()
     '''
+
+def compare_theia_joints_kinect_joints(data: TheiaData, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
+    kinect_joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
+    theia_joints = [int(element) for element in [TheiaJoint.SHOULDER_RIGHT, TheiaJoint.ELBOW_RIGHT, TheiaJoint.WRIST_RIGHT]]
+
+    corr = 0
+    corr_un = 0
+
+    rmse = 0
+    rmse_un = 0
+
+    dtw_dist = 0
+    dtw_dist_un = 0
+
+    fr_dist = 0
+    fr_dist_un = 0
+
+    theia_ts = np.arange(data.theia_tensor.shape[0]) * (1./120.)
+
+    for kinect_joint, theia_joint in zip(kinect_joints, theia_joints):
+        down_theia = downsample(double_butter(data.theia_tensor[:, theia_joint, :], 120), theia_ts, 15)
+        length = min(down_theia.shape[0], data.down_kinect_joints.shape[0])
+        o = max(int(length * cutoff), 1)
+
+        down_theia = down_theia[:length][o:-o]
+
+        joints = data.down_kinect_joints[:, kinect_joint,:][:length][o:-o]
+        joints_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joint, :])[:length][o:-o]
+
+        corr += np.correlate(down_theia[:, 0], joints[:, 0])[0] + np.correlate(down_theia[:, 1], joints[:, 1])[0] + np.correlate(down_theia[:, 2], joints[:, 2])[0]
+        corr_un += np.correlate(down_theia[:, 0], joints_un[:, 0])[0] + np.correlate(down_theia[:, 1], joints_un[:, 1])[0] + np.correlate(down_theia[:, 2], joints[:, 2])[0]
+
+        diff = np.linalg.norm(down_theia - joints, axis=1)
+        rmse += np.sqrt(np.mean(np.power(diff, 2)))
+
+        diff_un = np.linalg.norm(down_theia - joints_un, axis=1)
+        rmse_un += np.sqrt(np.mean(np.power(diff_un, 2)))
+
+        dtw_dist += dtw.dtw(down_theia, joints, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+        dtw_dist_un += dtw.dtw(down_theia, joints_un, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+        fr_dist += frechet_dist(down_theia, joints)
+        fr_dist_un += frechet_dist(down_theia, joints_un)
+
+    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+
+
 
 def compare_filter_type(experiment_path_a: Path, experiment_path_b: Path) -> None:
     pass
