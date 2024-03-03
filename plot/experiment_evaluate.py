@@ -1538,7 +1538,19 @@ def main():
 
     if theia:
         results = compare_theia_joints_kinect_joints(load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder))))
-        print("Theia Results:")
+        print("Theia Joint Results:")
+        print(results)
+
+        results = compare_theia_joints_kinect_joints_vel(load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder))))
+        print("Theia Joint Vel Results:")
+        print(results)
+
+        results = compare_theia_joints_kinect_com(load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder))))
+        print("Theia COM Results:")
+        print(results)
+
+        results = compare_theia_joints_kinect_com_vel(load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder))))
+        print("Theia COM Vel Results:")
         print(results)
         return
 
@@ -1698,6 +1710,139 @@ def test():
     plt.show()
     breakpoint()
     '''
+
+def compare_theia_joints_kinect_com_vel(data: TheiaData, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
+    theia_joint = int(TheiaJoint.COM_VEL)
+
+    corr = 0
+    corr_un = 0
+
+    rmse = 0
+    rmse_un = 0
+
+    dtw_dist = 0
+    dtw_dist_un = 0
+
+    fr_dist = 0
+    fr_dist_un = 0
+
+    theia_ts = np.arange(data.theia_tensor.shape[0]) * (1./120.)
+
+    down_theia = downsample(double_butter(data.theia_tensor[:, theia_joint, :], 120), theia_ts, 15)
+    length = min(down_theia.shape[0], data.down_kinect_joints.shape[0])
+    o = max(int(length * cutoff), 1)
+
+    down_theia = down_theia[:length][o:-o]
+
+    vel = data.down_kinect_com_velocities[:length][o:-o]
+    vel_un = central_diff(double_butter(data.down_kinect_unfiltered_com), 15)[:length][o:-o]
+
+    corr += np.correlate(down_theia[:, 0], vel[:, 0])[0] + np.correlate(down_theia[:, 1], vel[:, 1])[0] + np.correlate(down_theia[:, 2], vel[:, 2])[0]
+    corr_un += np.correlate(down_theia[:, 0], vel_un[:, 0])[0] + np.correlate(down_theia[:, 1], vel_un[:, 1])[0] + np.correlate(down_theia[:, 2], vel_un[:, 2])[0]
+
+    diff = np.linalg.norm(down_theia - vel, axis=1)
+    rmse += np.sqrt(np.mean(np.power(diff, 2)))
+
+    diff_un = np.linalg.norm(down_theia - vel_un, axis=1)
+    rmse_un += np.sqrt(np.mean(np.power(diff_un, 2)))
+
+    dtw_dist += dtw.dtw(down_theia, vel, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+    dtw_dist_un += dtw.dtw(down_theia, vel_un, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+    fr_dist += frechet_dist(down_theia, vel)
+    fr_dist_un += frechet_dist(down_theia, vel_un)
+
+    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+
+
+def compare_theia_joints_kinect_com(data: TheiaData, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
+    theia_joint = int(TheiaJoint.COM)
+
+    corr = 0
+    corr_un = 0
+
+    rmse = 0
+    rmse_un = 0
+
+    dtw_dist = 0
+    dtw_dist_un = 0
+
+    fr_dist = 0
+    fr_dist_un = 0
+
+    theia_ts = np.arange(data.theia_tensor.shape[0]) * (1./120.)
+
+    down_theia = downsample(double_butter(data.theia_tensor[:, theia_joint, :], 120), theia_ts, 15)
+    length = min(down_theia.shape[0], data.down_kinect_joints.shape[0])
+    o = max(int(length * cutoff), 1)
+
+    down_theia = down_theia[:length][o:-o]
+
+    joints = data.down_kinect_com[:length][o:-o]
+    joints_un = double_butter(data.down_kinect_unfiltered_com)[:length][o:-o]
+
+    corr += np.correlate(down_theia[:, 0], joints[:, 0])[0] + np.correlate(down_theia[:, 1], joints[:, 1])[0] + np.correlate(down_theia[:, 2], joints[:, 2])[0]
+    corr_un += np.correlate(down_theia[:, 0], joints_un[:, 0])[0] + np.correlate(down_theia[:, 1], joints_un[:, 1])[0] + np.correlate(down_theia[:, 2], joints[:, 2])[0]
+
+    diff = np.linalg.norm(down_theia - joints, axis=1)
+    rmse += np.sqrt(np.mean(np.power(diff, 2)))
+
+    diff_un = np.linalg.norm(down_theia - joints_un, axis=1)
+    rmse_un += np.sqrt(np.mean(np.power(diff_un, 2)))
+
+    dtw_dist += dtw.dtw(down_theia, joints, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+    dtw_dist_un += dtw.dtw(down_theia, joints_un, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+    fr_dist += frechet_dist(down_theia, joints)
+    fr_dist_un += frechet_dist(down_theia, joints_un)
+
+    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+
+
+def compare_theia_joints_kinect_joints_vel(data: TheiaData, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
+    kinect_joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
+    theia_joints = [int(element) for element in [TheiaJoint.SHOULDER_RIGHT, TheiaJoint.ELBOW_RIGHT, TheiaJoint.WRIST_RIGHT]]
+
+    corr = 0
+    corr_un = 0
+
+    rmse = 0
+    rmse_un = 0
+
+    dtw_dist = 0
+    dtw_dist_un = 0
+
+    fr_dist = 0
+    fr_dist_un = 0
+
+    theia_ts = np.arange(data.theia_tensor.shape[0]) * (1./120.)
+
+    for kinect_joint, theia_joint in zip(kinect_joints, theia_joints):
+        down_theia = downsample(central_diff(double_butter(data.theia_tensor[:, theia_joint, :], 120), 120), theia_ts, 15)
+        length = min(down_theia.shape[0], data.down_kinect_joints.shape[0])
+        o = max(int(length * cutoff), 1)
+
+        down_theia = down_theia[:length][o:-o]
+
+        vel = data.down_kinect_velocities[:, kinect_joint,:][:length][o:-o]
+        vel_un = central_diff(double_butter(data.down_kinect_unfiltered_joints[:, kinect_joint, :]), 15)[:length][o:-o]
+
+        corr += np.correlate(down_theia[:, 0], vel[:, 0])[0] + np.correlate(down_theia[:, 1], vel[:, 1])[0] + np.correlate(down_theia[:, 2], vel[:, 2])[0]
+        corr_un += np.correlate(down_theia[:, 0], vel_un[:, 0])[0] + np.correlate(down_theia[:, 1], vel_un[:, 1])[0] + np.correlate(down_theia[:, 2], vel_un[:, 2])[0]
+
+        diff = np.linalg.norm(down_theia - vel, axis=1)
+        rmse += np.sqrt(np.mean(np.power(diff, 2)))
+
+        diff_un = np.linalg.norm(down_theia - vel_un, axis=1)
+        rmse_un += np.sqrt(np.mean(np.power(diff_un, 2)))
+
+        dtw_dist += dtw.dtw(down_theia, vel, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+        dtw_dist_un += dtw.dtw(down_theia, vel_un, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+        fr_dist += frechet_dist(down_theia, vel)
+        fr_dist_un += frechet_dist(down_theia, vel_un)
+
+    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 def compare_theia_joints_kinect_joints(data: TheiaData, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
     kinect_joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
