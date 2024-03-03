@@ -1,5 +1,6 @@
 #pragma once
 #include <cstddef>
+#include <cmath>
 #include <functional>
 #include <tuple>
 #include <vector>
@@ -224,7 +225,12 @@ public:
         MatrixXd first(9, 18);
         MatrixXd second(9, 18);
         first << eye_9, zero_9;
-        second << zero_9, (eye_9 - (phi_T * (phi * phi_T).inverse() * phi));
+        auto trans = (eye_9 - (phi_T * (phi * phi_T).inverse() * phi));
+        if (std::isnan(trans(0, 0))) {
+            second << zero_9, eye_9;
+        } else {
+            second << zero_9, trans;
+        }
         tmp_result << first, second;
 
         corrected_projected_state = tmp_result * corrected_state;
