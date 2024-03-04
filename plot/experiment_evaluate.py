@@ -496,7 +496,7 @@ def plot_cop_x_y_for_different_factors(ex_name: str, factors: list[float], datas
 
 
 
-def plot_constrained_segment_joint_length_change(ex_name: str, data: Data, cutoff: float) -> None:
+def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | TheiaData, cutoff: float) -> None:
     segment_a = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
     segment_b = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
     segment_c = [int(element) for element in [Joint.HIP_LEFT, Joint.KNEE_LEFT, Joint.ANKLE_LEFT]]
@@ -1454,8 +1454,8 @@ def main():
     os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_velocities/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/cop_trajectories/", exist_ok=True)
 
-    if args.second_folder:
-        determine_minimum_against_ground_truth(args)
+    #if args.second_folder:
+    #    determine_minimum_against_ground_truth(args)
 
     '''
     cutoff = 0.01
@@ -1467,8 +1467,8 @@ def main():
         joint = int(Joint.HEAD)
         idx = 2
         for error in [25]:
-            data1 = load_processed_data(find_factor_path(error, Path(args.experiment_folder)))
-            data2 = load_processed_data(find_factor_path(error, Path(args.second_folder)))
+            data1 = cond_load_data(find_factor_path(error, Path(args.experiment_folder)))
+            data2 = cond_load_data(find_factor_path(error, Path(args.second_folder)))
 
             a = data1.kinect_joints[:, int(joint), idx]
             b = data2.kinect_joints[:, int(joint), idx]
@@ -1476,7 +1476,7 @@ def main():
             plt.plot(data1.kinect_ts, a, "-", label=f"Without acceleration - lambda: {error}", alpha=0.8)
             plt.plot(data2.kinect_ts, b, label=f"With acceleration - lambda: {error}", alpha=0.8)
 
-        data1 = load_processed_data(find_factor_path(0, Path(args.experiment_folder)))
+        data1 = cond_load_data(find_factor_path(0, Path(args.experiment_folder)))
         a = data1.down_kinect_unfiltered_joints[:, int(joint), idx]
         plt.plot(data1.down_kinect_ts, double_butter(a), "--", label=f"Raw", alpha=0.8)
 
@@ -1537,21 +1537,24 @@ def main():
     print(f"best factor: {best_factor}")
 
     if theia:
-        results = compare_theia_joints_kinect_joints(load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder))))
+        theia_data = load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder)))
+        results = compare_theia_joints_kinect_joints(theia_data)
         print("Theia Joint Results:")
         print(results)
 
-        results = compare_theia_joints_kinect_joints_vel(load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder))))
+        results = compare_theia_joints_kinect_joints_vel(theia_data)
         print("Theia Joint Vel Results:")
         print(results)
 
-        results = compare_theia_joints_kinect_com(load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder))))
+        results = compare_theia_joints_kinect_com(theia_data)
         print("Theia COM Results:")
         print(results)
 
-        results = compare_theia_joints_kinect_com_vel(load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder))))
+        results = compare_theia_joints_kinect_com_vel(theia_data)
         print("Theia COM Vel Results:")
         print(results)
+
+        plot_constrained_segment_joint_length_change(ex_name, theia_data, cutoff)
         return
 
     data = load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))
@@ -1737,8 +1740,8 @@ def compare_theia_joints_kinect_com_vel(data: TheiaData, cutoff: float = 0.15) -
     vel = data.down_kinect_com_velocities[:length][o:-o]
     vel_un = central_diff(double_butter(data.down_kinect_unfiltered_com), 15)[:length][o:-o]
 
-    corr += np.correlate(down_theia[:, 0], vel[:, 0])[0] + np.correlate(down_theia[:, 1], vel[:, 1])[0] + np.correlate(down_theia[:, 2], vel[:, 2])[0]
-    corr_un += np.correlate(down_theia[:, 0], vel_un[:, 0])[0] + np.correlate(down_theia[:, 1], vel_un[:, 1])[0] + np.correlate(down_theia[:, 2], vel_un[:, 2])[0]
+    corr += np.corrcoef(down_theia[:, 0], vel[:, 0])[0, 1] + np.corrcoef(down_theia[:, 1], vel[:, 1])[0, 1] + np.corrcoef(down_theia[:, 2], vel[:, 2])[0, 1]
+    corr_un += np.corrcoef(down_theia[:, 0], vel_un[:, 0])[0, 1] + np.corrcoef(down_theia[:, 1], vel_un[:, 1])[0, 1] + np.corrcoef(down_theia[:, 2], vel_un[:, 2])[0, 1]
 
     diff = np.linalg.norm(down_theia - vel, axis=1)
     rmse += np.sqrt(np.mean(np.power(diff, 2)))
@@ -1752,7 +1755,8 @@ def compare_theia_joints_kinect_com_vel(data: TheiaData, cutoff: float = 0.15) -
     fr_dist += frechet_dist(down_theia, vel)
     fr_dist_un += frechet_dist(down_theia, vel_un)
 
-    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+    # correlation is 3 axis
+    return corr / (3), corr_un / (3), rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 
 def compare_theia_joints_kinect_com(data: TheiaData, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
@@ -1781,8 +1785,8 @@ def compare_theia_joints_kinect_com(data: TheiaData, cutoff: float = 0.15) -> tu
     joints = data.down_kinect_com[:length][o:-o]
     joints_un = double_butter(data.down_kinect_unfiltered_com)[:length][o:-o]
 
-    corr += np.correlate(down_theia[:, 0], joints[:, 0])[0] + np.correlate(down_theia[:, 1], joints[:, 1])[0] + np.correlate(down_theia[:, 2], joints[:, 2])[0]
-    corr_un += np.correlate(down_theia[:, 0], joints_un[:, 0])[0] + np.correlate(down_theia[:, 1], joints_un[:, 1])[0] + np.correlate(down_theia[:, 2], joints[:, 2])[0]
+    corr += np.corrcoef(down_theia[:, 0], joints[:, 0])[0, 1] + np.corrcoef(down_theia[:, 1], joints[:, 1])[0, 1] + np.corrcoef(down_theia[:, 2], joints[:, 2])[0, 1]
+    corr_un += np.corrcoef(down_theia[:, 0], joints_un[:, 0])[0, 1] + np.corrcoef(down_theia[:, 1], joints_un[:, 1])[0, 1] + np.corrcoef(down_theia[:, 2], joints[:, 2])[0, 1]
 
     diff = np.linalg.norm(down_theia - joints, axis=1)
     rmse += np.sqrt(np.mean(np.power(diff, 2)))
@@ -1796,7 +1800,8 @@ def compare_theia_joints_kinect_com(data: TheiaData, cutoff: float = 0.15) -> tu
     fr_dist += frechet_dist(down_theia, joints)
     fr_dist_un += frechet_dist(down_theia, joints_un)
 
-    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+    # correlation is 3 joints and 3 axis
+    return corr / (3*3), corr_un / (3*3), rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 
 def compare_theia_joints_kinect_joints_vel(data: TheiaData, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
@@ -1827,8 +1832,8 @@ def compare_theia_joints_kinect_joints_vel(data: TheiaData, cutoff: float = 0.15
         vel = data.down_kinect_velocities[:, kinect_joint,:][:length][o:-o]
         vel_un = central_diff(double_butter(data.down_kinect_unfiltered_joints[:, kinect_joint, :]), 15)[:length][o:-o]
 
-        corr += np.correlate(down_theia[:, 0], vel[:, 0])[0] + np.correlate(down_theia[:, 1], vel[:, 1])[0] + np.correlate(down_theia[:, 2], vel[:, 2])[0]
-        corr_un += np.correlate(down_theia[:, 0], vel_un[:, 0])[0] + np.correlate(down_theia[:, 1], vel_un[:, 1])[0] + np.correlate(down_theia[:, 2], vel_un[:, 2])[0]
+        corr += np.corrcoef(down_theia[:, 0], vel[:, 0])[0, 1] + np.corrcoef(down_theia[:, 1], vel[:, 1])[0, 1] + np.corrcoef(down_theia[:, 2], vel[:, 2])[0, 1]
+        corr_un += np.corrcoef(down_theia[:, 0], vel_un[:, 0])[0, 1] + np.corrcoef(down_theia[:, 1], vel_un[:, 1])[0, 1] + np.corrcoef(down_theia[:, 2], vel_un[:, 2])[0, 1]
 
         diff = np.linalg.norm(down_theia - vel, axis=1)
         rmse += np.sqrt(np.mean(np.power(diff, 2)))
@@ -1842,7 +1847,8 @@ def compare_theia_joints_kinect_joints_vel(data: TheiaData, cutoff: float = 0.15
         fr_dist += frechet_dist(down_theia, vel)
         fr_dist_un += frechet_dist(down_theia, vel_un)
 
-    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+    # correlation is 3 joints and 3 axis
+    return corr / (3*3), corr_un / (3*3), rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 def compare_theia_joints_kinect_joints(data: TheiaData, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
     kinect_joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
@@ -1872,8 +1878,8 @@ def compare_theia_joints_kinect_joints(data: TheiaData, cutoff: float = 0.15) ->
         joints = data.down_kinect_joints[:, kinect_joint,:][:length][o:-o]
         joints_un = double_butter(data.down_kinect_unfiltered_joints[:, kinect_joint, :])[:length][o:-o]
 
-        corr += np.correlate(down_theia[:, 0], joints[:, 0])[0] + np.correlate(down_theia[:, 1], joints[:, 1])[0] + np.correlate(down_theia[:, 2], joints[:, 2])[0]
-        corr_un += np.correlate(down_theia[:, 0], joints_un[:, 0])[0] + np.correlate(down_theia[:, 1], joints_un[:, 1])[0] + np.correlate(down_theia[:, 2], joints[:, 2])[0]
+        corr += np.corrcoef(down_theia[:, 0], joints[:, 0])[0, 1] + np.corrcoef(down_theia[:, 1], joints[:, 1])[0, 1] + np.corrcoef(down_theia[:, 2], joints[:, 2])[0, 1]
+        corr_un += np.corrcoef(down_theia[:, 0], joints_un[:, 0])[0, 1] + np.corrcoef(down_theia[:, 1], joints_un[:, 1])[0, 1] + np.corrcoef(down_theia[:, 2], joints[:, 2])[0, 1]
 
         diff = np.linalg.norm(down_theia - joints, axis=1)
         rmse += np.sqrt(np.mean(np.power(diff, 2)))
@@ -1887,7 +1893,8 @@ def compare_theia_joints_kinect_joints(data: TheiaData, cutoff: float = 0.15) ->
         fr_dist += frechet_dist(down_theia, joints)
         fr_dist_un += frechet_dist(down_theia, joints_un)
 
-    return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+    # correlation is 3 joints and 3 axis
+    return corr / (3*3), corr_un / (3*3), rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 
 
