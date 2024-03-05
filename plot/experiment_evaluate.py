@@ -1,5 +1,6 @@
 from __future__ import annotations
 import time
+from typing import Optional
 from pprint import pprint as pp
 import os
 import json
@@ -191,10 +192,10 @@ class TheiaData:
 
     @property
     def min_joint_length_at_15hz(self) -> int:
-        if not length_theia_joints:
-            length_theia_tensor = theia_tensor.shape[0]
-            length_theia_joints = downsample(theia_tensor, np.arange(length_theia_joints) * (1./120.), 15).shape[0]
-        return min(self.down_kinect_joints.shape[0], self.down_kinect_unfiltered_joints.shape[0], length_theia_joints)
+        if not self.length_theia_joints:
+            length_theia_tensor = self.theia_tensor.shape[0]
+            self.length_theia_joints = downsample(self.theia_tensor, np.arange(length_theia_tensor) * (1./120.), 15).shape[0]
+        return min(self.down_kinect_joints.shape[0], self.down_kinect_unfiltered_joints.shape[0], self.length_theia_joints)
 
 
 @dataclass
@@ -235,7 +236,7 @@ class Data:
 
 
 _THEIA_JOINTS = [
-    "HEAD",
+    "NECK",
     "SHOULDER_LEFT",
     "ELBOW_LEFT",
     "WRIST_LEFT",
@@ -255,6 +256,8 @@ _THEIA_JOINTS = [
 ]
 TheiaJoint = IntEnum("TheiaJoint", _THEIA_JOINTS, start = 0)
 
+def theiaj2str(idx: int) -> str:
+    return _THEIA_JOINTS[idx]
 
 _JOINTS = [
     "PELVIS",
@@ -294,6 +297,33 @@ Joint = IntEnum("Joint", _JOINTS, start = 0)
 
 def j2str(idx: int) -> str:
     return _JOINTS[idx]
+
+FILTER_TYPES = ["ConstrainedSkeletonFilter", "SkeletonFilter", "SimpleConstrainedSkeletonFilter", "SimpleSkeletonFilter"]
+
+MATCHING_JOINTS = [
+    (Joint.SHOULDER_LEFT, TheiaJoint.SHOULDER_LEFT, "Left Shoulder"),
+    (Joint.ELBOW_LEFT, TheiaJoint.ELBOW_LEFT, "Left Elbow"),
+    (Joint.WRIST_LEFT, TheiaJoint.WRIST_LEFT, "Left Wrist"),
+    (Joint.ANKLE_LEFT, TheiaJoint.ANKLE_LEFT, "Left Ankle"),
+    (Joint.KNEE_LEFT, TheiaJoint.KNEE_LEFT, "Left Knee"),
+    (Joint.HIP_LEFT, TheiaJoint.HIP_LEFT, "Left Hip"),
+    (Joint.FOOT_LEFT, TheiaJoint.FOOT_LEFT, "Left Foot"),
+    (Joint.SHOULDER_RIGHT, TheiaJoint.SHOULDER_RIGHT, "Right Shoulder"),
+    (Joint.ELBOW_RIGHT, TheiaJoint.ELBOW_RIGHT, "Right Elbow"),
+    (Joint.WRIST_RIGHT, TheiaJoint.WRIST_RIGHT, "Right Wrist"),
+    (Joint.ANKLE_RIGHT, TheiaJoint.ANKLE_RIGHT, "Right Ankle"),
+    (Joint.KNEE_RIGHT, TheiaJoint.KNEE_RIGHT, "Right Knee"),
+    (Joint.HIP_RIGHT, TheiaJoint.HIP_RIGHT, "Right Hip"),
+    (Joint.FOOT_RIGHT, TheiaJoint.FOOT_RIGHT, "Right Foot"),
+    (Joint.NECK, TheiaJoint.NECK, "Neck"),
+]
+
+JOINT_SEGMENTS = [
+    ([Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT], [TheiaJoint.SHOULDER_LEFT, TheiaJoint.ELBOW_LEFT, TheiaJoint.WRIST_LEFT], "UP_LEFT"),
+    ([Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT], [TheiaJoint.SHOULDER_RIGHT, TheiaJoint.ELBOW_RIGHT, TheiaJoint.WRIST_RIGHT], "UP_RIGHT"),
+    ([Joint.ANKLE_LEFT, Joint.KNEE_LEFT, Joint.HIP_LEFT], [TheiaJoint.ANKLE_LEFT, TheiaJoint.KNEE_LEFT, TheiaJoint.HIP_LEFT], "DOWN_LEFT"),
+    ([Joint.ANKLE_RIGHT, Joint.KNEE_RIGHT, Joint.HIP_RIGHT], [TheiaJoint.ANKLE_RIGHT, TheiaJoint.KNEE_RIGHT, TheiaJoint.HIP_RIGHT], "DOWN_RIGHT"),
+]
 
 
 @numba.jit(nopython=True)
@@ -523,22 +553,22 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
     for kinect_joints in [segment_a, segment_b, segment_c, segment_d]:
         segment_name = "_".join([str(i) for i in kinect_joints])
 
-        length = data.kinect_joints.shape[0]
+        length = min(data.kinect_joints.shape[0], data.kinect_unfiltered_joints.shape[0])
         o = max(int(length * cutoff), 1)
 
         ts = data.kinect_ts[o:-o]
 
-        shoulder = data.kinect_joints[:, kinect_joints[0], :][o:-o]
-        shoulder_un = data.kinect_unfiltered_joints[:, kinect_joints[0], :][o:-o]
-        butter_shoulder_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[0], :])[o:-o]
+        shoulder = data.kinect_joints[:, kinect_joints[0], :][:length][o:-o]
+        shoulder_un = data.kinect_unfiltered_joints[:, kinect_joints[0], :][:length][o:-o]
+        butter_shoulder_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[0], :])[:length][o:-o]
 
-        elbow = data.kinect_joints[:, kinect_joints[1], :][o:-o]
-        elbow_un = data.kinect_unfiltered_joints[:, kinect_joints[1], :][o:-o]
-        butter_elbow_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[1], :])[o:-o]
+        elbow = data.kinect_joints[:, kinect_joints[1], :][:length][o:-o]
+        elbow_un = data.kinect_unfiltered_joints[:, kinect_joints[1], :][:length][o:-o]
+        butter_elbow_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[1], :])[:length][o:-o]
 
-        wrist = data.kinect_joints[:, kinect_joints[2], :][o:-o]
-        wrist_un = data.kinect_unfiltered_joints[:, kinect_joints[2], :][o:-o]
-        butter_wrist_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[2], :])[o:-o]
+        wrist = data.kinect_joints[:, kinect_joints[2], :][:length][o:-o]
+        wrist_un = data.kinect_unfiltered_joints[:, kinect_joints[2], :][:length][o:-o]
+        butter_wrist_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[2], :])[:length][o:-o]
 
         a = np.linalg.norm(shoulder - elbow, axis=1)
         b = np.linalg.norm(elbow - wrist, axis=1)
@@ -1471,6 +1501,7 @@ def main():
     os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_trajectories/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_velocities/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/cop_trajectories/", exist_ok=True)
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/subplots/", exist_ok=True)
 
     #if args.second_folder:
     #    determine_minimum_against_ground_truth(args)
@@ -1556,13 +1587,15 @@ def main():
 
     if theia:
         theia_data = load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder)))
-        results = compare_theia_joints_kinect_joints(theia_data)
-        print("Theia Joint Results:")
-        print(results)
+        for (kinect_joints, theia_joints, name) in JOINT_SEGMENTS:
+            print(f"Segment: {name}")
+            results = compare_theia_joints_kinect_joints(theia_data, kinect_joints, theia_joints)
+            print("Theia Joint Results:")
+            print(results)
 
-        results = compare_theia_joints_kinect_joints_vel(theia_data)
-        print("Theia Joint Vel Results:")
-        print(results)
+            results = compare_theia_joints_kinect_joints_vel(theia_data, kinect_joints, theia_joints)
+            print("Theia Joint Vel Results:")
+            print(results)
 
         results = compare_theia_joints_kinect_com(theia_data)
         print("Theia COM Results:")
@@ -1573,6 +1606,8 @@ def main():
         print(results)
 
         plot_constrained_segment_joint_length_change(ex_name, theia_data, cutoff)
+
+        plot_subparts_of_trajectories(theia_data, ex_name)
         return
 
     data = load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))
@@ -1822,7 +1857,7 @@ def compare_theia_joints_kinect_com(data: TheiaData, cutoff: float = 0.15) -> tu
     return corr / (3*3), corr_un / (3*3), rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 
-def compare_theia_joints_kinect_joints_vel(data: TheiaData, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
+def compare_theia_joints_kinect_joints_vel(data: TheiaData, kinect_joints_: list[Joint], theia_joints_: list[TheiaJoint], cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
     kinect_joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
     theia_joints = [int(element) for element in [TheiaJoint.SHOULDER_RIGHT, TheiaJoint.ELBOW_RIGHT, TheiaJoint.WRIST_RIGHT]]
 
@@ -1868,9 +1903,9 @@ def compare_theia_joints_kinect_joints_vel(data: TheiaData, cutoff: float = 0.15
     # correlation is 3 joints and 3 axis
     return corr / (3*3), corr_un / (3*3), rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
-def compare_theia_joints_kinect_joints(data: TheiaData, cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
-    kinect_joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
-    theia_joints = [int(element) for element in [TheiaJoint.SHOULDER_RIGHT, TheiaJoint.ELBOW_RIGHT, TheiaJoint.WRIST_RIGHT]]
+def compare_theia_joints_kinect_joints(data: TheiaData, kinect_joints_: list[Joint], theia_joints_: list[TheiaJoint], cutoff: float = 0.15) -> tuple[float, float, float, float, float, float, float, float]:
+    kinect_joints = [int(element) for element in kinect_joints_]
+    theia_joints = [int(element) for element in theia_joints_]
 
     corr = 0
     corr_un = 0
@@ -1913,6 +1948,62 @@ def compare_theia_joints_kinect_joints(data: TheiaData, cutoff: float = 0.15) ->
 
     # correlation is 3 joints and 3 axis
     return corr / (3*3), corr_un / (3*3), rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
+
+
+def plot_subparts_of_trajectories(theia_data: TheiaData, ex_name: str) -> None:
+    length = theia_data.min_joint_length_at_15hz
+
+    unfiltered = theia_data.down_kinect_unfiltered_joints[:length]
+    filtered = theia_data.down_kinect_joints[:length]
+    truth = downsample(theia_data.theia_tensor, np.arange(theia_data.theia_tensor.shape[0]) * (1./120.), 15)[:length]
+    time = np.arange(0, length) * (1./15.)
+
+    step = 5
+
+    start_end = (time[-1] // step) * step
+    starts = np.arange(0, start_end-step, step)
+    ends = np.arange(2*step, start_end+1, step)
+    timeslots = np.column_stack((starts, ends))
+
+    for kinect_joint, theia_joint, joint_name in tqdm(MATCHING_JOINTS):
+
+
+        for ax_idx, ax_name in enumerate(["X", "Y", "Z"]):
+            for slot in timeslots:
+                ts = np.linspace(slot[0], slot[1], 2 * step * 15)
+                m, n = int(slot[0] * 15), int(slot[1] * 15)
+                plt.cla()
+                plt.plot(ts, unfiltered[m:n, int(kinect_joint), ax_idx], label="Unfiltered Kinect")
+                plt.plot(ts, filtered[m:n, int(kinect_joint), ax_idx], label="Filtered Kinect")
+                plt.plot(ts, truth[m:n, int(theia_joint), ax_idx], label="Theia")
+                plt.legend()
+                plt.xlabel(f"{slot[0]} - {slot[1]} [s]")
+                plt.ylabel(f"{ax_name} [m]")
+                os.makedirs(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/", exist_ok=True)
+                plt.savefig(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/{slot[0]}-{slot[1]}.pdf")
+                plt.cla()
+
+    unfiltered = theia_data.down_kinect_unfiltered_com[:length]
+    filtered = theia_data.down_kinect_com[:length]
+    truth = truth[:length, TheiaJoint.COM, :]
+
+    joint_name = "CoM"
+    for ax_idx, ax_name in enumerate(["X", "Y", "Z"]):
+        for slot in timeslots:
+            ts = np.linspace(slot[0], slot[1], 2 * step * 15)
+            m, n = int(slot[0] * 15), int(slot[1] * 15)
+            plt.cla()
+            plt.plot(ts, unfiltered[m:n, ax_idx], label="Unfiltered Kinect")
+            plt.plot(ts, filtered[m:n, ax_idx], label="Filtered Kinect")
+            plt.plot(ts, truth[m:n, ax_idx], label="Theia")
+            plt.legend()
+            plt.xlabel(f"{slot[0]} - {slot[1]} [s]")
+            plt.ylabel(f"{ax_name} [m]")
+            os.makedirs(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/", exist_ok=True)
+            plt.savefig(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/{slot[0]}-{slot[1]}.pdf")
+            plt.cla()
+
+
 
 
 
