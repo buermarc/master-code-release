@@ -6,7 +6,7 @@ import json
 import numpy as np
 from numpy.testing import assert_allclose
 import argparse
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import matplotlib
 # matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -187,6 +187,15 @@ class TheiaData:
     kinect_velocities: np.ndarray
     theia_tensor: np.ndarray
 
+    length_theia_joints: Optional[int] = field(init=False, default=None)
+
+    @property
+    def min_joint_length_at_15hz(self) -> int:
+        if not length_theia_joints:
+            length_theia_tensor = theia_tensor.shape[0]
+            length_theia_joints = downsample(theia_tensor, np.arange(length_theia_joints) * (1./120.), 15).shape[0]
+        return min(self.down_kinect_joints.shape[0], self.down_kinect_unfiltered_joints.shape[0], length_theia_joints)
+
 
 @dataclass
 class Data:
@@ -215,6 +224,15 @@ class Data:
     qtm_joints: np.ndarray
     qtm_ts: np.ndarray
     config: dict[str, str]
+
+    length_qtm_joints: Optional[int] = field(init=False, default=None)
+
+    @property
+    def min_joint_length_at_15hz(self) -> int:
+        if not length_qtm_joints:
+            length_qtm_joints = downsample(qtm_joints, qtm_ts, 15).shape[0]
+        return min(self.down_kinect_joints.shape[0], self.down_kinect_unfiltered_joints.shape[0], length_qtm_joints)
+
 
 _THEIA_JOINTS = [
     "HEAD",
