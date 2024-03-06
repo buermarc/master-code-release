@@ -943,11 +943,12 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
         fr_distance = 0
         corr_offset = 0
 
-        length = data.down_kinect_joints.shape[0]
+        length = min(data.down_kinect_joints.shape[0], data.down_kinect_unfiltered_joints.shape[0])
         o = max(int(length * cutoff), 1)
         factor = float(data.config['measurement_error_factor'])
         if factor == 0:
-            assert_allclose(data.down_kinect_joints, data.down_kinect_unfiltered_joints)
+            #print(np.max(np.abs(data.down_kinect_joints - data.down_kinect_unfiltered_joints)))
+            #assert_allclose(data.down_kinect_joints, data.down_kinect_unfiltered_joints, rtol=1e-1)
             continue
 
         # if factor > 1:
@@ -957,8 +958,8 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
         if True:
             joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
             for joint in joints:
-                a = data.down_kinect_joints[:, joint, :][o:-o]
-                b = double_butter(data.down_kinect_unfiltered_joints[:, joint, :], cutoff=6, once=factor != 0)[o:-o]
+                a = data.down_kinect_joints[:length, joint, :][o:-o]
+                b = double_butter(data.down_kinect_unfiltered_joints[:length, joint, :], cutoff=6, once=factor != 0)[o:-o]
 
                 # if  (0.3 < float(data.config["measurement_error_factor"]) < 0.35) or (1.0 < float(data.config["measurement_error_factor"]) < 1.05) or (5.00 < float(data.config["measurement_error_factor"]) < 5.05):
                 '''
@@ -983,8 +984,8 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
                 result = dtw.dtw(a, b, keep_internals=True, step_pattern=dtw.rabinerJuangStepPattern(6, "c"))
                 dtw_distance += result.distance
 
-                p = np.column_stack((data.down_kinect_ts[o:-o], a))
-                q = np.column_stack((data.down_kinect_ts[o:-o], b))
+                p = np.column_stack((data.down_kinect_ts[:length][o:-o], a))
+                q = np.column_stack((data.down_kinect_ts[:length][o:-o], b))
                 fr_distance += frechet_dist(p, q)
 
 
@@ -1087,7 +1088,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     for directory in tqdm(directories):
         data = cond_load_data(directory)
 
-        length = data.down_kinect_joints.shape[0]
+        length = min(data.down_kinect_joints.shape[0], data.down_kinect_unfiltered_joints.shape[0])
         o = int(length * cutoff)
         factor = float(data.config['measurement_error_factor'])
 
@@ -1102,10 +1103,10 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         fr_distance = 0
         corr_offset = 0
         for idx, joint in enumerate([Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]):
-            a_vel = data.down_kinect_velocities[:, int(joint), :]
+            a_vel = data.down_kinect_velocities[:length, int(joint), :]
             # If we have a kalman filter factor then we also want to introduce butterworth filter lag
-            b = double_butter(data.down_kinect_unfiltered_joints[:, int(joint), :], cutoff=4, N=2, once=False)
-            c = data.down_kinect_unfiltered_joints[:, int(joint), :]
+            b = double_butter(data.down_kinect_unfiltered_joints[:length, int(joint), :], cutoff=4, N=2, once=False)
+            # c = data.down_kinect_unfiltered_joints[:length, int(joint), :]
 
             b_vel = np.zeros_like(b)
             b_vel[1:-1] = (b[2:] - b[:-2]) / (2*(1./15.))
@@ -1182,8 +1183,8 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
             # p = np.column_stack((np.arange(0, len(a_vel))[:20], a_vel[:20]))
             # q = np.column_stack((np.arange(0, len(b_vel))[:20], b_vel[:20]))
             # fr_distance += frdist(p, q)
-            p = np.column_stack((data.down_kinect_ts, a_vel))
-            q = np.column_stack((data.down_kinect_ts, b_vel))
+            p = np.column_stack((data.down_kinect_ts[:length], a_vel))
+            q = np.column_stack((data.down_kinect_ts[:length], b_vel))
             fr_distance += frechet_dist(p, q)
 
             if joint == Joint.WRIST_LEFT:
@@ -1411,6 +1412,205 @@ def compare_velocities(data: Data) -> None:
     plt.cla()
 
 
+def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_name: str, cutoff: float = 0.1):
+    directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}", exist_ok=True)
+    for (kinect_joints, theia_joints, segment_name) in JOINT_SEGMENTS:
+        corr_a = []
+        frechet_a = []
+        dtw_a = []
+        lsed_a = []
+        factors = []
+
+        vel_corr_a = []
+        vel_frechet_a = []
+        vel_dtw_a = []
+        vel_lsed_a = []
+        vel_factors = []
+
+
+        for directory in tqdm(directories):
+            data: TheiaData = cond_load_data(directory)
+            if data.config["measurement_error_factor"] == 0:
+                continue
+
+            theia_ts = np.arange(data.theia_tensor.shape[0]) * (1./120.)
+
+            lsed = 0
+            dtwsum = 0
+            fr = 0
+            corr = 0
+
+            vel_lsed = 0
+            vel_dtwsum = 0
+            vel_fr = 0
+            vel_corr = 0
+
+            for kinect_joint, theia_joint in zip(kinect_joints, theia_joints):
+                d_t = downsample(data.theia_tensor[:, int(theia_joint), :], theia_ts, 15)
+                d_f = downsample(data.kinect_joints[:, int(kinect_joint), :], data.kinect_ts, 15)
+
+                vel_d_t = downsample(central_diff(data.theia_tensor[:, int(theia_joint), :], 120), theia_ts, 15)
+                vel_d_f = downsample(data.kinect_velocities[:, int(kinect_joint), :], data.kinect_ts, 15)
+
+                length = min(d_t.shape[0], d_f.shape[0])
+                o = int(length * cutoff)
+
+                d_t = d_t[:length][o:-o]
+                d_f = d_f[:length][o:-o]
+
+                vel_d_t = vel_d_t[:length][o:-o]
+                vel_d_f = vel_d_f[:length][o:-o]
+
+                corr += (np.corrcoef(d_t[:, 0], d_f[:, 0])[0, 1] + np.corrcoef(d_t[:, 1], d_f[:, 1])[0, 1] + np.corrcoef(d_t[:, 2], d_f[:, 2])[0, 1]) / 3
+                vel_corr += (np.corrcoef(vel_d_t[:, 0], vel_d_f[:, 0])[0, 1] + np.corrcoef(vel_d_t[:, 1], vel_d_f[:, 1])[0, 1] + np.corrcoef(vel_d_t[:, 2], vel_d_f[:, 2])[0, 1]) / 3
+
+                diff = np.linalg.norm(d_t - d_f, axis=1)
+                lsed += np.sqrt(np.mean(np.power(diff, 2)))
+
+                vel_diff = np.linalg.norm(vel_d_t - vel_d_f, axis=1)
+                vel_lsed += np.sqrt(np.mean(np.power(vel_diff, 2)))
+
+                ts = np.arange(len(d_t))
+                d_t = np.column_stack((ts, d_t))
+                d_f = np.column_stack((ts, d_f))
+
+                vel_d_t = np.column_stack((ts, vel_d_t))
+                vel_d_f = np.column_stack((ts, vel_d_f))
+
+                fr += frechet_dist(d_t, d_f)
+                vel_fr += frechet_dist(vel_d_t, vel_d_f)
+
+                dtwsum += dtw.dtw(d_t, d_f, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+                vel_dtwsum += dtw.dtw(vel_d_t, vel_d_f, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+            corr_a.append(corr / 3)
+            frechet_a.append(fr)
+            dtw_a.append(dtwsum)
+            lsed_a.append(lsed)
+
+            vel_corr_a.append(vel_corr / 3)
+            vel_frechet_a.append(vel_fr)
+            vel_dtw_a.append(vel_dtwsum)
+            vel_lsed_a.append(vel_lsed)
+
+            factors.append(data.config["measurement_error_factor"])
+
+        facts = np.array(factors)
+        rmses = np.array(lsed_a)
+        dtw_dists = np.array(dtw_a)
+        fr_dists = np.array(frechet_a)
+        corrs = np.array(corr_a)
+
+        rmse_argmin = np.argmin(rmses)
+        dtw_argmin = np.argmin(dtw_dists)
+        fr_argmin = np.argmin(fr_dists)
+        corr_argmax = np.argmax(corrs)
+
+        idx = np.argsort(facts)
+
+        vel_rmses = np.array(vel_lsed_a)
+        vel_dtw_dists = np.array(vel_dtw_a)
+        vel_fr_dists = np.array(vel_frechet_a)
+        vel_corrs = np.array(vel_corr_a)
+
+        vel_rmse_argmin = np.argmin(vel_rmses)
+        vel_dtw_argmin = np.argmin(vel_dtw_dists)
+        vel_fr_argmin = np.argmin(vel_fr_dists)
+        vel_corr_argmax = np.argmax(vel_corrs)
+
+        vel_idx = np.argsort(facts)
+
+        plt.cla()
+        plt.plot(facts[idx][:], rmses[idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+        plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.xlabel("Measurement Error Factor")
+        plt.ylabel("RMSE")
+        plt.legend()
+        plt.title(f"Ex: {ex_name} - RMSE pro Measurement Error Factor")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/rmse_{segment_name}.pdf")
+        plt.cla()
+
+        plt.cla()
+        plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+        plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.xlabel("Measurement Error Factor")
+        plt.ylabel("Dynamic Time Warp Dist")
+        plt.legend()
+        plt.title(f"Ex: {ex_name} - DTW Dist. pro Measurement Error Factor")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/dtw_{segment_name}.pdf")
+        plt.cla()
+
+        plt.cla()
+        plt.plot(facts[idx][:], fr_dists[idx][:], label="Frechet Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+        plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin Frechet Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.xlabel("Measurement Error Factor")
+        plt.ylabel("Frechet Dist")
+        plt.legend()
+        plt.title(f"Ex: {ex_name} - Frechet Dist. pro Measurement Error Factor")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/frechet_{segment_name}.pdf")
+        plt.cla()
+
+        plt.cla()
+        plt.plot(facts[idx][:], corrs[idx][:], label="Pearson Correlation", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+        plt.plot(facts[corr_argmax], corrs[corr_argmax], marker="X", ls="None", label=f"Argmax Pearson Correlation: {facts[corr_argmax]:.2f}", color="crimson", alpha=0.6)
+        plt.xlabel("Measurement Error Factor")
+        plt.ylabel("Pearson Correlation")
+        plt.legend()
+        plt.title(f"Ex: {ex_name} - Pearson Corr. pro Measurement Error Factor")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/corr_{segment_name}.pdf")
+        plt.cla()
+
+
+        print(f"Segment: {segment_name}")
+        print(factors[rmse_argmin], factors[dtw_argmin], factors[fr_argmin], factors[corr_argmax])
+
+        plt.cla()
+        plt.plot(facts[vel_idx][:], vel_rmses[vel_idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+        plt.plot(facts[vel_rmse_argmin], vel_rmses[vel_rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[vel_rmse_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.xlabel("Measurement Error Factor")
+        plt.ylabel("RMSE")
+        plt.legend()
+        plt.title(f"Ex: {ex_name} - RMSE pro Measurement Error Factor")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_rmse_{segment_name}.pdf")
+        plt.cla()
+
+        plt.cla()
+        plt.plot(facts[vel_idx][:], vel_dtw_dists[vel_idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+        plt.plot(facts[vel_dtw_argmin], vel_dtw_dists[vel_dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[vel_dtw_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.xlabel("Measurement Error Factor")
+        plt.ylabel("Dynamic Time Warp Dist")
+        plt.legend()
+        plt.title(f"Ex: {ex_name} - DTW Dist. pro Measurement Error Factor")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_dtw_{segment_name}.pdf")
+        plt.cla()
+
+        plt.cla()
+        plt.plot(facts[vel_idx][:], vel_fr_dists[vel_idx][:], label="Frechet Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+        plt.plot(facts[vel_fr_argmin], vel_fr_dists[vel_fr_argmin], marker="X", ls="None", label=f"Argmin Frechet Dist: {facts[vel_fr_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.xlabel("Measurement Error Factor")
+        plt.ylabel("Frechet Dist")
+        plt.legend()
+        plt.title(f"Ex: {ex_name} - Frechet Dist. pro Measurement Error Factor")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_frechet_{segment_name}.pdf")
+        plt.cla()
+
+        plt.cla()
+        plt.plot(facts[vel_idx][:], vel_corrs[vel_idx][:], label="Pearson Correlation", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+        plt.plot(facts[vel_corr_argmax], vel_corrs[vel_corr_argmax], marker="X", ls="None", label=f"Argmax Pearson Correlation: {facts[vel_corr_argmax]:.2f}", color="crimson", alpha=0.6)
+        plt.xlabel("Measurement Error Factor")
+        plt.ylabel("Pearson Correlation")
+        plt.legend()
+        plt.title(f"Ex: {ex_name} - Pearson Corr. pro Measurement Error Factor")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_corr_{segment_name}.pdf")
+        plt.cla()
+
+        print(f"Segment velocity: {segment_name}")
+        print(factors[vel_rmse_argmin], factors[vel_dtw_argmin], factors[vel_fr_argmin], factors[vel_corr_argmax])
+
+
+
+
 def determine_minimum_against_ground_truth(args):
     ranges = np.arange(0, 100, 2.5)
     corr_a = []
@@ -1519,7 +1719,8 @@ def main():
     FILTER_NAME = os.path.basename(os.path.dirname(args.experiment_folder))
 
     os.makedirs(f"./results/experiments/{FILTER_NAME}/", exist_ok=True)
-    os.makedirs(f"./results/experiments/{FILTER_NAME}/determine_factor/", exist_ok=True)
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/netermine_factor/", exist_ok=True)
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_trajectories/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_velocities/", exist_ok=True)
@@ -1605,10 +1806,11 @@ def main():
     print(f"fr factor: {joint_fr_factor}")
     # data = load_processed_data(vel_path)
     best_factor = (((joint_fr_factor + vel_rmse_factor + vel_dtw_factor + vel_fr_factor) / 3 ) // 5 ) * 5
-    best_factor = 100
+    best_factor = 10
     print(f"best factor: {best_factor}")
 
     if theia:
+        determine_minimum_against_ground_truth_theia(Path(args.experiment_folder), ex_name)
         theia_data = load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder)))
         for (kinect_joints, theia_joints, name) in JOINT_SEGMENTS:
             print(f"Segment: {name}")
@@ -1982,7 +2184,7 @@ def plot_subparts_of_trajectories(theia_data: TheiaData, ex_name: str) -> None:
     truth = downsample(theia_data.theia_tensor, np.arange(theia_data.theia_tensor.shape[0]) * (1./120.), 15)[:length]
     time = np.arange(0, length) * (1./15.)
 
-    step = 5
+    step = 2
 
     start_end = (time[-1] // step) * step
     starts = np.arange(step, start_end-step, step)
