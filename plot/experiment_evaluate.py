@@ -1,6 +1,7 @@
 from __future__ import annotations
 import time
 from typing import Optional
+from pyCompare import blandAltman
 from pprint import pprint as pp
 import os
 import json
@@ -22,6 +23,28 @@ import numba
 from multiprocessing.pool import ThreadPool
 
 SHOW = False
+
+def bland_altman(data1: np.ndarray, data2: np.ndarray, path: str) -> None:
+    count = bland_altman_outlier_count(data1, data2)
+    blandAltman(
+        data1,
+        data2,
+        limitOfAgreement=1.96,
+        confidenceInterval=95,
+        confidenceIntervalMethod="approximate",
+        detrend=None,
+        percentage=False,
+        figureFormat="pdf",
+        title=f"Outlier: {count}",
+        savePath=path
+    )
+
+def bland_altman_outlier_count(data1: np.ndarray, data2: np.ndarray) -> int:
+    mean = np.mean([data1, data2], axis=0)
+    diff = data1 - data2                   # Difference between data1 and data2
+    md = np.mean(diff)                   # Mean of the difference
+    sd = np.std(diff, axis=0)
+    return np.sum(diff < md-sd*1.96) + np.sum(diff > md+sd*1.96)
 
 FILTER_NAME = ""
 
@@ -1608,6 +1631,7 @@ def main():
         plot_constrained_segment_joint_length_change(ex_name, theia_data, cutoff)
 
         plot_subparts_of_trajectories(theia_data, ex_name)
+        bland_altman_plots(theia_data, ex_name)
         return
 
     data = load_processed_data(find_factor_path(best_factor, Path(args.experiment_folder)))
@@ -1961,8 +1985,8 @@ def plot_subparts_of_trajectories(theia_data: TheiaData, ex_name: str) -> None:
     step = 5
 
     start_end = (time[-1] // step) * step
-    starts = np.arange(0, start_end-step, step)
-    ends = np.arange(2*step, start_end+1, step)
+    starts = np.arange(step, start_end-step, step)
+    ends = np.arange(3*step, start_end+1, step)
     timeslots = np.column_stack((starts, ends))
 
     for kinect_joint, theia_joint, joint_name in tqdm(MATCHING_JOINTS):
@@ -2003,8 +2027,34 @@ def plot_subparts_of_trajectories(theia_data: TheiaData, ex_name: str) -> None:
             plt.savefig(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/{slot[0]}-{slot[1]}.pdf")
             plt.cla()
 
+def bland_altman_plots(theia_data: TheiaData, ex_name: str, cutoff: float = 0.10) -> None:
+    length = theia_data.min_joint_length_at_15hz
+    o = max(int(length * cutoff), 1)
 
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/", exist_ok=True)
 
+    unfiltered = theia_data.down_kinect_unfiltered_joints[:length][o:-o]
+    filtered = theia_data.down_kinect_joints[:length][o:-o]
+    truth = downsample(theia_data.theia_tensor, np.arange(theia_data.theia_tensor.shape[0]) * (1./120.), 15)[:length][o:-o]
+    time = np.arange(0, length) * (1./15.)
+
+    for kinect_joint, theia_joint, joint_name in tqdm(MATCHING_JOINTS):
+        for ax_idx, ax_name in enumerate(["X", "Y", "Z"]):
+            path = f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/{joint_name}_{ax_name}_filtered.pdf"
+            bland_altman(filtered[:, int(kinect_joint), ax_idx], truth[:, int(theia_joint), ax_idx], path)
+            path = f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/{joint_name}_{ax_name}_unfiltered.pdf"
+            bland_altman(unfiltered[:, int(kinect_joint), ax_idx], truth[:, int(theia_joint), ax_idx], path)
+
+    unfiltered = theia_data.down_kinect_unfiltered_com[:length][o:-o]
+    filtered = theia_data.down_kinect_com[:length][o:-o]
+    truth = truth[:length, TheiaJoint.COM, :]
+
+    joint_name = "CoM"
+    for ax_idx, ax_name in enumerate(["X", "Y", "Z"]):
+        path = f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/{joint_name}_{ax_name}_filtered.pdf"
+        bland_altman(filtered[:, ax_idx], truth[:, ax_idx], path)
+        path = f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/{joint_name}_{ax_name}_unfiltered.pdf"
+        bland_altman(unfiltered[:, ax_idx], truth[:, ax_idx], path)
 
 
 def compare_filter_type(experiment_path_a: Path, experiment_path_b: Path) -> None:
