@@ -24,6 +24,20 @@ from multiprocessing.pool import ThreadPool
 
 SHOW = False
 
+def corr_shift_trim3d(a: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        x, y =  a[:, 2], b[:, 2]
+        off = np.argmax(signal.correlate(x, y)) - len(a) + 1
+        if off < 0:
+            b = b[abs(off):]
+            length = min(a.shape[0], b.shape[0])
+            return a[:length], b[:length]
+        elif off > 0:
+            a = a[abs(off):]
+            length = min(a.shape[0], b.shape[0])
+            return a[:length], b[:length]
+        return a, b
+
+
 def bland_altman(data1: np.ndarray, data2: np.ndarray, path: str) -> None:
     count = bland_altman_outlier_count(data1, data2)
     blandAltman(
@@ -1447,10 +1461,10 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
             vel_corr = 0
 
             for kinect_joint, theia_joint in zip(kinect_joints, theia_joints):
-                d_t = downsample(data.theia_tensor[:, int(theia_joint), :], theia_ts, 15)
+                d_t = downsample(double_butter(data.theia_tensor[:, int(theia_joint), :], 120), theia_ts, 15)
                 d_f = downsample(data.kinect_joints[:, int(kinect_joint), :], data.kinect_ts, 15)
 
-                vel_d_t = downsample(central_diff(data.theia_tensor[:, int(theia_joint), :], 120), theia_ts, 15)
+                vel_d_t = downsample(double_butter(central_diff(data.theia_tensor[:, int(theia_joint), :], 120), 120), theia_ts, 15)
                 vel_d_f = downsample(data.kinect_velocities[:, int(kinect_joint), :], data.kinect_ts, 15)
 
                 length = min(d_t.shape[0], d_f.shape[0])
@@ -1709,6 +1723,9 @@ def main():
     parser.add_argument("-s", "--show", dest="show", action="store_true", default=False)
     parser.add_argument("-c", "--compare", dest="compare", action="store_true", default=False)
     parser.add_argument("-f", "--second-folder", dest="second_folder")
+    parser.add_argument("-p", dest="predictions", action="store_true", default=False)
+    parser.add_argument("-e", "--experiment_name", dest="experiment_name")
+    parser.add_argument("-v", dest="vel", action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -1726,6 +1743,14 @@ def main():
     os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_velocities/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/cop_trajectories/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/subplots/", exist_ok=True)
+
+    ex_name = os.path.basename(args.experiment_folder)
+
+    if args.predictions:
+        for factor in np.arange(0, 80, 5):
+            compare_prediction_vs_truth_for_different_filters(Path(args.experiment_folder), args.experiment_name, factor, vel=args.vel)
+        return
+
 
     #if args.second_folder:
     #    determine_minimum_against_ground_truth(args)
@@ -1763,8 +1788,6 @@ def main():
 
     cutoff = 0.01
     # path, factor = find_best_measurement_error_factor_corr_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
-
-    ex_name = os.path.basename(args.experiment_folder)
     theia = "s300" in ex_name
     if theia:
         args.experiment_type = "constraint"
@@ -1806,7 +1829,7 @@ def main():
     print(f"fr factor: {joint_fr_factor}")
     # data = load_processed_data(vel_path)
     best_factor = (((joint_fr_factor + vel_rmse_factor + vel_dtw_factor + vel_fr_factor) / 3 ) // 5 ) * 5
-    best_factor = 10
+    best_factor = 65
     print(f"best factor: {best_factor}")
 
     if theia:
@@ -2229,7 +2252,7 @@ def plot_subparts_of_trajectories(theia_data: TheiaData, ex_name: str) -> None:
             plt.savefig(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/{slot[0]}-{slot[1]}.pdf")
             plt.cla()
 
-def bland_altman_plots(theia_data: TheiaData, ex_name: str, cutoff: float = 0.10) -> None:
+def bland_altman_plots(theia_data: TheiaData, ex_name: str, cutoff: float = 0.20) -> None:
     length = theia_data.min_joint_length_at_15hz
     o = max(int(length * cutoff), 1)
 
@@ -2262,7 +2285,137 @@ def bland_altman_plots(theia_data: TheiaData, ex_name: str, cutoff: float = 0.10
 def compare_filter_type(experiment_path_a: Path, experiment_path_b: Path) -> None:
     pass
 
+def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, ex_name: str, best_factor: float, cutoff: float = 0.1, vel: bool = False) -> None:
+    for filter_name in ["SimpleSkeletonFilter"]:
+        path = experiment_path / filter_name / ex_name
+        data = load_processed_theia_data(find_factor_path(best_factor, path))
+
+        length = data.min_joint_length_at_15hz
+        o = max(int(length * cutoff), 1)
+
+        prediction = data.down_kinect_predictions[:length][o:-o]
+        estimate = None
+        if not vel:
+            estimate = data.down_kinect_joints[:length][o:-o]
+        else:
+            estimate = data.down_kinect_velocities[:length][o:-o]
+        unfiltered = data.down_kinect_unfiltered_joints[:length][o:-o]
+        truth = downsample(data.theia_tensor, np.arange(data.theia_tensor.shape[0]) * (1./120.), 15)[:length][o:-o]
+
+        l_pred_to_est_rmse = []
+        l_truth_to_pred_rmse = []
+        l_truth_to_est_rmse = []
+        l_truth_to_unfiltered_rmse = []
+
+        l_truth_to_est_fr = []
+        l_truth_to_un_fr = []
+
+        l_truth_to_est_dtw = []
+        l_truth_to_un_dtw = []
+
+        for kinect_joint, theia_joint, joint_name in MATCHING_JOINTS:
+            kinect_joint, theia_joint = int(kinect_joint), int(theia_joint)
+
+
+            pred = None
+            est = None
+            un = None
+            tru = None
+            est = estimate[:, kinect_joint, :]
+            pred = prediction[:, kinect_joint, :]
+            if not vel:
+                un = unfiltered[:, kinect_joint, :]
+                tru = truth[:, theia_joint, :]
+            else:
+                un = central_diff(unfiltered[:, kinect_joint, :], 15)
+                tru = central_diff(double_butter(truth[:, theia_joint, :]), 15)
+
+            sun, sutru = corr_shift_trim3d(un, tru)
+            sest, stru = corr_shift_trim3d(est, tru)
+
+
+            '''
+            for i in range(3):
+                plt.plot(un[:, i], label="un")
+                plt.plot(tru[:, i], label="true")
+                plt.plot(shift_est[:, i], label="shift est")
+                # plt.plot(est[:, i], label="est")
+                plt.legend()
+                plt.show()
+                plt.cla()
+                '''
+
+            diff = np.linalg.norm(pred - est, axis=1)
+            pred_to_est_rmse = np.sqrt(np.mean(np.power(diff, 2)))
+
+            diff = np.linalg.norm(tru - pred, axis=1)
+            truth_to_pred_rmse = np.sqrt(np.mean(np.power(diff, 2)))
+
+            diff = np.linalg.norm(stru - sest, axis=1)
+            truth_to_est_rmse = np.sqrt(np.mean(np.power(diff, 2)))
+
+            diff = np.linalg.norm(sutru - sun, axis=1)
+            truth_to_un_rmse = np.sqrt(np.mean(np.power(diff, 2)))
+
+            p = np.column_stack((np.arange(len(stru)), stru))
+            q = np.column_stack((np.arange(len(sest)), sest))
+            truth_to_est_fr = frechet_dist(p, q)
+            truth_to_est_dtw = dtw.dtw(p, q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+            p = np.column_stack((np.arange(len(sutru)), sutru))
+            q = np.column_stack((np.arange(len(sun)), sun))
+            truth_to_un_fr = frechet_dist(p, q)
+            truth_to_un_dtw = dtw.dtw(p, q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+            # print(f"Filter: {filter_name} Joint: {joint_name}")
+            # print(f"pred_to_est_rmse: {pred_to_est_rmse}")
+            # print(f"truth_to_pred_rmse: {truth_to_pred_rmse}")
+            # print(f"truth_to_est_rmse: {truth_to_est_rmse}")
+            # print(f"truth_to_un_rmse: {truth_to_un_rmse}")
+
+            l_pred_to_est_rmse.append(pred_to_est_rmse)
+            l_truth_to_pred_rmse.append(truth_to_pred_rmse)
+            l_truth_to_est_rmse.append(truth_to_est_rmse)
+            l_truth_to_unfiltered_rmse.append(truth_to_un_rmse)
+
+            l_truth_to_est_fr.append(truth_to_est_fr)
+            l_truth_to_un_fr.append(truth_to_un_fr)
+
+            l_truth_to_est_dtw.append(truth_to_est_dtw)
+            l_truth_to_un_dtw.append(truth_to_un_dtw)
+
+        print(f"Filter: {filter_name}")
+        print(f"mean_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).mean()}")
+        print(f"mean_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).mean()}")
+        print(f"mean_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).mean()}")
+        print(f"mean_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).mean()}")
+
+        print(f"max_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).max()}")
+        print(f"max_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).max()}")
+        print(f"max_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).max()}")
+        print(f"max_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).max()}")
+
+        print(f"min_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).min()}")
+        print(f"min_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).min()}")
+        print(f"min_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).min()}")
+        print(f"min_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).min()}")
+
+        print(f"std_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).std()}")
+        print(f"std_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).std()}")
+        print(f"std_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).std()}")
+        print(f"std_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).std()}")
+
+        print()
+        print(f"mean_truth_to_est_fr: {np.array(l_truth_to_est_fr).mean()}")
+        print(f"mean_truth_to_unfiltered_fr: {np.array(l_truth_to_un_fr).mean()}")
+        print()
+
+        print()
+        print(f"mean_truth_to_est_dtw: {np.array(l_truth_to_est_dtw).mean()}")
+        print(f"mean_truth_to_unfiltered_dtw: {np.array(l_truth_to_un_dtw).mean()}")
+        print()
+
+
 
 if __name__ == "__main__":
     main()
-    # test()
