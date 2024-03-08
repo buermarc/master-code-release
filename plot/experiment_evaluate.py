@@ -24,8 +24,8 @@ from multiprocessing.pool import ThreadPool
 
 SHOW = False
 
-def corr_shift_trim3d(a: np.ndarray, b: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        x, y =  a[:, 2], b[:, 2]
+def corr_shift_trim3d(a: np.ndarray, b: np.ndarray, idx: int = 2) -> tuple[np.ndarray, np.ndarray]:
+        x, y =  a[:, idx], b[:, idx]
         off = np.argmax(signal.correlate(x, y)) - len(a) + 1
         if off < 0:
             b = b[abs(off):]
@@ -623,8 +623,8 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
     segment_c = [int(element) for element in [Joint.HIP_LEFT, Joint.KNEE_LEFT, Joint.ANKLE_LEFT]]
     segment_d = [int(element) for element in [Joint.HIP_RIGHT, Joint.KNEE_RIGHT, Joint.ANKLE_RIGHT]]
 
-    for kinect_joints in [segment_a, segment_b, segment_c, segment_d]:
-        segment_name = "_".join([str(i) for i in kinect_joints])
+    for kinect_joints, theia_joints, name in JOINT_SEGMENTS:
+        segment_name = "_".join([str(i) for i in kinect_joints]) + "_" + name
 
         length = min(data.kinect_joints.shape[0], data.kinect_unfiltered_joints.shape[0])
         o = max(int(length * cutoff), 1)
@@ -633,14 +633,17 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
 
         shoulder = data.kinect_joints[:, kinect_joints[0], :][:length][o:-o]
         shoulder_un = data.kinect_unfiltered_joints[:, kinect_joints[0], :][:length][o:-o]
+        shoulder_theia = data.theia_tensor[:, theia_joints[0], :][:length][o:-o]
         butter_shoulder_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[0], :])[:length][o:-o]
 
         elbow = data.kinect_joints[:, kinect_joints[1], :][:length][o:-o]
         elbow_un = data.kinect_unfiltered_joints[:, kinect_joints[1], :][:length][o:-o]
+        elbow_theia = data.theia_tensor[:, theia_joints[1], :][:length][o:-o]
         butter_elbow_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[1], :])[:length][o:-o]
 
         wrist = data.kinect_joints[:, kinect_joints[2], :][:length][o:-o]
         wrist_un = data.kinect_unfiltered_joints[:, kinect_joints[2], :][:length][o:-o]
+        wrist_theia = data.theia_tensor[:, theia_joints[2], :][:length][o:-o]
         butter_wrist_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[2], :])[:length][o:-o]
 
         a = np.linalg.norm(shoulder - elbow, axis=1)
@@ -648,6 +651,9 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
 
         a_un = np.linalg.norm(shoulder_un - elbow_un, axis=1)
         b_un = np.linalg.norm(elbow_un - wrist_un, axis=1)
+
+        a_theia = np.linalg.norm(shoulder_theia - elbow_theia, axis=1)
+        b_theia = np.linalg.norm(elbow_theia - wrist_theia, axis=1)
 
         butter_a_un = np.linalg.norm(butter_shoulder_un - butter_elbow_un, axis=1)
         butter_b_un = np.linalg.norm(butter_elbow_un - butter_wrist_un, axis=1)
@@ -657,22 +663,24 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
         print(f"a mean: {a.mean()}, b mean: {b.mean()}, a.var: {a.var()}, b.var: {b.var()}")
         print(f"a_un mean: {a_un.mean()}, b_un mean: {b_un.mean()}, a_un.var: {a_un.var()}, b_un.var: {b_un.var()}")
         print(f"butter_a_un mean: {butter_a_un.mean()}, butter_b_un mean: {butter_b_un.mean()}, butter_a_un.var: {butter_a_un.var()}, butter_b_un.var: {butter_b_un.var()}")
+        print(f"a_theia mean: {a_theia.mean()}, b_theia mean: {b_theia.mean()}, a_theia.var: {a_theia.var()}, b_theia.var: {b_theia.var()}")
 
         plt.cla()
         plt.plot(ts, a, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
         plt.plot(ts, a_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
+        plt.plot(ts, a_theia, label="Theia", color="darkorange", alpha=0.5, marker=".", markevery=50)
         # plt.plot(ts, butter_a_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
         plt.xlabel("Time [s]")
         plt.ylabel("Distance [m]")
         plt.legend()
-        plt.title("Segment Length Distance over Time for Upper Segment")
+        plt.title("Segment")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/{segment_name}_upper_segment_{ex_name}.pdf")
         plt.cla()
-        time.sleep(1)
 
         plt.cla()
         plt.plot(ts, b, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
         plt.plot(ts, b_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
+        plt.plot(ts, b_theia, label="Theia", color="darkorange", alpha=0.5, marker=".", markevery=50)
         # plt.plot(ts, butter_b_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
         plt.xlabel("Time [s]")
         plt.ylabel("Distance [m]")
@@ -680,7 +688,8 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
         plt.title("Segment Length Distance over Time for Lower Segment")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/{segment_name}_lower_segment_{ex_name}.pdf")
         plt.cla()
-        time.sleep(1)
+
+
 
 def find_factor_path(factor: float, path: Path) -> Path:
     directories = [element for element in path.iterdir() if element.is_dir()]
@@ -688,7 +697,7 @@ def find_factor_path(factor: float, path: Path) -> Path:
         with (directory / "config.json").open(mode="r", encoding="UTF-8") as _f:
             if round(factor, 1) == round(json.load(_f)["measurement_error_factor"], 1):
                 return directory
-    raise ValueError("Factor not found")
+    raise ValueError(f"Factor not found: {factor}")
 
 def compare_qtm_joints_kinect_joints_vel(data: Data, cutoff: float) -> tuple[float, float, float, float, float, float, float, float]:
     kinect_joints = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
@@ -1772,7 +1781,7 @@ def main():
     FILTER_NAME = os.path.basename(os.path.dirname(args.experiment_folder))
 
     os.makedirs(f"./results/experiments/{FILTER_NAME}/", exist_ok=True)
-    os.makedirs(f"./results/experiments/{FILTER_NAME}/netermine_factor/", exist_ok=True)
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/determine_factor/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/", exist_ok=True)
     os.makedirs(f"./results/experiments/{FILTER_NAME}/joint_trajectories/", exist_ok=True)
@@ -1783,9 +1792,17 @@ def main():
     ex_name = os.path.basename(args.experiment_folder)
 
     if args.predictions:
-        # for factor in np.arange(0, 80, 5):
-        for factor in [65]:
-            compare_prediction_vs_truth_for_different_filters(Path(args.experiment_folder), args.experiment_name, factor, vel=args.vel)
+        if "s3" in args.experiment_name:
+            for factor in np.arange(0, 400, 5):
+            # for factor in [65]:
+                compare_prediction_vs_truth_for_different_filters(Path(args.experiment_folder), args.experiment_name, factor, vel=args.vel)
+        elif "s1" in args.experiment_name:
+            for factor in np.arange(0, 200, 5):
+            # for factor in [65]:
+                compare_prediction_vs_truth_for_different_filters_qtm_for_com(Path(args.experiment_folder), args.experiment_name, factor, vel=args.vel)
+        else:
+            raise ValueError(f"{ex_name} not supported")
+
         return
 
 
@@ -1866,7 +1883,7 @@ def main():
     print(f"fr factor: {joint_fr_factor}")
     # data = load_processed_data(vel_path)
     best_factor = (((joint_fr_factor + vel_rmse_factor + vel_dtw_factor + vel_fr_factor) / 3 ) // 5 ) * 5
-    best_factor = 65
+    best_factor = 80
     print(f"best factor: {best_factor}")
 
     if theia:
@@ -2242,6 +2259,11 @@ def plot_subparts_of_trajectories(theia_data: TheiaData, ex_name: str) -> None:
     unfiltered = theia_data.down_kinect_unfiltered_joints[:length]
     filtered = theia_data.down_kinect_joints[:length]
     truth = downsample(theia_data.theia_tensor, np.arange(theia_data.theia_tensor.shape[0]) * (1./120.), 15)[:length]
+
+    vel_unfiltered = central_diff(theia_data.down_kinect_unfiltered_joints[:length], 15)
+    vel_filtered = theia_data.down_kinect_velocities[:length]
+    vel_truth = downsample(theia_data.theia_tensor, np.arange(theia_data.theia_tensor.shape[0]) * (1./120.), 15)[:length]
+
     time = np.arange(0, length) * (1./15.)
 
     step = 2
@@ -2269,6 +2291,22 @@ def plot_subparts_of_trajectories(theia_data: TheiaData, ex_name: str) -> None:
                 plt.savefig(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/{slot[0]}-{slot[1]}.pdf")
                 plt.cla()
 
+                plt.cla()
+                plt.plot(ts, vel_unfiltered[m:n, int(kinect_joint), ax_idx], label="Unfiltered Kinect")
+                plt.plot(ts, vel_filtered[m:n, int(kinect_joint), ax_idx], label="Filtered Kinect")
+                plt.plot(ts, vel_truth[m:n, int(theia_joint), ax_idx], label="Theia")
+                plt.legend()
+                plt.xlabel(f"{slot[0]} - {slot[1]} [s]")
+                plt.ylabel(f"{ax_name} [m]")
+                os.makedirs(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/vel", exist_ok=True)
+                plt.savefig(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/vel/{slot[0]}-{slot[1]}.pdf")
+                plt.cla()
+
+
+    vel_unfiltered = central_diff(theia_data.down_kinect_unfiltered_com[:length], 15)
+    vel_filtered = theia_data.down_kinect_velocities[:length]
+    vel_truth = central_diff(truth[:length, TheiaJoint.COM, :], 15)
+
     unfiltered = theia_data.down_kinect_unfiltered_com[:length]
     filtered = theia_data.down_kinect_com[:length]
     truth = truth[:length, TheiaJoint.COM, :]
@@ -2288,6 +2326,18 @@ def plot_subparts_of_trajectories(theia_data: TheiaData, ex_name: str) -> None:
             os.makedirs(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/", exist_ok=True)
             plt.savefig(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/{slot[0]}-{slot[1]}.pdf")
             plt.cla()
+
+            plt.cla()
+            plt.plot(ts, unfiltered[m:n, ax_idx], label="Unfiltered Kinect")
+            plt.plot(ts, filtered[m:n, ax_idx], label="Filtered Kinect")
+            plt.plot(ts, truth[m:n, ax_idx], label="Theia")
+            plt.legend()
+            plt.xlabel(f"{slot[0]} - {slot[1]} [s]")
+            plt.ylabel(f"{ax_name} [m]")
+            os.makedirs(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/vel", exist_ok=True)
+            plt.savefig(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/vel/{slot[0]}-{slot[1]}.pdf")
+            plt.cla()
+
 
 def bland_altman_plots(theia_data: TheiaData, ex_name: str, cutoff: float = 0.20) -> None:
     length = theia_data.min_joint_length_at_15hz
@@ -2347,7 +2397,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, ex_
         else:
             estimate = data.down_kinect_velocities[:length][o:-o]
         unfiltered = data.down_kinect_unfiltered_joints[:length][o:-o]
-        truth = downsample(data.theia_tensor, np.arange(data.theia_tensor.shape[0]) * (1./120.), 15)[:length][o:-o]
+        truth = downsample(double_butter(data.theia_tensor, 120), np.arange(data.theia_tensor.shape[0]) * (1./120.), 15)[:length][o:-o]
 
         l_pred_to_est_rmse = []
         l_truth_to_pred_rmse = []
@@ -2375,10 +2425,13 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, ex_
                 tru = truth[:, theia_joint, :]
             else:
                 un = central_diff(unfiltered[:, kinect_joint, :], 15)
-                tru = central_diff(double_butter(truth[:, theia_joint, :]), 15)
+                tru = central_diff(truth[:, theia_joint, :], 15)
 
-            sun, sutru = corr_shift_trim3d(un, tru)
-            sest, stru = corr_shift_trim3d(est, tru)
+            # sun, sutru = corr_shift_trim3d(un, tru)
+            # sest, stru = corr_shift_trim3d(est, tru)
+
+            sun, sutru = un, tru
+            sest, stru = est, tru
 
 
             '''
@@ -2504,6 +2557,42 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, ex_
 
         print(f"truth_to_est_xcom: {truth_to_est_xcom}")
         print(f"truth_to_un_xcom: {truth_to_un_xcom}")
+        print()
+
+def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_path: Path, ex_name: str, best_factor: float, cutoff: float = 0.1, vel: bool = False) -> None:
+    for filter_name in ["SimpleSkeletonFilter"]:
+    # for filter_name in ["ConstrainedSkeletonFilter", "SkeletonFilter", "SimpleConstrainedSkeletonFilter", "SimpleSkeletonFilter"]:
+        path = experiment_path / filter_name / ex_name
+        data = load_processed_data(find_factor_path(best_factor, path))
+
+        """
+        if best_factor > 50:
+            plt.plot(data.down_kinect_xcom[:, 0], label="Kinect X")
+            plt.plot(data.down_theia_xcom_15_hz[:, 0], label="Theia X")
+            plt.legend()
+            plt.show()
+            plt.cla()
+        """
+
+        length = min(data.down_kinect_com.shape[0], data.down_kinect_unfiltered_com.shape[0], data.qtm_cop.shape[0])
+        o = max(int(length * cutoff), 1)
+
+        est = data.down_kinect_com[:length][o:-o][:, :2]
+        un = data.down_kinect_unfiltered_com[:length][o:-o][:, :2]
+        tru = downsample(data.qtm_cop, data.qtm_cop_ts, 15)[:, :2][:length][o:-o]
+
+        sun, sutru = corr_shift_trim3d(un, tru, idx=0)
+        sest, stru = corr_shift_trim3d(est, tru, idx=0)
+
+        diff = np.linalg.norm(stru - sest, axis=1)
+        truth_to_est_com = np.sqrt(np.mean(np.power(diff, 2)))
+
+        diff = np.linalg.norm(tru - un, axis=1)
+        truth_to_un_com = np.sqrt(np.mean(np.power(diff, 2)))
+
+        print(f"Filter: {filter_name}")
+        print(f"truth_to_est_com: {truth_to_est_com}")
+        print(f"truth_to_un_com: {truth_to_un_com}")
         print()
 
 if __name__ == "__main__":
