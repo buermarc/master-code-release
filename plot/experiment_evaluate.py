@@ -234,6 +234,42 @@ class TheiaData:
             self.length_theia_joints = downsample(self.theia_tensor, np.arange(length_theia_tensor) * (1./120.), 15).shape[0]
         return min(self.down_kinect_joints.shape[0], self.down_kinect_unfiltered_joints.shape[0], self.length_theia_joints)
 
+    @property
+    def down_kinect_xcom(self) -> np.ndarray:
+        """Returns kinect xcom with 15 hz."""
+        g = 9.81
+        w_0 = np.sqrt(g / self.down_kinect_com[:, 2])
+        len_w_0 = len(w_0)
+        w_0 = np.repeat(w_0, 3).reshape(len_w_0, 3)
+        return self.down_kinect_com + (self.down_kinect_com_velocities / w_0)
+
+    @property
+    def down_kinect_unfiltered_xcom(self) -> np.ndarray:
+        """Returns kinect xcom with 15 hz."""
+        g = 9.81
+        w_0 = np.sqrt(g / self.down_kinect_com[:, 2])
+        len_w_0 = len(w_0)
+        w_0 = np.repeat(w_0, 3).reshape(len_w_0, 3)
+        return self.down_kinect_com + (self.down_kinect_com_velocities / w_0)
+
+
+    @property
+    def down_theia_ts(self) -> np.ndarray:
+        return np.arange(self.down_theia_tensor.shape[0]) * (1./30.)
+
+    @property
+    def down_theia_xcom_15_hz(self) -> np.ndarray:
+        return downsample(self.down_theia_xcom, self.down_theia_ts, 15)
+
+    @property
+    def down_theia_xcom(self) -> np.ndarray:
+        """Returns theia xcom with 120 hz."""
+        g = 9.81
+        w_0 = np.sqrt(g / self.down_theia_tensor[:, int(TheiaJoint.COM), 2])
+        len_w_0 = len(w_0)
+        w_0 = np.repeat(w_0, 3).reshape(len_w_0, 3)
+        return self.down_theia_tensor[:, int(TheiaJoint.COM), :] + (self.down_theia_tensor[:, int(TheiaJoint.COM_VEL), :] / w_0)
+
 
 @dataclass
 class Data:
@@ -1747,7 +1783,8 @@ def main():
     ex_name = os.path.basename(args.experiment_folder)
 
     if args.predictions:
-        for factor in np.arange(0, 80, 5):
+        # for factor in np.arange(0, 80, 5):
+        for factor in [65]:
             compare_prediction_vs_truth_for_different_filters(Path(args.experiment_folder), args.experiment_name, factor, vel=args.vel)
         return
 
@@ -2286,9 +2323,19 @@ def compare_filter_type(experiment_path_a: Path, experiment_path_b: Path) -> Non
     pass
 
 def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, ex_name: str, best_factor: float, cutoff: float = 0.1, vel: bool = False) -> None:
-    for filter_name in ["SimpleSkeletonFilter"]:
+    # for filter_name in ["SimpleSkeletonFilter"]:
+    for filter_name in ["ConstrainedSkeletonFilter", "SkeletonFilter", "SimpleConstrainedSkeletonFilter", "SimpleSkeletonFilter"]:
         path = experiment_path / filter_name / ex_name
         data = load_processed_theia_data(find_factor_path(best_factor, path))
+
+        """
+        if best_factor > 50:
+            plt.plot(data.down_kinect_xcom[:, 0], label="Kinect X")
+            plt.plot(data.down_theia_xcom_15_hz[:, 0], label="Theia X")
+            plt.legend()
+            plt.show()
+            plt.cla()
+        """
 
         length = data.min_joint_length_at_15hz
         o = max(int(length * cutoff), 1)
@@ -2384,6 +2431,41 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, ex_
             l_truth_to_est_dtw.append(truth_to_est_dtw)
             l_truth_to_un_dtw.append(truth_to_un_dtw)
 
+
+        est = None
+        un = None
+        tru = None
+        if not vel:
+            est = data.down_kinect_com[:length][o:-o]
+            un = data.down_kinect_unfiltered_com[:length][o:-o]
+            tru = truth[:, int(TheiaJoint.COM), :]
+        else:
+            est = data.down_kinect_com_velocities[:length][o:-o]
+            un = central_diff(data.down_kinect_unfiltered_com[:length][o:-o], 15)
+            tru = central_diff(double_butter(truth[:, int(TheiaJoint.COM), :]), 15)
+
+        sun, sutru = corr_shift_trim3d(un, tru)
+        sest, stru = corr_shift_trim3d(est, tru)
+
+        diff = np.linalg.norm(stru - sest, axis=1)
+        truth_to_est_com = np.sqrt(np.mean(np.power(diff, 2)))
+
+        diff = np.linalg.norm(sutru - sun, axis=1)
+        truth_to_un_com = np.sqrt(np.mean(np.power(diff, 2)))
+
+        est = data.down_kinect_xcom[:length][o:-o]
+        un = data.down_kinect_unfiltered_xcom[:length][o:-o]
+        tru = data.down_theia_xcom_15_hz[:length][o:-o]
+
+        sun, sutru = corr_shift_trim3d(un, tru)
+        sest, stru = corr_shift_trim3d(est, tru)
+
+        diff = np.linalg.norm(stru - sest, axis=1)
+        truth_to_est_xcom = np.sqrt(np.mean(np.power(diff, 2)))
+
+        diff = np.linalg.norm(sutru - sun, axis=1)
+        truth_to_un_xcom = np.sqrt(np.mean(np.power(diff, 2)))
+
         print(f"Filter: {filter_name}")
         print(f"mean_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).mean()}")
         print(f"mean_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).mean()}")
@@ -2415,7 +2497,14 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, ex_
         print(f"mean_truth_to_unfiltered_dtw: {np.array(l_truth_to_un_dtw).mean()}")
         print()
 
+        print(f"Filter: {filter_name}")
+        print(f"truth_to_est_com: {truth_to_est_com}")
+        print(f"truth_to_un_com: {truth_to_un_com}")
+        print()
 
+        print(f"truth_to_est_xcom: {truth_to_est_xcom}")
+        print(f"truth_to_un_xcom: {truth_to_un_xcom}")
+        print()
 
 if __name__ == "__main__":
     main()
