@@ -2383,8 +2383,8 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
     records = []
     com_records = []
     xcom_records = []
-    for ex_name in [f"s3000{i}" for i in range(1, 7)]:
-        for best_factor in np.arange(0, 100, 5):
+    for ex_name in tqdm([f"s3000{i}" for i in range(1, 7)]):
+        for best_factor in tqdm(np.arange(0, 100, 5)):
             for filter_name in ["ConstrainedSkeletonFilter", "SkeletonFilter", "SimpleConstrainedSkeletonFilter", "SimpleSkeletonFilter"]:
                 path = experiment_path / filter_name / ex_name
                 data = load_processed_theia_data(find_factor_path(best_factor, path))
@@ -2555,7 +2555,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                     ex_name,
                     filter_name,
                     best_factor,
-                    truth_to_est_xcom,
+                    truth_to_est_com,
                 )
                 com_records.append(com_record)
 
@@ -2567,6 +2567,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                 )
                 xcom_records.append(xcom_record)
 
+                '''
                 print(f"Filter: {filter_name}")
                 print(f"mean_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).mean()}")
                 print(f"mean_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).mean()}")
@@ -2606,6 +2607,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                 print(f"truth_to_est_xcom: {truth_to_est_xcom}")
                 print(f"truth_to_un_xcom: {truth_to_un_xcom}")
                 print()
+                '''
 
         recorddata = np.array(records, dtype=[
             ("Experiment Name", f"U{len('s30001')}"),
@@ -2617,6 +2619,22 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ("Frechet", "f"),
         ])
         dataframe = pd.DataFrame.from_records(recorddata)
+
+        com_recorddata = np.array(com_records, dtype=[
+            ("Experiment Name", f"U{len('s30001')}"),
+            ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
+            ("Factor", "f"),
+            ("RMSE", "f"),
+        ])
+        com_dataframe = pd.DataFrame.from_records(com_recorddata)
+
+        xcom_recorddata = np.array(xcom_records, dtype=[
+            ("Experiment Name", f"U{len('s30001')}"),
+            ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
+            ("Factor", "f"),
+            ("RMSE", "f"),
+        ])
+        xcom_dataframe = pd.DataFrame.from_records(xcom_recorddata)
 
         oldsize = plt.rcParams['figure.figsize']
         # plt.rcParams["figure.figsize"] = 40, 40
@@ -2649,6 +2667,52 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             else:
                 plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor.pdf")
             plt.cla()
+
+            # Plot CoM
+            sub = com_dataframe.loc[com_dataframe["Filter Name"] == filter_name]
+            subsub = sub.loc[sub["Experiment Name"] == ex_name]
+            sns.set_style("darkgrid")
+            ax = sns.catplot(
+                data=subsub,
+                x="Factor",
+                y="RMSE",
+                kind="point",
+                markersize=4,
+                linewidth=1,
+            )
+            ax.set_xticklabels(rotation=40, ha="right")
+            plt.xlabel(r"$\lambda$")
+            plt.ylabel("RMSE [m]")
+            plt.title(rf"{ex_name}: {filter_name} RMSE for CoM")
+            os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/", exist_ok=True)
+            if vel:
+                plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor_vel_com.pdf")
+            else:
+                plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor_com.pdf")
+            plt.cla()
+
+            # Plot XcoM
+            sub = xcom_dataframe.loc[xcom_dataframe["Filter Name"] == filter_name]
+            subsub = sub.loc[sub["Experiment Name"] == ex_name]
+            sns.set_style("darkgrid")
+            ax = sns.catplot(
+                data=subsub,
+                x="Factor",
+                y="RMSE",
+                kind="point",
+                markersize=4,
+                linewidth=1,
+            )
+            ax.set_xticklabels(rotation=40, ha="right")
+            plt.xlabel(r"$\lambda$")
+            plt.ylabel("RMSE [m]")
+            plt.title(rf"{ex_name}: {filter_name} RMSE for XcoM")
+            os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/", exist_ok=True)
+            if vel:
+                plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor_vel_xcom.pdf")
+            else:
+                plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor_xcom.pdf")
+            plt.cla()
         # plt.rcParams["figure.figsize"] = oldsize
 
     recorddata = np.array(records, dtype=[
@@ -2661,6 +2725,22 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ("Frechet", "f"),
     ])
     dataframe = pd.DataFrame.from_records(recorddata)
+
+    com_recorddata = np.array(com_records, dtype=[
+        ("Experiment Name", f"U{len('s30001')}"),
+        ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
+        ("Factor", "f"),
+        ("RMSE", "f"),
+    ])
+    com_dataframe = pd.DataFrame.from_records(com_recorddata)
+
+    xcom_recorddata = np.array(xcom_records, dtype=[
+        ("Experiment Name", f"U{len('s30001')}"),
+        ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
+        ("Factor", "f"),
+        ("RMSE", "f"),
+    ])
+    xcom_dataframe = pd.DataFrame.from_records(xcom_recorddata)
 
     for filter_name in FILTER_TYPES:
         sub = dataframe.loc[dataframe["Filter Name"] == filter_name]
@@ -2686,11 +2766,56 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         plt.title(rf"s3000x: {filter_name} RMSE for different $\lambda$ for each joint")
         os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x", exist_ok=True)
         if vel:
-            plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor_vel.pdf")
+            plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x/rmse_over_factor_vel.pdf")
         else:
-            plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor.pdf")
+            plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x/rmse_over_factor.pdf")
         plt.cla()
 
+        # com
+        sub = com_dataframe.loc[com_dataframe["Filter Name"] == filter_name]
+        sns.set_style("darkgrid")
+        ax = sns.catplot(
+            data=sub,
+            x="Factor",
+            y="RMSE",
+            kind="point",
+            markersize=4,
+            linewidth=1,
+            errorbar=None
+        )
+        ax.set_xticklabels(rotation=40, ha="right")
+        plt.xlabel(r"$\lambda$")
+        plt.ylabel("RMSE [m]")
+        plt.title(rf"s3000x: {filter_name} RMSE for CoM")
+        os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x", exist_ok=True)
+        if vel:
+            plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x/rmse_over_factor_vel_com.pdf")
+        else:
+            plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x/rmse_over_factor_com.pdf")
+        plt.cla()
+
+        # xcom
+        sub = xcom_dataframe.loc[xcom_dataframe["Filter Name"] == filter_name]
+        sns.set_style("darkgrid")
+        ax = sns.catplot(
+            data=sub,
+            x="Factor",
+            y="RMSE",
+            kind="point",
+            markersize=4,
+            linewidth=1,
+            errorbar=None
+        )
+        ax.set_xticklabels(rotation=40, ha="right")
+        plt.xlabel(r"$\lambda$")
+        plt.ylabel("RMSE [m]")
+        plt.title(rf"s3000x: {filter_name} RMSE for XcoM")
+        os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x", exist_ok=True)
+        if vel:
+            plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x/rmse_over_factor_vel_xcom.pdf")
+        else:
+            plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x/rmse_over_factor_xcom.pdf")
+        plt.cla()
 
 def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_path: Path, ex_name: str, best_factor: float, cutoff: float = 0.1, vel: bool = False) -> None:
     for filter_name in ["SimpleSkeletonFilter"]:
