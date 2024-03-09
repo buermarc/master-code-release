@@ -21,6 +21,14 @@ import dtw
 from tqdm import tqdm
 import numba
 from multiprocessing.pool import ThreadPool
+import seaborn as sns
+import pandas as pd
+
+params = {'text.usetex' : True,
+          'font.size' : 14,
+          'font.family' : 'lmodern'
+          }
+plt.rcParams.update(params)
 
 SHOW = False
 
@@ -1793,9 +1801,7 @@ def main():
 
     if args.predictions:
         if "s3" in args.experiment_name:
-            for factor in np.arange(0, 400, 5):
-            # for factor in [65]:
-                compare_prediction_vs_truth_for_different_filters(Path(args.experiment_folder), args.experiment_name, factor, vel=args.vel)
+            compare_prediction_vs_truth_for_different_filters(Path(args.experiment_folder), vel=args.vel)
         elif "s1" in args.experiment_name:
             for factor in np.arange(0, 200, 5):
             # for factor in [65]:
@@ -2372,192 +2378,319 @@ def bland_altman_plots(theia_data: TheiaData, ex_name: str, cutoff: float = 0.20
 def compare_filter_type(experiment_path_a: Path, experiment_path_b: Path) -> None:
     pass
 
-def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, ex_name: str, best_factor: float, cutoff: float = 0.1, vel: bool = False) -> None:
+def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cutoff: float = 0.1, vel: bool = False) -> None:
     # for filter_name in ["SimpleSkeletonFilter"]:
-    for filter_name in ["ConstrainedSkeletonFilter", "SkeletonFilter", "SimpleConstrainedSkeletonFilter", "SimpleSkeletonFilter"]:
-        path = experiment_path / filter_name / ex_name
-        data = load_processed_theia_data(find_factor_path(best_factor, path))
+    records = []
+    com_records = []
+    xcom_records = []
+    for ex_name in [f"s3000{i}" for i in range(1, 7)]:
+        for best_factor in np.arange(0, 100, 5):
+            for filter_name in ["ConstrainedSkeletonFilter", "SkeletonFilter", "SimpleConstrainedSkeletonFilter", "SimpleSkeletonFilter"]:
+                path = experiment_path / filter_name / ex_name
+                data = load_processed_theia_data(find_factor_path(best_factor, path))
 
-        """
-        if best_factor > 50:
-            plt.plot(data.down_kinect_xcom[:, 0], label="Kinect X")
-            plt.plot(data.down_theia_xcom_15_hz[:, 0], label="Theia X")
-            plt.legend()
-            plt.show()
-            plt.cla()
-        """
+                """
+                if best_factor > 50:
+                    plt.plot(data.down_kinect_xcom[:, 0], label="Kinect X")
+                    plt.plot(data.down_theia_xcom_15_hz[:, 0], label="Theia X")
+                    plt.legend()
+                    plt.show()
+                    plt.cla()
+                """
 
-        length = data.min_joint_length_at_15hz
-        o = max(int(length * cutoff), 1)
+                length = data.min_joint_length_at_15hz
+                o = max(int(length * cutoff), 1)
 
-        prediction = data.down_kinect_predictions[:length][o:-o]
-        estimate = None
-        if not vel:
-            estimate = data.down_kinect_joints[:length][o:-o]
-        else:
-            estimate = data.down_kinect_velocities[:length][o:-o]
-        unfiltered = data.down_kinect_unfiltered_joints[:length][o:-o]
-        truth = downsample(double_butter(data.theia_tensor, 120), np.arange(data.theia_tensor.shape[0]) * (1./120.), 15)[:length][o:-o]
+                prediction = data.down_kinect_predictions[:length][o:-o]
+                estimate = None
+                if not vel:
+                    estimate = data.down_kinect_joints[:length][o:-o]
+                else:
+                    estimate = data.down_kinect_velocities[:length][o:-o]
+                unfiltered = data.down_kinect_unfiltered_joints[:length][o:-o]
+                truth = downsample(double_butter(data.theia_tensor, 120), np.arange(data.theia_tensor.shape[0]) * (1./120.), 15)[:length][o:-o]
 
-        l_pred_to_est_rmse = []
-        l_truth_to_pred_rmse = []
-        l_truth_to_est_rmse = []
-        l_truth_to_unfiltered_rmse = []
+                l_pred_to_est_rmse = []
+                l_truth_to_pred_rmse = []
+                l_truth_to_est_rmse = []
+                l_truth_to_unfiltered_rmse = []
 
-        l_truth_to_est_fr = []
-        l_truth_to_un_fr = []
+                l_truth_to_est_fr = []
+                l_truth_to_un_fr = []
 
-        l_truth_to_est_dtw = []
-        l_truth_to_un_dtw = []
+                l_truth_to_est_dtw = []
+                l_truth_to_un_dtw = []
 
-        for kinect_joint, theia_joint, joint_name in MATCHING_JOINTS:
-            kinect_joint, theia_joint = int(kinect_joint), int(theia_joint)
+                for kinect_joint, theia_joint, joint_name in MATCHING_JOINTS:
+                    kinect_joint, theia_joint = int(kinect_joint), int(theia_joint)
 
 
-            pred = None
-            est = None
-            un = None
-            tru = None
-            est = estimate[:, kinect_joint, :]
-            pred = prediction[:, kinect_joint, :]
-            if not vel:
-                un = unfiltered[:, kinect_joint, :]
-                tru = truth[:, theia_joint, :]
+                    pred = None
+                    est = None
+                    un = None
+                    tru = None
+                    est = estimate[:, kinect_joint, :]
+                    pred = prediction[:, kinect_joint, :]
+                    if not vel:
+                        un = unfiltered[:, kinect_joint, :]
+                        tru = truth[:, theia_joint, :]
+                    else:
+                        un = central_diff(unfiltered[:, kinect_joint, :], 15)
+                        tru = central_diff(truth[:, theia_joint, :], 15)
+
+                    # sun, sutru = corr_shift_trim3d(un, tru)
+                    # sest, stru = corr_shift_trim3d(est, tru)
+
+                    sun, sutru = un, tru
+                    sest, stru = est, tru
+
+
+                    '''
+                    for i in range(3):
+                        plt.plot(un[:, i], label="un")
+                        plt.plot(tru[:, i], label="true")
+                        plt.plot(shift_est[:, i], label="shift est")
+                        # plt.plot(est[:, i], label="est")
+                        plt.legend()
+                        plt.show()
+                        plt.cla()
+                        '''
+
+                    diff = np.linalg.norm(pred - est, axis=1)
+                    pred_to_est_rmse = np.sqrt(np.mean(np.power(diff, 2)))
+
+                    diff = np.linalg.norm(tru - pred, axis=1)
+                    truth_to_pred_rmse = np.sqrt(np.mean(np.power(diff, 2)))
+
+                    diff = np.linalg.norm(stru - sest, axis=1)
+                    truth_to_est_rmse = np.sqrt(np.mean(np.power(diff, 2)))
+
+                    diff = np.linalg.norm(sutru - sun, axis=1)
+                    truth_to_un_rmse = np.sqrt(np.mean(np.power(diff, 2)))
+
+                    p = np.column_stack((np.arange(len(stru)), stru))
+                    q = np.column_stack((np.arange(len(sest)), sest))
+                    truth_to_est_fr = frechet_dist(p, q)
+                    truth_to_est_dtw = dtw.dtw(p, q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+                    p = np.column_stack((np.arange(len(sutru)), sutru))
+                    q = np.column_stack((np.arange(len(sun)), sun))
+                    truth_to_un_fr = frechet_dist(p, q)
+                    truth_to_un_dtw = dtw.dtw(p, q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+                    # print(f"Filter: {filter_name} Joint: {joint_name}")
+                    # print(f"pred_to_est_rmse: {pred_to_est_rmse}")
+                    # print(f"truth_to_pred_rmse: {truth_to_pred_rmse}")
+                    # print(f"truth_to_est_rmse: {truth_to_est_rmse}")
+                    # print(f"truth_to_un_rmse: {truth_to_un_rmse}")
+
+                    l_pred_to_est_rmse.append(pred_to_est_rmse)
+                    l_truth_to_pred_rmse.append(truth_to_pred_rmse)
+                    l_truth_to_est_rmse.append(truth_to_est_rmse)
+                    l_truth_to_unfiltered_rmse.append(truth_to_un_rmse)
+
+                    l_truth_to_est_fr.append(truth_to_est_fr)
+                    l_truth_to_un_fr.append(truth_to_un_fr)
+
+                    l_truth_to_est_dtw.append(truth_to_est_dtw)
+                    l_truth_to_un_dtw.append(truth_to_un_dtw)
+
+                    record = (
+                        ex_name,
+                        filter_name,
+                        joint_name,
+                        best_factor,
+                        truth_to_est_rmse,
+                        truth_to_est_dtw,
+                        truth_to_est_fr,
+                    )
+                    records.append(record)
+
+                record = (
+                    ex_name,
+                    filter_name,
+                    "Mean",
+                    best_factor,
+                    np.array(l_truth_to_est_rmse).mean(),
+                    np.array(l_truth_to_est_dtw).mean(),
+                    np.array(l_truth_to_est_fr).mean(),
+                )
+                records.append(record)
+
+                est = None
+                un = None
+                tru = None
+                if not vel:
+                    est = data.down_kinect_com[:length][o:-o]
+                    un = data.down_kinect_unfiltered_com[:length][o:-o]
+                    tru = truth[:, int(TheiaJoint.COM), :]
+                else:
+                    est = data.down_kinect_com_velocities[:length][o:-o]
+                    un = central_diff(data.down_kinect_unfiltered_com[:length][o:-o], 15)
+                    tru = central_diff(double_butter(truth[:, int(TheiaJoint.COM), :]), 15)
+
+                sun, sutru = corr_shift_trim3d(un, tru)
+                sest, stru = corr_shift_trim3d(est, tru)
+
+                diff = np.linalg.norm(stru - sest, axis=1)
+                truth_to_est_com = np.sqrt(np.mean(np.power(diff, 2)))
+
+                diff = np.linalg.norm(sutru - sun, axis=1)
+                truth_to_un_com = np.sqrt(np.mean(np.power(diff, 2)))
+
+                est = data.down_kinect_xcom[:length][o:-o]
+                un = data.down_kinect_unfiltered_xcom[:length][o:-o]
+                tru = data.down_theia_xcom_15_hz[:length][o:-o]
+
+                sun, sutru = corr_shift_trim3d(un, tru)
+                sest, stru = corr_shift_trim3d(est, tru)
+
+                diff = np.linalg.norm(stru - sest, axis=1)
+                truth_to_est_xcom = np.sqrt(np.mean(np.power(diff, 2)))
+
+                diff = np.linalg.norm(sutru - sun, axis=1)
+                truth_to_un_xcom = np.sqrt(np.mean(np.power(diff, 2)))
+
+                com_record = (
+                    ex_name,
+                    filter_name,
+                    best_factor,
+                    truth_to_est_xcom,
+                )
+                com_records.append(com_record)
+
+                xcom_record = (
+                    ex_name,
+                    filter_name,
+                    best_factor,
+                    truth_to_est_xcom,
+                )
+                xcom_records.append(xcom_record)
+
+                print(f"Filter: {filter_name}")
+                print(f"mean_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).mean()}")
+                print(f"mean_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).mean()}")
+                print(f"mean_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).mean()}")
+                print(f"mean_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).mean()}")
+
+                print(f"max_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).max()}")
+                print(f"max_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).max()}")
+                print(f"max_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).max()}")
+                print(f"max_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).max()}")
+
+                print(f"min_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).min()}")
+                print(f"min_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).min()}")
+                print(f"min_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).min()}")
+                print(f"min_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).min()}")
+
+                print(f"std_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).std()}")
+                print(f"std_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).std()}")
+                print(f"std_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).std()}")
+                print(f"std_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).std()}")
+
+                print()
+                print(f"mean_truth_to_est_fr: {np.array(l_truth_to_est_fr).mean()}")
+                print(f"mean_truth_to_unfiltered_fr: {np.array(l_truth_to_un_fr).mean()}")
+                print()
+
+                print()
+                print(f"mean_truth_to_est_dtw: {np.array(l_truth_to_est_dtw).mean()}")
+                print(f"mean_truth_to_unfiltered_dtw: {np.array(l_truth_to_un_dtw).mean()}")
+                print()
+
+                print(f"Filter: {filter_name}")
+                print(f"truth_to_est_com: {truth_to_est_com}")
+                print(f"truth_to_un_com: {truth_to_un_com}")
+                print()
+
+                print(f"truth_to_est_xcom: {truth_to_est_xcom}")
+                print(f"truth_to_un_xcom: {truth_to_un_xcom}")
+                print()
+
+        recorddata = np.array(records, dtype=[
+            ("Experiment Name", f"U{len('s30001')}"),
+            ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
+            ("Joint Name", f"U{len('Right Shoulder')}"),
+            ("Factor", "f"),
+            ("RMSE", "f"),
+            ("DTW", "f"),
+            ("Frechet", "f"),
+        ])
+        dataframe = pd.DataFrame.from_records(recorddata)
+
+        oldsize = plt.rcParams['figure.figsize']
+        # plt.rcParams["figure.figsize"] = 40, 40
+        sns.set_theme(rc={'figure.figsize':(40, 40)})
+        for filter_name in FILTER_TYPES:
+            sub = dataframe.loc[dataframe["Filter Name"] == filter_name]
+            subsub = sub.loc[sub["Experiment Name"] == ex_name]
+            sns.set_style("darkgrid")
+            len_joints = len(MATCHING_JOINTS)
+            markers=["^", "o", "X", "v", "s", "<", ">", "*", "D", "P", "^", "o", "X", "v", "s", "<", ">", "*", "D", "P"][:len_joints] + ["d"]
+            linestyles=(["-"] * 8 + [":"] * 8)[:len_joints] + ["-."]
+            ax = sns.catplot(
+                data=subsub,
+                x="Factor",
+                y="RMSE",
+                kind="point",
+                hue="Joint Name",
+                markers=markers,
+                linestyles=linestyles,
+                markersize=4,
+                linewidth=1,
+            )
+            ax.set_xticklabels(rotation=40, ha="right")
+            plt.xlabel(r"$\lambda$")
+            plt.ylabel("RMSE [m]")
+            plt.title(rf"{ex_name}: {filter_name} RMSE for different $\lambda$ for each joint")
+            os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/", exist_ok=True)
+            if vel:
+                plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor_vel.pdf")
             else:
-                un = central_diff(unfiltered[:, kinect_joint, :], 15)
-                tru = central_diff(truth[:, theia_joint, :], 15)
+                plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor.pdf")
+            plt.cla()
+        # plt.rcParams["figure.figsize"] = oldsize
 
-            # sun, sutru = corr_shift_trim3d(un, tru)
-            # sest, stru = corr_shift_trim3d(est, tru)
+    recorddata = np.array(records, dtype=[
+        ("Experiment Name", f"U{len('s30001')}"),
+        ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
+        ("Joint Name", f"U{len('Right Shoulder')}"),
+        ("Factor", "f"),
+        ("RMSE", "f"),
+        ("DTW", "f"),
+        ("Frechet", "f"),
+    ])
+    dataframe = pd.DataFrame.from_records(recorddata)
 
-            sun, sutru = un, tru
-            sest, stru = est, tru
-
-
-            '''
-            for i in range(3):
-                plt.plot(un[:, i], label="un")
-                plt.plot(tru[:, i], label="true")
-                plt.plot(shift_est[:, i], label="shift est")
-                # plt.plot(est[:, i], label="est")
-                plt.legend()
-                plt.show()
-                plt.cla()
-                '''
-
-            diff = np.linalg.norm(pred - est, axis=1)
-            pred_to_est_rmse = np.sqrt(np.mean(np.power(diff, 2)))
-
-            diff = np.linalg.norm(tru - pred, axis=1)
-            truth_to_pred_rmse = np.sqrt(np.mean(np.power(diff, 2)))
-
-            diff = np.linalg.norm(stru - sest, axis=1)
-            truth_to_est_rmse = np.sqrt(np.mean(np.power(diff, 2)))
-
-            diff = np.linalg.norm(sutru - sun, axis=1)
-            truth_to_un_rmse = np.sqrt(np.mean(np.power(diff, 2)))
-
-            p = np.column_stack((np.arange(len(stru)), stru))
-            q = np.column_stack((np.arange(len(sest)), sest))
-            truth_to_est_fr = frechet_dist(p, q)
-            truth_to_est_dtw = dtw.dtw(p, q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
-
-            p = np.column_stack((np.arange(len(sutru)), sutru))
-            q = np.column_stack((np.arange(len(sun)), sun))
-            truth_to_un_fr = frechet_dist(p, q)
-            truth_to_un_dtw = dtw.dtw(p, q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
-
-            # print(f"Filter: {filter_name} Joint: {joint_name}")
-            # print(f"pred_to_est_rmse: {pred_to_est_rmse}")
-            # print(f"truth_to_pred_rmse: {truth_to_pred_rmse}")
-            # print(f"truth_to_est_rmse: {truth_to_est_rmse}")
-            # print(f"truth_to_un_rmse: {truth_to_un_rmse}")
-
-            l_pred_to_est_rmse.append(pred_to_est_rmse)
-            l_truth_to_pred_rmse.append(truth_to_pred_rmse)
-            l_truth_to_est_rmse.append(truth_to_est_rmse)
-            l_truth_to_unfiltered_rmse.append(truth_to_un_rmse)
-
-            l_truth_to_est_fr.append(truth_to_est_fr)
-            l_truth_to_un_fr.append(truth_to_un_fr)
-
-            l_truth_to_est_dtw.append(truth_to_est_dtw)
-            l_truth_to_un_dtw.append(truth_to_un_dtw)
-
-
-        est = None
-        un = None
-        tru = None
-        if not vel:
-            est = data.down_kinect_com[:length][o:-o]
-            un = data.down_kinect_unfiltered_com[:length][o:-o]
-            tru = truth[:, int(TheiaJoint.COM), :]
+    for filter_name in FILTER_TYPES:
+        sub = dataframe.loc[dataframe["Filter Name"] == filter_name]
+        sns.set_style("darkgrid")
+        len_joints = len(MATCHING_JOINTS)
+        markers=["^", "o", "X", "v", "s", "<", ">", "*", "D", "P", "^", "o", "X", "v", "s", "<", ">", "*", "D", "P"][:len_joints] + ["d"]
+        linestyles=(["-"] * 8 + [":"] * 8)[:len_joints] + ["-."]
+        ax = sns.catplot(
+            data=sub,
+            x="Factor",
+            y="RMSE",
+            kind="point",
+            hue="Joint Name",
+            markers=markers,
+            linestyles=linestyles,
+            markersize=4,
+            linewidth=1,
+            errorbar=None
+        )
+        ax.set_xticklabels(rotation=40, ha="right")
+        plt.xlabel(r"$\lambda$")
+        plt.ylabel("RMSE [m]")
+        plt.title(rf"s3000x: {filter_name} RMSE for different $\lambda$ for each joint")
+        os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x", exist_ok=True)
+        if vel:
+            plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor_vel.pdf")
         else:
-            est = data.down_kinect_com_velocities[:length][o:-o]
-            un = central_diff(data.down_kinect_unfiltered_com[:length][o:-o], 15)
-            tru = central_diff(double_butter(truth[:, int(TheiaJoint.COM), :]), 15)
+            plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor.pdf")
+        plt.cla()
 
-        sun, sutru = corr_shift_trim3d(un, tru)
-        sest, stru = corr_shift_trim3d(est, tru)
-
-        diff = np.linalg.norm(stru - sest, axis=1)
-        truth_to_est_com = np.sqrt(np.mean(np.power(diff, 2)))
-
-        diff = np.linalg.norm(sutru - sun, axis=1)
-        truth_to_un_com = np.sqrt(np.mean(np.power(diff, 2)))
-
-        est = data.down_kinect_xcom[:length][o:-o]
-        un = data.down_kinect_unfiltered_xcom[:length][o:-o]
-        tru = data.down_theia_xcom_15_hz[:length][o:-o]
-
-        sun, sutru = corr_shift_trim3d(un, tru)
-        sest, stru = corr_shift_trim3d(est, tru)
-
-        diff = np.linalg.norm(stru - sest, axis=1)
-        truth_to_est_xcom = np.sqrt(np.mean(np.power(diff, 2)))
-
-        diff = np.linalg.norm(sutru - sun, axis=1)
-        truth_to_un_xcom = np.sqrt(np.mean(np.power(diff, 2)))
-
-        print(f"Filter: {filter_name}")
-        print(f"mean_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).mean()}")
-        print(f"mean_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).mean()}")
-        print(f"mean_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).mean()}")
-        print(f"mean_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).mean()}")
-
-        print(f"max_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).max()}")
-        print(f"max_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).max()}")
-        print(f"max_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).max()}")
-        print(f"max_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).max()}")
-
-        print(f"min_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).min()}")
-        print(f"min_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).min()}")
-        print(f"min_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).min()}")
-        print(f"min_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).min()}")
-
-        print(f"std_pred_to_est_rmse: {np.array(l_pred_to_est_rmse).std()}")
-        print(f"std_truth_to_pred_rmse: {np.array(l_truth_to_pred_rmse).std()}")
-        print(f"std_truth_to_est_rmse: {np.array(l_truth_to_est_rmse).std()}")
-        print(f"std_truth_to_unfiltered_rmse: {np.array(l_truth_to_unfiltered_rmse).std()}")
-
-        print()
-        print(f"mean_truth_to_est_fr: {np.array(l_truth_to_est_fr).mean()}")
-        print(f"mean_truth_to_unfiltered_fr: {np.array(l_truth_to_un_fr).mean()}")
-        print()
-
-        print()
-        print(f"mean_truth_to_est_dtw: {np.array(l_truth_to_est_dtw).mean()}")
-        print(f"mean_truth_to_unfiltered_dtw: {np.array(l_truth_to_un_dtw).mean()}")
-        print()
-
-        print(f"Filter: {filter_name}")
-        print(f"truth_to_est_com: {truth_to_est_com}")
-        print(f"truth_to_un_com: {truth_to_un_com}")
-        print()
-
-        print(f"truth_to_est_xcom: {truth_to_est_xcom}")
-        print(f"truth_to_un_xcom: {truth_to_un_xcom}")
-        print()
 
 def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_path: Path, ex_name: str, best_factor: float, cutoff: float = 0.1, vel: bool = False) -> None:
     for filter_name in ["SimpleSkeletonFilter"]:
