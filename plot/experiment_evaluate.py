@@ -254,13 +254,14 @@ class DetermineFactorGenerateTable:
 '''
         content = ""
         for record in self.records:
-            content += rf"{record.experiment_name}                   & {round(record.lsed, 1)}            & {round(record.dtw, 1)}           & {round(record.dfd, 1)}           & {round(record.pcc, 1)}           \\ \hline"
+            ex_name = record.experiment_name.replace("_", "\\_")
+            content += rf"{ex_name}                   & {round(record.lsed, 1)}            & {round(record.dtw, 1)}           & {round(record.dfd, 1)}           & {round(record.pcc, 1)}           \\ \hline"
             content += "\n"
         end = rf'''
 \end{{tabular}}
 \end{{center}}
-\label{{tab:determine-factor-{self.filter_type}}}
 \caption{{Optimal $\lambda$ for \{self.filter_type} Evaluated on {self.eval_type}}}
+\label{{tab:determine-factor-{self.filter_type}}}
 \end{{table}}
 '''
 
@@ -302,8 +303,8 @@ class GenericTableGeneration:
         end = rf'''
 \end{{tabular}}
 \end{{center}}
-\label{{tab:{self.ref}}}
 \caption{{{self.title}}}
+\label{{tab:{self.ref}}}
 \end{{table}}
 '''
 
@@ -1144,7 +1145,7 @@ def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float,
     return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 
-def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: str, cutoff: float, experiment_type: str) -> tuple[Path, float, float, float, float, DetermineFactorRecord]:
+def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: str, cutoff: float) -> tuple[Path, float, float, float, float, DetermineFactorRecord]:
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     RMSEs = []
     dtw_distances = []
@@ -1174,7 +1175,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
         # if factor > 1:
         #     continue
 
-        # if "constraint" in experiment_type:
+        # if "constraint" in xperiment_type:
         if True:
             joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
             for joint in joints:
@@ -1233,7 +1234,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
         dtw_distances.append(dtw_distance)
         fr_distances.append(fr_distance)
         factors.append(data.config["measurement_error_factor"])
-        pccs.append(pcc / 3
+        pccs.append(pcc / 3)
 
     facts = np.array(factors)
     rmses = np.array(RMSEs)
@@ -1248,13 +1249,13 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     idx = np.argsort(facts)
 
     plt.cla()
-    plt.plot(facts[idx][:], rmses[idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-    plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
+    plt.plot(facts[idx][:], rmses[idx][:], label="LSED", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+    plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin LSED: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
     plt.xlabel("Measurement Error Factor")
-    plt.ylabel("RMSE")
+    plt.ylabel("LSED")
     plt.legend()
-    plt.title(f"Ex: {os.path.basename(experiment_folder)} - RMSE pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.title(f"Ex: {os.path.basename(experiment_folder)} - LSED pro Measurement Error Factor")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_joints_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1267,7 +1268,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
 
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - PCC pro Measurement Error Factor")
 
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_pcc_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_pcc_joints_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1279,7 +1280,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - DTW Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_dtw_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_dtw_distance_joints_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1291,7 +1292,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.ylabel("Frechet Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - Frechet Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_frechet_distance_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_frechet_distance_joints_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1305,7 +1306,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     )
     return directories[rmse_argmin], factors[rmse_argmin], factors[dtw_argmin], factors[fr_argmin], factors[pcc_argmax], record
 
-def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path, ex_name: str, cutoff: float, experiment_type: str) -> tuple[Path, float, float, float, float, DetermineFactorRecord]:
+def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path, ex_name: str, cutoff: float) -> tuple[Path, float, float, float, float, DetermineFactorRecord]:
     """Find the best measurement error factor through comparing velocities."""
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     RMSEs = []
@@ -1442,13 +1443,13 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     idx = np.argsort(facts)
 
     plt.cla()
-    plt.plot(facts[idx][:], rmses[idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-    plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
+    plt.plot(facts[idx][:], rmses[idx][:], label="LSED", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+    plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin LSED: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
     plt.xlabel("Measurement Error Factor")
-    plt.ylabel("RMSE")
+    plt.ylabel("LSED")
     plt.legend()
-    plt.title(f"Ex: {os.path.basename(experiment_folder)} - RMSE pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.title(f"Ex: {os.path.basename(experiment_folder)} - LSED pro Measurement Error Factor")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_velocity_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1463,7 +1464,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.title(f"{facts[idx][:][jump_idx]}:{factors[rmse_argmin]}- Ex: {os.path.basename(experiment_folder)} Correlation offset : measurement error factor")
     print(f"Correlation jump {facts[idx][:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
 
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_velocity_correlation_offset_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_velocity_correlation_offset_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1476,7 +1477,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - DTW Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_dtw_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_dtw_distance_velocity_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1489,7 +1490,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
 
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - PCC pro Measurement Error Factor")
 
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_pcc_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_pcc_velocity_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1501,7 +1502,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.ylabel("Frechet Dist")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} - Frechet Dist. pro Measurement Error Factor")
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_frechet_distance_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_frechet_distance_velocity_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
@@ -1621,7 +1622,7 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: flo
     plt.ylabel("Correlation")
     plt.legend()
     plt.title(f"Ex: {os.path.basename(experiment_folder)} Correlation per measurement error factor")
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_corr_{os.path.basename(experiment_folder)}.pdf")
     plt.cla()
     argmax = np.argmax(corrs)
     return  directories[argmax], factors[argmax]
@@ -1777,12 +1778,12 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         vel_idx = np.argsort(facts)
 
         plt.cla()
-        plt.plot(facts[idx][:], rmses[idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-        plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.plot(facts[idx][:], rmses[idx][:], label="LSED", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+        plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin LSED: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
         plt.xlabel("Measurement Error Factor")
-        plt.ylabel("RMSE")
+        plt.ylabel("LSED")
         plt.legend()
-        plt.title(f"Ex: {ex_name} - RMSE pro Measurement Error Factor")
+        plt.title(f"Ex: {ex_name} - LSED pro Measurement Error Factor")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/rmse_{segment_name}.pdf")
         plt.cla()
 
@@ -1821,12 +1822,12 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         print(factors[rmse_argmin], factors[dtw_argmin], factors[fr_argmin], factors[corr_argmax])
 
         plt.cla()
-        plt.plot(facts[vel_idx][:], vel_rmses[vel_idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-        plt.plot(facts[vel_rmse_argmin], vel_rmses[vel_rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[vel_rmse_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.plot(facts[vel_idx][:], vel_rmses[vel_idx][:], label="LSED", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+        plt.plot(facts[vel_rmse_argmin], vel_rmses[vel_rmse_argmin], marker="X", ls="None", label=f"Argmin LSED: {facts[vel_rmse_argmin]:.2f}", color="crimson", alpha=0.6)
         plt.xlabel("Measurement Error Factor")
-        plt.ylabel("RMSE")
+        plt.ylabel("LSED")
         plt.legend()
-        plt.title(f"Ex: {ex_name} - RMSE pro Measurement Error Factor")
+        plt.title(f"Ex: {ex_name} - LSED pro Measurement Error Factor")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_rmse_{segment_name}.pdf")
         plt.cla()
 
@@ -1960,13 +1961,15 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
     table = GenericTableGeneration(["Filter Name", "LSED", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Positions", "mean-optimal-lambda")
     vel_table = GenericTableGeneration(["Filter Name", "LSED", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Velocities", "mean-optimal-lambda-vel")
     for filter_type in FILTER_TYPES:
+        global FILTER_NAME
+        FILTER_NAME = filter_type
         generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Positions", records=[])
         vel_generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Velocities", records=[])
         for ex_name in EX_NAMES_WITH_BETTER_AND_SMOOTHED:
             ex_path = path / filter_type / ex_name
-            _, _, _, _, _, record = find_best_measurement_error_factor_rmse(ex_path, ex_name, 0.1, experiment_type="constraints")
+            _, _, _, _, _, record = find_best_measurement_error_factor_rmse(ex_path, ex_name, 0.1)
             generator.append(record)
-            _, _, _, _, _, vel_record = find_best_measurement_error_factor_rmse_on_velocity(ex_path, ex_name, 0.1, experiment_type="constraints")
+            _, _, _, _, _, vel_record = find_best_measurement_error_factor_rmse_on_velocity(ex_path, ex_name, 0.1)
             vel_generator.append(vel_record)
 
         out_path = Path(f"./results/experiments/{filter_type}/determine_factor/table.tex")
@@ -2109,8 +2112,8 @@ def main():
     vel_path, vel_rmse_factor, vel_dtw_factor, vel_fr_factor = vel_result.get()
     '''
 
-    joint_path, joint_rmse_factor, joint_dtw_factor, joint_fr_factor, joint_pcc_factor, record = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), ex_name, cutoff, args.experiment_type)
-    vel_path, vel_rmse_factor, vel_dtw_factor, vel_fr_factor, vel_pcc_factor, vel_record = find_best_measurement_error_factor_rmse_on_velocity(Path(args.experiment_folder), ex_name, cutoff, args.experiment_type)
+    joint_path, joint_rmse_factor, joint_dtw_factor, joint_fr_factor, joint_pcc_factor, record = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), ex_name, cutoff)
+    vel_path, vel_rmse_factor, vel_dtw_factor, vel_fr_factor, vel_pcc_factor, vel_record = find_best_measurement_error_factor_rmse_on_velocity(Path(args.experiment_folder), ex_name, cutoff)
 
 
 
@@ -2851,7 +2854,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
             ("Joint Name", f"U{len('Right Shoulder')}"),
             ("Factor", "f"),
-            ("RMSE", "f"),
+            ("LSED", "f"),
             ("DTW", "f"),
             ("Frechet", "f"),
         ])
@@ -2861,7 +2864,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ("Experiment Name", f"U{len('s30001')}"),
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
             ("Factor", "f"),
-            ("RMSE", "f"),
+            ("LSED", "f"),
         ])
         com_dataframe = pd.DataFrame.from_records(com_recorddata)
 
@@ -2869,7 +2872,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ("Experiment Name", f"U{len('s30001')}"),
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
             ("Factor", "f"),
-            ("RMSE", "f"),
+            ("LSED", "f"),
         ])
         xcom_dataframe = pd.DataFrame.from_records(xcom_recorddata)
 
@@ -2886,7 +2889,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ax = sns.catplot(
                 data=subsub,
                 x="Factor",
-                y="RMSE",
+                y="LSED",
                 kind="point",
                 hue="Joint Name",
                 markers=markers,
@@ -2896,8 +2899,8 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             )
             ax.set_xticklabels(rotation=40, ha="right")
             plt.xlabel(r"$\lambda$")
-            plt.ylabel("RMSE [m]")
-            plt.title(rf"{ex_name}: {filter_name} RMSE for different $\lambda$ for each joint")
+            plt.ylabel("LSED [m]")
+            plt.title(rf"{ex_name}: {filter_name} LSED for different $\lambda$ for each joint")
             os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor_vel.pdf")
@@ -2912,15 +2915,15 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ax = sns.catplot(
                 data=subsub,
                 x="Factor",
-                y="RMSE",
+                y="LSED",
                 kind="point",
                 markersize=4,
                 linewidth=1,
             )
             ax.set_xticklabels(rotation=40, ha="right")
             plt.xlabel(r"$\lambda$")
-            plt.ylabel("RMSE [m]")
-            plt.title(rf"{ex_name}: {filter_name} RMSE for CoM")
+            plt.ylabel("LSED [m]")
+            plt.title(rf"{ex_name}: {filter_name} LSED for CoM")
             os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor_vel_com.pdf")
@@ -2935,15 +2938,15 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ax = sns.catplot(
                 data=subsub,
                 x="Factor",
-                y="RMSE",
+                y="LSED",
                 kind="point",
                 markersize=4,
                 linewidth=1,
             )
             ax.set_xticklabels(rotation=40, ha="right")
             plt.xlabel(r"$\lambda$")
-            plt.ylabel("RMSE [m]")
-            plt.title(rf"{ex_name}: {filter_name} RMSE for XcoM")
+            plt.ylabel("LSED [m]")
+            plt.title(rf"{ex_name}: {filter_name} LSED for XcoM")
             os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/{ex_name}/rmse_over_factor_vel_xcom.pdf")
@@ -2957,7 +2960,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
         ("Joint Name", f"U{len('Right Shoulder')}"),
         ("Factor", "f"),
-        ("RMSE", "f"),
+        ("LSED", "f"),
         ("DTW", "f"),
         ("Frechet", "f"),
     ])
@@ -2967,7 +2970,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ("Experiment Name", f"U{len('s30001')}"),
         ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
         ("Factor", "f"),
-        ("RMSE", "f"),
+        ("LSED", "f"),
     ])
     com_dataframe = pd.DataFrame.from_records(com_recorddata)
 
@@ -2975,7 +2978,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ("Experiment Name", f"U{len('s30001')}"),
         ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
         ("Factor", "f"),
-        ("RMSE", "f"),
+        ("LSED", "f"),
     ])
     xcom_dataframe = pd.DataFrame.from_records(xcom_recorddata)
 
@@ -2988,7 +2991,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ax = sns.catplot(
             data=sub,
             x="Factor",
-            y="RMSE",
+            y="LSED",
             kind="point",
             hue="Joint Name",
             markers=markers,
@@ -2999,8 +3002,8 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         )
         ax.set_xticklabels(rotation=40, ha="right")
         plt.xlabel(r"$\lambda$")
-        plt.ylabel("RMSE [m]")
-        plt.title(rf"s3000x: {filter_name} RMSE for different $\lambda$ for each joint")
+        plt.ylabel("LSED [m]")
+        plt.title(rf"s3000x: {filter_name} LSED for different $\lambda$ for each joint")
         os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x/rmse_over_factor_vel.pdf")
@@ -3014,7 +3017,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ax = sns.catplot(
             data=sub,
             x="Factor",
-            y="RMSE",
+            y="LSED",
             kind="point",
             markersize=4,
             linewidth=1,
@@ -3022,8 +3025,8 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         )
         ax.set_xticklabels(rotation=40, ha="right")
         plt.xlabel(r"$\lambda$")
-        plt.ylabel("RMSE [m]")
-        plt.title(rf"s3000x: {filter_name} RMSE for CoM")
+        plt.ylabel("LSED [m]")
+        plt.title(rf"s3000x: {filter_name} LSED for CoM")
         os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x/rmse_over_factor_vel_com.pdf")
@@ -3037,7 +3040,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ax = sns.catplot(
             data=sub,
             x="Factor",
-            y="RMSE",
+            y="LSED",
             kind="point",
             markersize=4,
             linewidth=1,
@@ -3045,8 +3048,8 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         )
         ax.set_xticklabels(rotation=40, ha="right")
         plt.xlabel(r"$\lambda$")
-        plt.ylabel("RMSE [m]")
-        plt.title(rf"s3000x: {filter_name} RMSE for XcoM")
+        plt.ylabel("LSED [m]")
+        plt.title(rf"s3000x: {filter_name} LSED for XcoM")
         os.makedirs(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/{filter_name}/rmse_over_factor/s3000x/rmse_over_factor_vel_xcom.pdf")
