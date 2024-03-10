@@ -212,6 +212,108 @@ def old_main():
 
 
 @dataclass
+class DetermineFactorRecord:
+    experiment_name: str
+    lsed: float
+    dtw: float
+    dfd: float
+    pcc: float
+
+
+@dataclass
+class DetermineFactorGenerateTable:
+    filter_type: str
+    eval_type: str
+    records: list[DetermineFactorRecord] = field(default_factory=list)
+
+    def append(self, record: DetermineFactorRecord) -> None:
+        self.records.append(record)
+
+    def mean(self) -> DetermineFactorRecord:
+        mean_record = DetermineFactorRecord("mean", 0, 0, 0, 0)
+        for record in self.records:
+            mean_record.lsed += record.lsed
+            mean_record.dtw += record.dtw
+            mean_record.dfd += record.dfd
+            mean_record.pcc += record.pcc
+
+        mean_record.lsed = mean_record.lsed / len(self.records)
+        mean_record.dtw = mean_record.dtw / len(self.records)
+        mean_record.dfd = mean_record.dfd / len(self.records)
+        mean_record.pcc = mean_record.pcc / len(self.records)
+        return mean_record
+
+    def generate_table(self, path: Path) -> None:
+        begin = r'''
+\begin{table}[]
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|}
+\hline
+\rowcolor[HTML]{C0C0C0}
+\textbf{Experiment Name} & \textbf{LSED} & \textbf{DTW} & \textbf{DFD} & \textbf{PCC} \\ \hline
+'''
+        content = ""
+        for record in self.records:
+            content += rf"{record.experiment_name}                   & {round(record.lsed, 1)}            & {round(record.dtw, 1)}           & {round(record.dfd, 1)}           & {round(record.pcc, 1)}           \\ \hline"
+            content += "\n"
+        end = rf'''
+\end{{tabular}}
+\end{{center}}
+\label{{tab:determine-factor-{self.filter_type}}}
+\caption{{Optimal $\lambda$ for \{self.filter_type} Evaluated on {self.eval_type}}}
+\end{{table}}
+'''
+
+        table_str = begin + content + end
+        print(table_str)
+        with path.open(mode="w+", encoding="UTF-8") as output_file:
+            output_file.write(table_str)
+
+@dataclass
+class GenericTableGeneration:
+    header_names: list[str]
+    title: str
+    ref: str
+    records: list[list[str]] = field(default_factory=list)
+
+    def append(self, record: list[str]) -> None:
+        self.records.append(record)
+
+    def generate_table(self, path: Path) -> None:
+        border = "|".join(["l"] * len(self.header_names))
+        border = "|" + border + "|"
+        begin = rf'''
+\begin{{table}}[]
+\begin{{center}}
+\begin{{tabular}}{{{border}}}
+\hline
+\rowcolor[HTML]{{C0C0C0}}
+'''
+        header = "& ".join([rf"\textbf{{{name}}}" for name in self.header_names])
+        header += r" \\ \hline"
+        begin += "\n"
+        begin += header
+        begin += "\n"
+        content = ""
+        for record in self.records:
+            content += " & ".join([rf"{item}" for item in record])
+            content += r" \\ \hline"
+            content += "\n"
+        end = rf'''
+\end{{tabular}}
+\end{{center}}
+\label{{tab:{self.ref}}}
+\caption{{{self.title}}}
+\end{{table}}
+'''
+
+        table_str = begin + content + end
+        print(table_str)
+        with path.open(mode="w+", encoding="UTF-8") as output_file:
+            output_file.write(table_str)
+
+
+@dataclass
 class TheiaData:
     config: dict[str, str]
     down_kinect_com: np.ndarray
@@ -380,6 +482,57 @@ def j2str(idx: int) -> str:
     return _JOINTS[idx]
 
 FILTER_TYPES = ["ConstrainedSkeletonFilter", "SkeletonFilter", "SimpleConstrainedSkeletonFilter", "SimpleSkeletonFilter"]
+
+EX_NAMES = [
+    "s10001",
+    "s10002",
+    "s10003",
+    "s10004",
+    "s30001",
+    "s30002",
+    "s30003",
+    "s30004",
+    "s30005",
+    "s30006",
+]
+
+EX_NAMES_WITH_BETTER = [
+    "s10001",
+    "s10002",
+    "s10003",
+    "s10004",
+    "s30001",
+    "s30002",
+    "s30003",
+    "s30004",
+    "s30005",
+    "s30006",
+    "b_s30001",
+    "b_s30002",
+    "b_s30003",
+    "b_s30004",
+    "b_s30005",
+    "b_s30006",
+]
+
+EX_NAMES_WITH_BETTER_AND_SMOOTHED = [
+    "s10001",
+    "s10002",
+    "s10003",
+    "s10004",
+    "s30001",
+    "s30002",
+    "s30003",
+    "s30004",
+    "s30005",
+    "s30006",
+    "b_s30001",
+    "b_s30002",
+    "b_s30003",
+    "b_s30004",
+    "b_s30005",
+    "b_s30006",
+]
 
 MATCHING_JOINTS = [
     (Joint.SHOULDER_LEFT, TheiaJoint.SHOULDER_LEFT, "Left Shoulder"),
@@ -991,12 +1144,12 @@ def compare_qtm_cop_kinect_cop(data: Data, cutoff: float = 0.15) -> tuple[float,
     return corr, corr_un, rmse, rmse_un, dtw_dist, dtw_dist_un, fr_dist, fr_dist_un
 
 
-def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: float, experiment_type: str) -> tuple[Path, float, float, float]:
+def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: str, cutoff: float, experiment_type: str) -> tuple[Path, float, float, float, float, DetermineFactorRecord]:
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     RMSEs = []
     dtw_distances = []
     fr_distances = []
-    correlation_offsets = []
+    pccs = []
     factors = []
 
     for directory in tqdm(directories):
@@ -1008,7 +1161,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
         rmse = 0
         dtw_distance = 0
         fr_distance = 0
-        corr_offset = 0
+        pcc = 0
 
         length = min(data.down_kinect_joints.shape[0], data.down_kinect_unfiltered_joints.shape[0])
         o = max(int(length * cutoff), 1)
@@ -1026,7 +1179,8 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
             joints = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
             for joint in joints:
                 a = data.down_kinect_joints[:length, joint, :][o:-o]
-                b = double_butter(data.down_kinect_unfiltered_joints[:length, joint, :], cutoff=6, once=factor != 0)[o:-o]
+                # b = double_butter(data.down_kinect_unfiltered_joints[:length, joint, :], cutoff=6, once=factor != 0)[o:-o]
+                b = double_butter(data.down_kinect_unfiltered_joints[:length, joint, :], cutoff=6)[o:-o]
 
                 # if  (0.3 < float(data.config["measurement_error_factor"]) < 0.35) or (1.0 < float(data.config["measurement_error_factor"]) < 1.05) or (5.00 < float(data.config["measurement_error_factor"]) < 5.05):
                 '''
@@ -1044,9 +1198,11 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
 
                 # diff = np.linalg.norm(b[o:-o] - a[o:-o], axis=1)
                 # diff = b - a
-                diff = np.linalg.norm(b[o:-o] - a[o:-o], axis=1)
+                diff = np.linalg.norm(b - a, axis=1)
                 error = np.sqrt(np.mean(np.power(diff, 2)))
                 rmse += error
+
+                pcc += (np.corrcoef(a[:, 0], b[:, 0])[0, 1] + np.corrcoef(a[:, 1], b[:, 1])[0, 1] + np.corrcoef(a[:, 2], b[:, 2])[0, 1]) / 3
 
                 result = dtw.dtw(a, b, keep_internals=True, step_pattern=dtw.rabinerJuangStepPattern(6, "c"))
                 dtw_distance += result.distance
@@ -1077,7 +1233,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
         dtw_distances.append(dtw_distance)
         fr_distances.append(fr_distance)
         factors.append(data.config["measurement_error_factor"])
-        correlation_offsets.append(corr_offset)
+        pccs.append(pcc / 3
 
     facts = np.array(factors)
     rmses = np.array(RMSEs)
@@ -1087,7 +1243,8 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     dtw_argmin = np.argmin(dtw_dists)
     fr_argmin = np.argmin(fr_dists)
 
-    corrs = np.array(correlation_offsets)
+    pccs = np.array(pccs)
+    pcc_argmax = np.argmax(pccs)
     idx = np.argsort(facts)
 
     plt.cla()
@@ -1102,21 +1259,18 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
         plt.show()
     plt.cla()
 
-    '''
-    plt.plot(facts[idx][:], corrs[idx][:], marker="X", ls="None", label="Correlation")
+    plt.plot(facts[idx][:], pccs[idx][:], label="PCC", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+    plt.plot(facts[pcc_argmax], pccs[pcc_argmax], marker="X", ls="None", label=f"Argmax PCC: {facts[pcc_argmax]:.2f}", color="crimson", alpha=0.6)
     plt.xlabel("Measurement Error Factor")
-    plt.ylabel("Correlation offset")
+    plt.ylabel("PCC")
     plt.legend()
 
-    jump_idx = np.argmax(corrs[idx][:] != 0)
-    plt.title(f"{facts[idx][:][jump_idx]}:{factors[rmse_argmin]}- Ex: {os.path.basename(experiment_folder)} Correlation offset : measurement error factor")
-    print(f"Correlation jump {facts[idx][:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
+    plt.title(f"Ex: {os.path.basename(experiment_folder)} - PCC pro Measurement Error Factor")
 
-    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_pcc_joints_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
     if SHOW:
         plt.show()
     plt.cla()
-    '''
 
     plt.cla()
     plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
@@ -1141,15 +1295,23 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, cutoff: flo
     if SHOW:
         plt.show()
     plt.cla()
-    return directories[rmse_argmin], factors[rmse_argmin], factors[dtw_argmin], factors[fr_argmin]
 
-def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path, cutoff: float, experiment_type: str) -> tuple[Path, float, float, float]:
+    record = DetermineFactorRecord(
+        ex_name,
+        factors[rmse_argmin],
+        factors[dtw_argmin],
+        factors[fr_argmin],
+        factors[pcc_argmax],
+    )
+    return directories[rmse_argmin], factors[rmse_argmin], factors[dtw_argmin], factors[fr_argmin], factors[pcc_argmax], record
+
+def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path, ex_name: str, cutoff: float, experiment_type: str) -> tuple[Path, float, float, float, float, DetermineFactorRecord]:
     """Find the best measurement error factor through comparing velocities."""
     directories = [element for element in experiment_folder.iterdir() if element.is_dir()]
     RMSEs = []
     dtw_distances = []
     fr_distances = []
-    correlation_offsets = []
+    pccs = []
     factors = []
     once = True
     for directory in tqdm(directories):
@@ -1169,10 +1331,11 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         dtw_distance = 0
         fr_distance = 0
         corr_offset = 0
+        pcc = 0
         for idx, joint in enumerate([Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]):
             a_vel = data.down_kinect_velocities[:length, int(joint), :]
             # If we have a kalman filter factor then we also want to introduce butterworth filter lag
-            b = double_butter(data.down_kinect_unfiltered_joints[:length, int(joint), :], cutoff=4, N=2, once=False)
+            b = double_butter(data.down_kinect_unfiltered_joints[:length, int(joint), :], cutoff=6, N=2, once=False)
             # c = data.down_kinect_unfiltered_joints[:length, int(joint), :]
 
             b_vel = np.zeros_like(b)
@@ -1247,6 +1410,8 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
             result = dtw.dtw(a_vel, b_vel, keep_internals=True, step_pattern=dtw.rabinerJuangStepPattern(6, "c"))
             dtw_distance += result.distance
 
+            pcc += (np.corrcoef(a_vel[:, 0], b_vel[:, 0])[0, 1] + np.corrcoef(a_vel[:, 1], b_vel[:, 1])[0, 1] + np.corrcoef(a_vel[:, 2], b_vel[:, 2])[0, 1]) / 3
+
             # p = np.column_stack((np.arange(0, len(a_vel))[:20], a_vel[:20]))
             # q = np.column_stack((np.arange(0, len(b_vel))[:20], b_vel[:20]))
             # fr_distance += frdist(p, q)
@@ -1261,7 +1426,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         dtw_distances.append(dtw_distance)
         fr_distances.append(fr_distance)
         factors.append(data.config["measurement_error_factor"])
-        correlation_offsets.append(corr_offset)
+        pccs.append(pcc / 3)
 
     facts = np.array(factors)
     rmses = np.array(RMSEs)
@@ -1271,7 +1436,9 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     dtw_argmin = np.argmin(dtw_dists)
     fr_argmin = np.argmin(fr_dists)
 
-    corrs = np.array(correlation_offsets)
+    pccs = np.array(pccs)
+    pcc_argmax = np.argmax(pccs)
+
     idx = np.argsort(facts)
 
     plt.cla()
@@ -1314,6 +1481,19 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         plt.show()
     plt.cla()
 
+    plt.plot(facts[idx][:], pccs[idx][:], label="PCC", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
+    plt.plot(facts[pcc_argmax], pccs[pcc_argmax], marker="X", ls="None", label=f"Argmax PCC: {facts[pcc_argmax]:.2f}", color="crimson", alpha=0.6)
+    plt.xlabel("Measurement Error Factor")
+    plt.ylabel("PCC")
+    plt.legend()
+
+    plt.title(f"Ex: {os.path.basename(experiment_folder)} - PCC pro Measurement Error Factor")
+
+    plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_pcc_velocity_{experiment_type}_{os.path.basename(experiment_folder)}.pdf")
+    if SHOW:
+        plt.show()
+    plt.cla()
+
     plt.cla()
     plt.plot(facts[idx][:], fr_dists[idx][:], label="Frechet Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
     plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin Frechet Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6)
@@ -1325,7 +1505,15 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     if SHOW:
         plt.show()
     plt.cla()
-    return directories[rmse_argmin], factors[rmse_argmin], factors[dtw_argmin], factors[fr_argmin]
+
+    record = DetermineFactorRecord(
+        ex_name,
+        factors[rmse_argmin],
+        factors[dtw_argmin],
+        factors[fr_argmin],
+        factors[pcc_argmax],
+    )
+    return directories[rmse_argmin], factors[rmse_argmin], factors[dtw_argmin], factors[fr_argmin], factors[pcc_argmax], record
 
 def find_best_measurement_error_factor_corr_on_velocity(experiment_folder: Path, cutoff: float, experiment_type: str) -> tuple[Path, float]:
     """Find the best measurement error factor through comparing velocities."""
@@ -1768,6 +1956,50 @@ def determine_minimum_against_ground_truth(args):
     plt.show()
 
 
+def all_ex_find_best_measurement_error_factor_rmse(path: Path):
+    table = GenericTableGeneration(["Filter Name", "LSED", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Positions", "mean-optimal-lambda")
+    vel_table = GenericTableGeneration(["Filter Name", "LSED", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Velocities", "mean-optimal-lambda-vel")
+    for filter_type in FILTER_TYPES:
+        generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Positions", records=[])
+        vel_generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Velocities", records=[])
+        for ex_name in EX_NAMES_WITH_BETTER_AND_SMOOTHED:
+            ex_path = path / filter_type / ex_name
+            _, _, _, _, _, record = find_best_measurement_error_factor_rmse(ex_path, ex_name, 0.1, experiment_type="constraints")
+            generator.append(record)
+            _, _, _, _, _, vel_record = find_best_measurement_error_factor_rmse_on_velocity(ex_path, ex_name, 0.1, experiment_type="constraints")
+            vel_generator.append(vel_record)
+
+        out_path = Path(f"./results/experiments/{filter_type}/determine_factor/table.tex")
+        generator.generate_table(out_path)
+        mean = generator.mean()
+        table.append([
+            "\\"+filter_type,
+            str(round(mean.lsed, 1)),
+            str(round(mean.dtw, 1)),
+            str(round(mean.dfd, 1)),
+            str(round(mean.pcc, 1)),
+        ])
+
+        vel_out_path = Path(f"./results/experiments/{filter_type}/determine_factor/vel_table.tex")
+        vel_generator.generate_table(vel_out_path)
+        vel_mean = vel_generator.mean()
+        vel_table.append([
+            "\\"+filter_type,
+            str(round(vel_mean.lsed, 1)),
+            str(round(vel_mean.dtw, 1)),
+            str(round(vel_mean.dfd, 1)),
+            str(round(vel_mean.pcc, 1)),
+        ])
+
+    for filter_type in FILTER_TYPES:
+        mean_out_path = Path(f"./results/experiments/{filter_type}/determine_factor/mean_table.tex")
+        mean_vel_out_path = Path(f"./results/experiments/{filter_type}/determine_factor/mean_vel_table.tex")
+        table.generate_table(mean_out_path)
+        vel_table.generate_table(mean_vel_out_path)
+
+
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("experiment_folder")
@@ -1779,6 +2011,7 @@ def main():
     parser.add_argument("-p", dest="predictions", action="store_true", default=False)
     parser.add_argument("-e", "--experiment_name", dest="experiment_name")
     parser.add_argument("-v", dest="vel", action="store_true", default=False)
+    parser.add_argument("-l", "--latex", dest="latextables", action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -1798,6 +2031,10 @@ def main():
     os.makedirs(f"./results/experiments/{FILTER_NAME}/subplots/", exist_ok=True)
 
     ex_name = os.path.basename(args.experiment_folder)
+
+    if args.latextables:
+        all_ex_find_best_measurement_error_factor_rmse(Path(args.experiment_folder))
+        return
 
     if args.predictions:
         if "s3" in args.experiment_name:
@@ -1872,8 +2109,8 @@ def main():
     vel_path, vel_rmse_factor, vel_dtw_factor, vel_fr_factor = vel_result.get()
     '''
 
-    joint_path, joint_rmse_factor, joint_dtw_factor, joint_fr_factor = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), cutoff, args.experiment_type)
-    vel_path, vel_rmse_factor, vel_dtw_factor, vel_fr_factor = find_best_measurement_error_factor_rmse_on_velocity(Path(args.experiment_folder), cutoff, args.experiment_type)
+    joint_path, joint_rmse_factor, joint_dtw_factor, joint_fr_factor, joint_pcc_factor, record = find_best_measurement_error_factor_rmse(Path(args.experiment_folder), ex_name, cutoff, args.experiment_type)
+    vel_path, vel_rmse_factor, vel_dtw_factor, vel_fr_factor, vel_pcc_factor, vel_record = find_best_measurement_error_factor_rmse_on_velocity(Path(args.experiment_folder), ex_name, cutoff, args.experiment_type)
 
 
 
