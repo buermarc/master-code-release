@@ -618,6 +618,24 @@ JOINT_SEGMENTS = [
     ([Joint.ANKLE_RIGHT, Joint.KNEE_RIGHT, Joint.HIP_RIGHT], [TheiaJoint.ANKLE_RIGHT, TheiaJoint.KNEE_RIGHT, TheiaJoint.HIP_RIGHT], "DOWN_RIGHT"),
 ]
 
+SEGMENT_NAME_TO_A_B_NAME = {
+    "UP_LEFT": ("Upper Arm Left", "Lower Arm Left"),
+    "UP_RIGHT": ("Upper Arm Right", "Lower Arm Right"),
+    "DOWN_LEFT": ("Thigh Left", "Shank Left"),
+    "DOWN_RIGHT": ("Thigh Right", "Shank Right"),
+}
+
+A_B_NAMES = [
+    "Upper Arm Left", "Lower Arm Left",
+    "Upper Arm Right", "Lower Arm Right",
+    "Thigh Left", "Shank Left",
+    "Thigh Right", "Shank Right"
+]
+
+def segment_name_to_a_b_name(name: str) -> tuple[str, str]:
+    return SEGMENT_NAME_TO_A_B_NAME[name]
+
+
 
 @numba.jit(nopython=True)
 def _downsample(data: np.ndarray, timestamps: np.ndarray, target_frequency: int, downsampled_values: np.ndarray) -> np.ndarray:
@@ -837,12 +855,14 @@ def plot_cop_x_y_for_different_factors(ex_name: str, factors: list[float], datas
 
 
 
-def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | TheiaData, cutoff: float) -> None:
+def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | TheiaData, cutoff: float) -> list[tuple]:
     segment_a = [int(element) for element in [Joint.SHOULDER_LEFT, Joint.ELBOW_LEFT, Joint.WRIST_LEFT]]
     segment_b = [int(element) for element in [Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT]]
     segment_c = [int(element) for element in [Joint.HIP_LEFT, Joint.KNEE_LEFT, Joint.ANKLE_LEFT]]
     segment_d = [int(element) for element in [Joint.HIP_RIGHT, Joint.KNEE_RIGHT, Joint.ANKLE_RIGHT]]
 
+    is_theia = isinstance(data, TheiaData)
+    records = []
     for kinect_joints, theia_joints, name in JOINT_SEGMENTS:
         segment_name = "_".join([str(i) for i in kinect_joints]) + "_" + name
 
@@ -851,19 +871,24 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
 
         ts = data.kinect_ts[o:-o]
 
+        a_theia, b_theia = None, None
+
         shoulder = data.kinect_joints[:, kinect_joints[0], :][:length][o:-o]
         shoulder_un = data.kinect_unfiltered_joints[:, kinect_joints[0], :][:length][o:-o]
-        shoulder_theia = data.theia_tensor[:, theia_joints[0], :][:length][o:-o]
+        if is_theia:
+            shoulder_theia = data.theia_tensor[:, theia_joints[0], :][:length][o:-o]
         butter_shoulder_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[0], :])[:length][o:-o]
 
         elbow = data.kinect_joints[:, kinect_joints[1], :][:length][o:-o]
         elbow_un = data.kinect_unfiltered_joints[:, kinect_joints[1], :][:length][o:-o]
-        elbow_theia = data.theia_tensor[:, theia_joints[1], :][:length][o:-o]
+        if is_theia:
+            elbow_theia = data.theia_tensor[:, theia_joints[1], :][:length][o:-o]
         butter_elbow_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[1], :])[:length][o:-o]
 
         wrist = data.kinect_joints[:, kinect_joints[2], :][:length][o:-o]
         wrist_un = data.kinect_unfiltered_joints[:, kinect_joints[2], :][:length][o:-o]
-        wrist_theia = data.theia_tensor[:, theia_joints[2], :][:length][o:-o]
+        if is_theia:
+            wrist_theia = data.theia_tensor[:, theia_joints[2], :][:length][o:-o]
         butter_wrist_un = double_butter(data.kinect_unfiltered_joints[:, kinect_joints[2], :])[:length][o:-o]
 
         a = np.linalg.norm(shoulder - elbow, axis=1)
@@ -872,8 +897,9 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
         a_un = np.linalg.norm(shoulder_un - elbow_un, axis=1)
         b_un = np.linalg.norm(elbow_un - wrist_un, axis=1)
 
-        a_theia = np.linalg.norm(shoulder_theia - elbow_theia, axis=1)
-        b_theia = np.linalg.norm(elbow_theia - wrist_theia, axis=1)
+        if is_theia:
+            a_theia = np.linalg.norm(shoulder_theia - elbow_theia, axis=1)
+            b_theia = np.linalg.norm(elbow_theia - wrist_theia, axis=1)
 
         butter_a_un = np.linalg.norm(butter_shoulder_un - butter_elbow_un, axis=1)
         butter_b_un = np.linalg.norm(butter_elbow_un - butter_wrist_un, axis=1)
@@ -883,31 +909,67 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
         print(f"a mean: {a.mean()}, b mean: {b.mean()}, a.var: {a.var()}, b.var: {b.var()}")
         print(f"a_un mean: {a_un.mean()}, b_un mean: {b_un.mean()}, a_un.var: {a_un.var()}, b_un.var: {b_un.var()}")
         print(f"butter_a_un mean: {butter_a_un.mean()}, butter_b_un mean: {butter_b_un.mean()}, butter_a_un.var: {butter_a_un.var()}, butter_b_un.var: {butter_b_un.var()}")
-        print(f"a_theia mean: {a_theia.mean()}, b_theia mean: {b_theia.mean()}, a_theia.var: {a_theia.var()}, b_theia.var: {b_theia.var()}")
+        if is_theia:
+            print(f"a_theia mean: {a_theia.mean()}, b_theia mean: {b_theia.mean()}, a_theia.var: {a_theia.var()}, b_theia.var: {b_theia.var()}")
+
+        factor = round(data.config["measurement_error_factor"], 1)
+
+        a_name, b_name = segment_name_to_a_b_name(name)
 
         plt.cla()
-        plt.plot(ts, a, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
-        plt.plot(ts, a_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
-        plt.plot(ts, a_theia, label="Theia", color="darkorange", alpha=0.5, marker=".", markevery=50)
+        plt.plot(ts, a, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50, linewidth=1)
+        plt.plot(ts, a_un, label="Unfiltered Data", color="olive", alpha=0.5, marker=".", markevery=50, linewidth=1)
+        if is_theia:
+            plt.plot(ts, a_theia, label="Theia", color="darkorange", alpha=0.5, marker=".", markevery=50, linewidth=1)
         # plt.plot(ts, butter_a_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
         plt.xlabel("Time [s]")
         plt.ylabel("Distance [m]")
         plt.legend()
-        plt.title("Segment")
-        plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/{segment_name}_upper_segment_{ex_name}.pdf")
+        plt.title(f"Segment Length Distance over Time for {a_name}")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/factor_{factor}_{segment_name}_upper_segment_{ex_name}.pdf")
         plt.cla()
 
         plt.cla()
-        plt.plot(ts, b, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50)
-        plt.plot(ts, b_un, label="Raw Data", color="olive", alpha=0.5, marker=".", markevery=50)
-        plt.plot(ts, b_theia, label="Theia", color="darkorange", alpha=0.5, marker=".", markevery=50)
+        plt.plot(ts, b, label="Kalman Filtered", color="steelblue", alpha=0.5, marker=".", markevery=50, linewidth=1)
+        plt.plot(ts, b_un, label="Unfiltered Data", color="olive", alpha=0.5, marker=".", markevery=50, linewidth=1)
+        if is_theia:
+            plt.plot(ts, b_theia, label="Theia", color="darkorange", alpha=0.5, marker=".", markevery=50, linewidth=1)
         # plt.plot(ts, butter_b_un, label="Butterworth Filtered", color="darkorange", alpha=0.5, marker=".", markevery=50)
         plt.xlabel("Time [s]")
         plt.ylabel("Distance [m]")
         plt.legend()
-        plt.title("Segment Length Distance over Time for Lower Segment")
-        plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/{segment_name}_lower_segment_{ex_name}.pdf")
+        plt.title(f"Segment Length Distance over Time for {b_name}")
+        plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/factor_{factor}_{segment_name}_lower_segment_{ex_name}.pdf")
         plt.cla()
+
+        record = (
+            ex_name,
+            FILTER_NAME,
+            factor,
+            a_name,
+            a.mean(),
+            a.var(),
+            a_un.mean(),
+            a_un.var(),
+            a_theia.mean() if is_theia else None,
+            a_theia.var() if is_theia else None,
+        )
+        records.append(record)
+
+        record = (
+            ex_name,
+            FILTER_NAME,
+            factor,
+            b_name,
+            b.mean(),
+            b.var(),
+            b_un.mean(),
+            b_un.var(),
+            b_theia.mean() if is_theia else None,
+            b_theia.var() if is_theia else None,
+        )
+        records.append(record)
+    return records
 
 
 
@@ -2107,7 +2169,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
     vel_table = GenericTableGeneration(["Filter Name", "LSED", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Velocities", "mean-optimal-lambda-vel")
     plot_records = []
     vel_plot_records = []
-    for filter_type in FILTER_TYPES[:2]:
+    for filter_type in FILTER_TYPES:
         global FILTER_NAME
         FILTER_NAME = filter_type
         generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Positions", records=[])
@@ -2209,7 +2271,6 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         dataframe = pd.DataFrame.from_records(recorddata)
         sns.set_style("darkgrid")
         len_joints = len(MATCHING_JOINTS)
-        markers=["^", "o", "X", "v", "s", "<", ">", "*", "D", "P", "^", "o", "X", "v", "s", "<", ">", "*", "D", "P"][:len_joints] + ["d"]
         linestyles=(["-"] * 8 + [":"] * 8)[:len_joints] + ["-."]
         ax = sns.catplot(
             data=dataframe,
@@ -2217,17 +2278,16 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
             y=metric,
             kind="point",
             hue="Filter Name",
-            markers=markers,
             linestyles=linestyles,
-            markersize=4,
+            markersize=0,
             linewidth=1,
             native_scale=True,
             errorbar=None
         )
-        ax.set_xticklabels(rotation=40, ha="right")
-        ticks = ax.ax.get_xticklabels()
-        plt.setp(ax.ax.get_xticklabels(), visible=False)
-        plt.setp(ticks[::6], visible=True)
+        # ax.set_xticklabels(rotation=40, ha="right")
+        # ticks = ax.ax.get_xticklabels()
+        # plt.setp(ax.ax.get_xticklabels(), visible=False)
+        # plt.setp(ticks[::6], visible=True)
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
@@ -2249,7 +2309,6 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         dataframe = pd.DataFrame.from_records(recorddata)
         sns.set_style("darkgrid")
         len_joints = len(MATCHING_JOINTS)
-        markers=["^", "o", "X", "v", "s", "<", ">", "*", "D", "P", "^", "o", "X", "v", "s", "<", ">", "*", "D", "P"][:len_joints] + ["d"]
         linestyles=(["-"] * 8 + [":"] * 8)[:len_joints] + ["-."]
         ax = sns.catplot(
             data=dataframe,
@@ -2257,17 +2316,16 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
             y=metric,
             kind="point",
             hue="Filter Name",
-            markers=markers,
             linestyles=linestyles,
-            markersize=4,
+            markersize=0,
             linewidth=1,
             native_scale=True,
             errorbar=None
         )
-        ax.set_xticklabels(rotation=40, ha="right")
-        ticks = ax.ax.get_xticklabels()
-        plt.setp(ax.ax.get_xticklabels(), visible=False)
-        plt.setp(ticks[::6], visible=True)
+        # ax.set_xticklabels(rotation=40, ha="right")
+        # ticks = ax.ax.get_xticklabels()
+        # plt.setp(ax.ax.get_xticklabels(), visible=False)
+        # plt.setp(ticks[::6], visible=True)
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
@@ -2291,7 +2349,6 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         dataframe = pd.DataFrame.from_records(recorddata)
         sns.set_style("darkgrid")
         len_joints = len(MATCHING_JOINTS)
-        markers=["^", "o", "X", "v", "s", "<", ">", "*", "D", "P", "^", "o", "X", "v", "s", "<", ">", "*", "D", "P"][:len_joints] + ["d"]
         linestyles=(["-"] * 8 + [":"] * 8)[:len_joints] + ["-."]
         ax = sns.catplot(
             data=dataframe,
@@ -2299,17 +2356,16 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
             y=metric,
             kind="point",
             hue="Filter Name",
-            markers=markers,
             linestyles=linestyles,
-            markersize=4,
+            markersize=0,
             linewidth=1,
             native_scale=True,
             errorbar=None
         )
-        ax.set_xticklabels(rotation=40, ha="right")
-        ticks = ax.ax.get_xticklabels()
-        plt.setp(ax.ax.get_xticklabels(), visible=False)
-        plt.setp(ticks[::6], visible=True)
+        # ax.set_xticklabels(rotation=40, ha="right")
+        # ticks = ax.ax.get_xticklabels()
+        # plt.setp(ax.ax.get_xticklabels(), visible=False)
+        # plt.setp(ticks[::6], visible=True)
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
@@ -2331,7 +2387,6 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         dataframe = pd.DataFrame.from_records(recorddata)
         sns.set_style("darkgrid")
         len_joints = len(MATCHING_JOINTS)
-        markers=["^", "o", "X", "v", "s", "<", ">", "*", "D", "P", "^", "o", "X", "v", "s", "<", ">", "*", "D", "P"][:len_joints] + ["d"]
         linestyles=(["-"] * 8 + [":"] * 8)[:len_joints] + ["-."]
         ax = sns.catplot(
             data=dataframe,
@@ -2339,17 +2394,16 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
             y=metric,
             kind="point",
             hue="Filter Name",
-            markers=markers,
             linestyles=linestyles,
-            markersize=4,
+            markersize=0,
             linewidth=1,
             native_scale=True,
             errorbar=None
         )
-        ax.set_xticklabels(rotation=40, ha="right")
-        ticks = ax.ax.get_xticklabels()
-        plt.setp(ax.ax.get_xticklabels(), visible=False)
-        plt.setp(ticks[::6], visible=True)
+        # ax.set_xticklabels(rotation=40, ha="right")
+        # ticks = ax.ax.get_xticklabels()
+        # plt.setp(ax.ax.get_xticklabels(), visible=False)
+        # plt.setp(ticks[::6], visible=True)
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
@@ -2375,6 +2429,8 @@ def main():
     parser.add_argument("-e", "--experiment_name", dest="experiment_name")
     parser.add_argument("-v", dest="vel", action="store_true", default=False)
     parser.add_argument("-l", "--latex", dest="latextables", action="store_true", default=False)
+    parser.add_argument("-j", "--jointlenght", dest="jointlength", action="store_true", default=False)
+    parser.add_argument("-b", "--blandaltman", dest="blandaltman", action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -2404,14 +2460,21 @@ def main():
             compare_prediction_vs_truth_for_different_filters(Path(args.experiment_folder), vel=False)
             compare_prediction_vs_truth_for_different_filters(Path(args.experiment_folder), vel=True)
         elif "s1" in args.experiment_name:
-            for factor in np.arange(0, 200, 5):
-            # for factor in [65]:
-                compare_prediction_vs_truth_for_different_filters_qtm_for_com(Path(args.experiment_folder), args.experiment_name, factor, vel=args.vel)
+            compare_prediction_vs_truth_for_different_filters_qtm_for_com(Path(args.experiment_folder), args.experiment_name, vel=args.vel)
         else:
             raise ValueError(f"{ex_name} not supported")
 
         return
 
+    if args.jointlength:
+        create_joint_length_plots_and_table(Path(args.experiment_folder))
+
+    if args.blandaltman:
+        best_factor = 65
+        theia_data = load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder)))
+        bland_altman_plots(theia_data, ex_name)
+        plot_subparts_of_trajectories(theia_data, ex_name)
+        return
 
     #if args.second_folder:
     #    determine_minimum_against_ground_truth(args)
@@ -2514,7 +2577,7 @@ def main():
         print("Theia COM Vel Results:")
         print(results)
 
-        plot_constrained_segment_joint_length_change(ex_name, theia_data, cutoff)
+        # plot_constrained_segment_joint_length_change(ex_name, theia_data, cutoff)
 
         plot_subparts_of_trajectories(theia_data, ex_name)
         bland_altman_plots(theia_data, ex_name)
@@ -3453,7 +3516,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             # Otherwise take default
             if ylabel:
                 plt.ylabel(ylabel)
-            plt.title(rf"Ex: s3000x - {filter_name} {metric} for different $\lambda$ for each joint")
+            plt.title(rf"Ex: Mean 2a&b - {filter_name} {metric} for different $\lambda$ for each joint")
             os.makedirs(f"./results/experiments/{filter_name}/over_factor/s3000x", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/over_factor/s3000x/{metric}_over_factor_vel.pdf", bbox_inches="tight")
@@ -3481,7 +3544,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             # Otherwise take default
             if ylabel:
                 plt.ylabel(ylabel)
-            plt.title(rf"Ex: s3000x - {filter_name} {metric} for CoM")
+            plt.title(rf"Ex: Mean 2a&b - {filter_name} {metric} for CoM")
             os.makedirs(f"./results/experiments/{filter_name}/over_factor/s3000x", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/over_factor/s3000x/{metric}_over_factor_vel_com.pdf", bbox_inches="tight")
@@ -3510,7 +3573,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             # Otherwise take default
             if ylabel:
                 plt.ylabel(ylabel)
-            plt.title(rf"Ex: s3000x - {filter_name} {metric} for XcoM")
+            plt.title(rf"Ex: Mean 2a&b - {filter_name} {metric} for XcoM")
             os.makedirs(f"./results/experiments/{filter_name}/over_factor/s3000x", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/over_factor/s3000x/{metric}_over_factor_vel_xcom.pdf", bbox_inches="tight")
@@ -3543,7 +3606,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         # Otherwise take default
         if ylabel:
             plt.ylabel(ylabel)
-        plt.title(rf"Ex: s3000x - All filters {metric} for different $\lambda$ for each joint")
+        plt.title(rf"Ex: Mean 2a&b - All Filters {metric} for different $\lambda$ for each joint")
         os.makedirs(f"./results/experiments/over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/s3000x/{metric}_over_factor_vel.pdf", bbox_inches="tight")
@@ -3573,7 +3636,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         # Otherwise take default
         if ylabel:
             plt.ylabel(ylabel)
-        plt.title(rf"Ex: s3000x - All filters {metric} for CoM")
+        plt.title(rf"Ex: Mean 2a&b - All Filters {metric} for CoM")
         os.makedirs(f"./results/experiments/over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/s3000x/{metric}_over_factor_vel_com.pdf", bbox_inches="tight")
@@ -3604,7 +3667,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         # Otherwise take default
         if ylabel:
             plt.ylabel(ylabel)
-        plt.title(rf"Ex: s3000x - All filters {metric} for XcoM")
+        plt.title(rf"Ex: Mean 2a&b - All Filters {metric} for XcoM")
         os.makedirs(f"./results/experiments/over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/s3000x/{metric}_over_factor_vel_xcom.pdf", bbox_inches="tight")
@@ -3612,44 +3675,170 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             plt.savefig(f"./results/experiments/over_factor/s3000x/{metric}_over_factor_xcom.pdf", bbox_inches="tight")
         plt.cla()
 
-def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_path: Path, ex_name: str, best_factor: float, cutoff: float = 0.1, vel: bool = False) -> None:
-    for filter_name in ["SimpleSkeletonFilter"]:
-    # for filter_name in ["ConstrainedSkeletonFilter", "SkeletonFilter", "SimpleConstrainedSkeletonFilter", "SimpleSkeletonFilter"]:
-        path = experiment_path / filter_name / ex_name
-        data = load_processed_data(find_factor_path(best_factor, path))
+def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_path: Path, ex_name: str, cutoff: float = 0.1, vel: bool = False) -> None:
+    cop_records = []
+    for ex_name in tqdm([f"s1000{i}" for i in range(1, 5)]):
+        for best_factor in tqdm(np.arange(0, 150, 5)):
+            for filter_name in ["ConstrainedSkeletonFilter", "SkeletonFilter", "SimpleConstrainedSkeletonFilter", "SimpleSkeletonFilter"]:
+                path = experiment_path / filter_name / ex_name
+                data = load_processed_data(find_factor_path(best_factor, path))
 
-        """
-        if best_factor > 50:
-            plt.plot(data.down_kinect_xcom[:, 0], label="Kinect X")
-            plt.plot(data.down_theia_xcom_15_hz[:, 0], label="Theia X")
-            plt.legend()
-            plt.show()
-            plt.cla()
-        """
 
-        length = min(data.down_kinect_com.shape[0], data.down_kinect_unfiltered_com.shape[0], data.qtm_cop.shape[0])
-        o = max(int(length * cutoff), 1)
+                length = min(data.down_kinect_com.shape[0], data.down_kinect_unfiltered_com.shape[0], data.qtm_cop.shape[0])
+                o = max(int(length * cutoff), 1)
 
-        est = data.down_kinect_com[:length][o:-o][:, :2]
-        un = data.down_kinect_unfiltered_com[:length][o:-o][:, :2]
-        tru = downsample(data.qtm_cop, data.qtm_cop_ts, 15)[:, :2][:length][o:-o]
+                est = data.down_kinect_com[:length][o:-o][:, :2]
+                un = data.down_kinect_unfiltered_com[:length][o:-o][:, :2]
+                tru = downsample(data.qtm_cop, data.qtm_cop_ts, 15)[:, :2][:length][o:-o]
 
-        # sun, sutru = corr_shift_trim3d(un, tru, idx=0)
-        # sest, stru = corr_shift_trim3d(est, tru, idx=0)
+                # sun, sutru = corr_shift_trim3d(un, tru, idx=0)
+                # sest, stru = corr_shift_trim3d(est, tru, idx=0)
 
-        sun, sutru = un, tru
-        sest, stru = est, tru
+                sun, sutru = un, tru
+                sest, stru = est, tru
 
-        diff = np.linalg.norm(stru - sest, axis=1)
-        truth_to_est_com = np.sqrt(np.mean(np.power(diff, 2)))
 
-        diff = np.linalg.norm(tru - un, axis=1)
-        truth_to_un_com = np.sqrt(np.mean(np.power(diff, 2)))
+                diff = np.linalg.norm(stru - sest, axis=1)
+                truth_to_est_lsed_cop = np.sqrt(np.mean(np.power(diff, 2)))
 
-        print(f"Filter: {filter_name}")
-        print(f"truth_to_est_com: {truth_to_est_com}")
-        print(f"truth_to_un_com: {truth_to_un_com}")
-        print()
+                diff = np.linalg.norm(sutru - sun, axis=1)
+                truth_to_un_cop = np.sqrt(np.mean(np.power(diff, 2)))
+
+                truth_to_un_pcc_cop = (np.corrcoef(sutru[:, 0], sun[:, 0])[0, 1] + np.corrcoef(sutru[:, 1], sun[:, 1])[0, 1]) / 2
+                truth_to_est_pcc_cop = (np.corrcoef(stru[:, 0], sest[:, 0])[0, 1] + np.corrcoef(stru[:, 1], sest[:, 1])[0, 1]) / 2
+
+                p = np.column_stack((np.arange(len(stru)), stru))
+                q = np.column_stack((np.arange(len(sest)), sest))
+                truth_to_est_fr_cop = frechet_dist(p, q)
+                truth_to_est_dtw_cop = dtw.dtw(p, q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+                p = np.column_stack((np.arange(len(sutru)), sutru))
+                q = np.column_stack((np.arange(len(sun)), sun))
+                truth_to_un_fr_cop = frechet_dist(p, q)
+                truth_to_un_dtw_cop = dtw.dtw(p, q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance
+
+                cop_record = (
+                    ex_name,
+                    filter_name,
+                    best_factor,
+                    truth_to_est_lsed_cop,
+                    truth_to_est_dtw_cop,
+                    truth_to_est_fr_cop,
+                    truth_to_est_pcc_cop,
+                )
+                cop_records.append(cop_record)
+
+    cop_recorddata = np.array(cop_records, dtype=[
+        ("Experiment Name", f"U{len('s30001')}"),
+        ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
+        ("Factor", "f"),
+        ("LSED", "f"),
+        ("DTW", "f"),
+        ("DFD", "f"),
+        ("PCC", "f"),
+    ])
+    cop_dataframe = pd.DataFrame.from_records(cop_recorddata)
+
+    plt.rcParams["figure.figsize"] = 40, 40
+    sns.set_theme(rc={'figure.figsize':(40, 40)})
+    for metric, ylabel in zip(METRIC_NAMES, YLABELS):
+        # Plot CoP
+        sns.set_style("darkgrid")
+        ax = sns.catplot(
+            data=cop_dataframe,
+            x="Factor",
+            y=metric,
+            kind="point",
+            markersize=4,
+            linewidth=1,
+        )
+        ax.set_xticklabels(rotation=40, ha="right")
+        ticks = ax.ax.get_xticklabels()
+        plt.setp(ax.ax.get_xticklabels(), visible=False)
+        plt.setp(ticks[::2], visible=True)
+        plt.xlabel(r"$\lambda$")
+        # Otherwise take default
+        if ylabel:
+            plt.ylabel(ylabel)
+        plt.title(rf"Ex: Mean 1a&b - All Filters {metric} for CoM/CoP")
+        os.makedirs(f"./results/experiments/over_factor/{ex_name}/", exist_ok=True)
+        if vel:
+            plt.savefig(f"./results/experiments/over_factor/{ex_name}/{metric}_over_factor_vel_cop.pdf", bbox_inches="tight")
+        else:
+            plt.savefig(f"./results/experiments/over_factor/{ex_name}/{metric}_over_factor_cop.pdf", bbox_inches="tight")
+        plt.cla()
+
+
+
+def create_joint_length_plots_and_table(path: Path):
+    records = []
+    focus_ex_names = ["s10001", "s30001"]
+    factors = [5, 25, 70]
+    for factor in factors:
+        for filter_type in FILTER_TYPES:
+            for ex_name in EX_NAMES:
+                ex_path = path / filter_type / ex_name
+                data = cond_load_data(find_factor_path(factor, ex_path))
+                global FILTER_NAME
+                FILTER_NAME = filter_type
+                recs = plot_constrained_segment_joint_length_change(ex_name, data, cutoff=0.1)
+                records.extend(recs)
+
+    recorddata = np.array(records, dtype=[
+        ("Experiment Name", f"U{len('s30001')}"),
+        ("Filter Type", f"U{len('SimpleConstrainedSkeletonFilter')}"),
+        ("Factor", "f"),
+        ("Segment Name", f"U{len('Upper Arm Right')}"),
+        (r"filteredmean", "f"),
+        (r"filteredvar", "f"),
+        (r"unfilteredmean", "f"),
+        (r"unfilteredvar", "f"),
+        (r"theiamean", "f"),
+        (r"theiavar", "f"),
+    ])
+
+    header_names = ["Experiment Name","Filter Type", "Segment Name", "Factor", r"Filtered\\nLength", r"Unfiltered\\Length", r"Theia\\Length"]
+    key, value = ("UP_LEFT", ("Upper Arm Left", "Lower Arm Left"))
+    a_name, b_name = value
+    whole_segment_name = f"{a_name} & {b_name} Length Change"
+    ref = f"{key}-length-change"
+    table = GenericTableGeneration(header_names, whole_segment_name, ref)
+    dataframe = pd.DataFrame.from_records(recorddata)
+    for ex_name in focus_ex_names:
+        sub = dataframe.loc[dataframe["Experiment Name"] == ex_name]
+        for filter_type in FILTER_TYPES:
+            subsub = sub.loc[sub["Filter Type"] == filter_type]
+            sss = subsub.loc[subsub["Segment Name"] == a_name]
+            for factor in factors:
+                ssss = sss.loc[sss["Factor"] == factor]
+                row = (
+                    map_ex_name(ex_name),
+                    rf"\{filter_type}",
+                    a_name,
+                    str(factor),
+                    rf"${ssss['filteredmean'].values[0]} \pm {ssss['filteredvar'].values[0]}$ m",
+                    rf"${ssss['unfilteredmean'].values[0]} \pm {ssss['unfilteredvar'].values[0]}$ m",
+                    rf"${ssss['theiamean'].values[0]} \pm {ssss['theiavar'].values[0]}$ m",
+                )
+                table.append(row)
+            sss = subsub.loc[subsub["Segment Name"] == b_name]
+            for factor in factors:
+                ssss = sss.loc[sss["Factor"] == factor]
+
+                row = (
+                    map_ex_name(ex_name),
+                    rf"\{filter_type}",
+                    a_name,
+                    str(factor),
+                    rf"${ssss['filteredmean'].values[0]}\pm {ssss['filteredvar'].values[0]}$ m",
+                    rf"${ssss['unfilteredmean'].values[0]}\pm {ssss['unfilteredvar'].values[0]}$ m",
+                    rf"${ssss['theiamean'].values[0]}\pm {ssss['theiavar'].values[0]}$ m",
+                )
+                table.append(row)
+
+    out_path = Path(f"./results/experiments/joint_segment_lengths/{whole_segment_name}.pdf")
+    table.generate_table(out_path)
+
 
 if __name__ == "__main__":
     main()
