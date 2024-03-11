@@ -3516,7 +3516,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             # Otherwise take default
             if ylabel:
                 plt.ylabel(ylabel)
-            plt.title(rf"Ex: Mean 2a&b - {filter_name} {metric} for different $\lambda$ for each joint")
+            plt.title(rf"Ex: Mean 2a\&b - {filter_name} {metric} for different $\lambda$ for each joint")
             os.makedirs(f"./results/experiments/{filter_name}/over_factor/s3000x", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/over_factor/s3000x/{metric}_over_factor_vel.pdf", bbox_inches="tight")
@@ -3544,7 +3544,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             # Otherwise take default
             if ylabel:
                 plt.ylabel(ylabel)
-            plt.title(rf"Ex: Mean 2a&b - {filter_name} {metric} for CoM")
+            plt.title(rf"Ex: Mean 2a\&b - {filter_name} {metric} for CoM")
             os.makedirs(f"./results/experiments/{filter_name}/over_factor/s3000x", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/over_factor/s3000x/{metric}_over_factor_vel_com.pdf", bbox_inches="tight")
@@ -3573,7 +3573,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             # Otherwise take default
             if ylabel:
                 plt.ylabel(ylabel)
-            plt.title(rf"Ex: Mean 2a&b - {filter_name} {metric} for XcoM")
+            plt.title(rf"Ex: Mean 2a\&b - {filter_name} {metric} for XcoM")
             os.makedirs(f"./results/experiments/{filter_name}/over_factor/s3000x", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/over_factor/s3000x/{metric}_over_factor_vel_xcom.pdf", bbox_inches="tight")
@@ -3606,7 +3606,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         # Otherwise take default
         if ylabel:
             plt.ylabel(ylabel)
-        plt.title(rf"Ex: Mean 2a&b - All Filters {metric} for different $\lambda$ for each joint")
+        plt.title(rf"Ex: Mean 2a\&b - All Filters {metric} for different $\lambda$ for each joint")
         os.makedirs(f"./results/experiments/over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/s3000x/{metric}_over_factor_vel.pdf", bbox_inches="tight")
@@ -3636,7 +3636,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         # Otherwise take default
         if ylabel:
             plt.ylabel(ylabel)
-        plt.title(rf"Ex: Mean 2a&b - All Filters {metric} for CoM")
+        plt.title(rf"Ex: Mean 2a\&b - All Filters {metric} for CoM")
         os.makedirs(f"./results/experiments/over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/s3000x/{metric}_over_factor_vel_com.pdf", bbox_inches="tight")
@@ -3667,7 +3667,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         # Otherwise take default
         if ylabel:
             plt.ylabel(ylabel)
-        plt.title(rf"Ex: Mean 2a&b - All Filters {metric} for XcoM")
+        plt.title(rf"Ex: Mean 2a\&b - All Filters {metric} for XcoM")
         os.makedirs(f"./results/experiments/over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/s3000x/{metric}_over_factor_vel_xcom.pdf", bbox_inches="tight")
@@ -3760,7 +3760,7 @@ def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_pat
         # Otherwise take default
         if ylabel:
             plt.ylabel(ylabel)
-        plt.title(rf"Ex: Mean 1a&b - All Filters {metric} for CoM/CoP")
+        plt.title(rf"Ex: Mean 1a\&b - All Filters {metric} for CoM/CoP")
         os.makedirs(f"./results/experiments/over_factor/{ex_name}/", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/{ex_name}/{metric}_over_factor_vel_cop.pdf", bbox_inches="tight")
