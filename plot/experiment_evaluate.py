@@ -3746,6 +3746,7 @@ def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_pat
             kind="point",
             markersize=0,
             linewidth=1,
+            errorbar=None,
         )
         ax.set_xticklabels(rotation=40, ha="right")
         ticks = ax.ax.get_xticklabels()
