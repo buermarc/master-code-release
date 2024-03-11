@@ -3592,9 +3592,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             y=metric,
             kind="point",
             hue="Filter Name",
-            markers=markers,
-            linestyles=linestyles,
-            markersize=4,
+            markersize=0,
             linewidth=1,
             errorbar=None
         )
@@ -3622,9 +3620,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             y=metric,
             kind="point",
             hue="Filter Name",
-            markers=markers,
-            linestyles=linestyles,
-            markersize=4,
+            markersize=0,
             linewidth=1,
             errorbar=None
         )
@@ -3652,9 +3648,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             y=metric,
             kind="point",
             hue="Filter Name",
-            markers=markers,
-            linestyles=linestyles,
-            markersize=4,
+            markersize=0,
             linewidth=1,
             errorbar=None
         )
@@ -3748,8 +3742,9 @@ def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_pat
             data=cop_dataframe,
             x="Factor",
             y=metric,
+            hue="Filter Name",
             kind="point",
-            markersize=4,
+            markersize=0,
             linewidth=1,
         )
         ax.set_xticklabels(rotation=40, ha="right")
@@ -3761,11 +3756,11 @@ def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_pat
         if ylabel:
             plt.ylabel(ylabel)
         plt.title(rf"Ex: Mean 1a\&b - All Filters {metric} for CoM/CoP")
-        os.makedirs(f"./results/experiments/over_factor/{ex_name}/", exist_ok=True)
+        os.makedirs(f"./results/experiments/over_factor/s1000x/", exist_ok=True)
         if vel:
-            plt.savefig(f"./results/experiments/over_factor/{ex_name}/{metric}_over_factor_vel_cop.pdf", bbox_inches="tight")
+            plt.savefig(f"./results/experiments/over_factor/s1000x/{metric}_over_factor_vel_cop.pdf", bbox_inches="tight")
         else:
-            plt.savefig(f"./results/experiments/over_factor/{ex_name}/{metric}_over_factor_cop.pdf", bbox_inches="tight")
+            plt.savefig(f"./results/experiments/over_factor/s1000x/{metric}_over_factor_cop.pdf", bbox_inches="tight")
         plt.cla()
 
 
