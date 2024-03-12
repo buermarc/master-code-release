@@ -33,6 +33,9 @@ plt.rcParams.update(params)
 
 SHOW = False
 
+def wt(text: str) -> str:
+    return rf"\begin{{tabular}}[c]{{@{{}}l@{{}}}}{text}\end{{tabular}}"
+
 def corr_shift_trim3d(a: np.ndarray, b: np.ndarray, idx: int = 2) -> tuple[np.ndarray, np.ndarray]:
         x, y =  a[:, idx], b[:, idx]
         off = np.argmax(signal.correlate(x, y)) - len(a) + 1
@@ -215,7 +218,7 @@ def old_main():
 @dataclass
 class DetermineFactorRecord:
     experiment_name: str
-    lsed: float
+    rmse: float
     dtw: float
     dfd: float
     pcc: float
@@ -233,12 +236,12 @@ class DetermineFactorGenerateTable:
     def mean(self) -> DetermineFactorRecord:
         mean_record = DetermineFactorRecord("mean", 0, 0, 0, 0)
         for record in self.records:
-            mean_record.lsed += record.lsed
+            mean_record.rmse += record.rmse
             mean_record.dtw += record.dtw
             mean_record.dfd += record.dfd
             mean_record.pcc += record.pcc
 
-        mean_record.lsed = mean_record.lsed / len(self.records)
+        mean_record.rmse = mean_record.rmse / len(self.records)
         mean_record.dtw = mean_record.dtw / len(self.records)
         mean_record.dfd = mean_record.dfd / len(self.records)
         mean_record.pcc = mean_record.pcc / len(self.records)
@@ -251,12 +254,12 @@ class DetermineFactorGenerateTable:
 \begin{tabular}{|l|l|l|l|l|}
 \hline
 \rowcolor[HTML]{C0C0C0}
-\textbf{Experiment Name} & \textbf{LSED} & \textbf{DTW} & \textbf{DFD} & \textbf{PCC} \\ \hline
+\textbf{Experiment Name} & \textbf{RMSE} & \textbf{DTW} & \textbf{DFD} & \textbf{PCC} \\ \hline
 '''
         content = ""
         for record in self.records:
             ex_name = record.experiment_name.replace("_", "\\_")
-            content += rf"{map_ex_name(ex_name)}                   & {round(record.lsed, 1)}            & {round(record.dtw, 1)}           & {round(record.dfd, 1)}           & {round(record.pcc, 1)}           \\ \hline"
+            content += rf"{map_ex_name(ex_name)}                   & {round(record.rmse, 1)}            & {round(record.dtw, 1)}           & {round(record.dfd, 1)}           & {round(record.pcc, 1)}           \\ \hline"
             content += "\n"
         end = rf'''
 \end{{tabular}}
@@ -277,6 +280,7 @@ class GenericTableGeneration:
     title: str
     ref: str
     records: list[list[str]] = field(default_factory=list)
+    rotation: int = 0
 
     def append(self, record: list[str]) -> None:
         self.records.append(record)
@@ -287,22 +291,26 @@ class GenericTableGeneration:
         begin = rf'''
 \begin{{table}}[]
 \begin{{center}}
+\begin{{adjustbox}}{{{self.rotation}}}
 \begin{{tabular}}{{{border}}}
 \hline
 \rowcolor[HTML]{{C0C0C0}}
 '''
-        header = "& ".join([rf"\textbf{{{name}}}" for name in self.header_names])
+        escape_header = [wt(name) if r"\\" in name else name for name in self.header_names]
+        header = " & ".join([rf"\textbf{{{name}}}" for name in escape_header])
         header += r" \\ \hline"
         begin += "\n"
         begin += header
         begin += "\n"
         content = ""
         for record in self.records:
-            content += " & ".join([rf"{item}" for item in record])
+            escape_record = [wt(item) if r"\\" in item else item for item in record]
+            content += " & ".join([rf"{item}" for item in escape_record])
             content += r" \\ \hline"
             content += "\n"
         end = rf'''
 \end{{tabular}}
+\end{{adjustbox}}
 \end{{center}}
 \caption{{{self.title}}}
 \label{{tab:{self.ref}}}
@@ -484,8 +492,19 @@ def j2str(idx: int) -> str:
     return _JOINTS[idx]
 
 FILTER_TYPES = ["ConstrainedSkeletonFilter", "SkeletonFilter", "SimpleConstrainedSkeletonFilter", "SimpleSkeletonFilter"]
-YLABELS = ["LSED [m]", None, None, None]
-METRIC_NAMES = ["LSED", "DTW", "DFD", "PCC"]
+SHORT_FILTER_TYPES = ["CSF", "SF", "SCSF", "SSF"]
+FILTER_NAME_MAP = {
+    "ConstrainedSkeletonFilter": "CSF",
+    "SkeletonFilter": "SF",
+    "SimpleConstrainedSkeletonFilter": "SCSF",
+    "SimpleSkeletonFilter": "SSF",
+}
+
+def short_name(long_name: str) -> str:
+    return FILTER_NAME_MAP[long_name]
+
+YLABELS = ["RMSE [m]", None, None, None]
+METRIC_NAMES = ["RMSE", "DTW", "DFD", "PCC"]
 
 EX_NAMES = [
     "s10001",
@@ -1386,19 +1405,19 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     idx = np.argsort(facts)
 
     plt.cla()
-    plt.plot(facts[idx][:], rmses[idx][:], label="LSED", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-    plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin LSED: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
+    plt.plot(facts[idx][:], rmses[idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+    plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
     plt.xlabel(r"$\lambda$")
-    plt.ylabel("LSED")
+    plt.ylabel("RMSE")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - LSED pro $\lambda$")
+    plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE pro $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_joints_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
     plt.cla()
 
-    plt.plot(facts[idx][:], pccs[idx][:], label="PCC", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-    plt.plot(facts[pcc_argmax], pccs[pcc_argmax], marker="X", ls="None", label=f"Argmax PCC: {facts[pcc_argmax]:.2f}", color="crimson", alpha=0.6)
+    plt.plot(facts[idx][:], pccs[idx][:], label="PCC", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+    plt.plot(facts[pcc_argmax], pccs[pcc_argmax], marker="X", ls="None", label=f"Argmax PCC: {facts[pcc_argmax]:.2f}", color="crimson", alpha=0.6, markersize=4)
     plt.xlabel(r"$\lambda$")
     plt.ylabel("PCC")
     plt.legend()
@@ -1411,8 +1430,8 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-    plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6)
+    plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+    plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
     plt.xlabel(r"$\lambda$")
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
@@ -1423,8 +1442,8 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-    plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6)
+    plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+    plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
     plt.xlabel(r"$\lambda$")
     plt.ylabel("DFD Dist")
     plt.legend()
@@ -1596,12 +1615,12 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     idx = np.argsort(facts)
 
     plt.cla()
-    plt.plot(facts[idx][:], rmses[idx][:], label="LSED", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-    plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin LSED: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
+    plt.plot(facts[idx][:], rmses[idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+    plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
     plt.xlabel(r"$\lambda$")
-    plt.ylabel("LSED")
+    plt.ylabel("RMSE")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - LSED pro $\lambda$")
+    plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE pro $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_velocity_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1624,8 +1643,8 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     '''
 
     plt.cla()
-    plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-    plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6)
+    plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+    plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
     plt.xlabel(r"$\lambda$")
     plt.ylabel("Dynamic Time Warp Dist")
     plt.legend()
@@ -1635,8 +1654,8 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         plt.show()
     plt.cla()
 
-    plt.plot(facts[idx][:], pccs[idx][:], label="PCC", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-    plt.plot(facts[pcc_argmax], pccs[pcc_argmax], marker="X", ls="None", label=f"Argmax PCC: {facts[pcc_argmax]:.2f}", color="crimson", alpha=0.6)
+    plt.plot(facts[idx][:], pccs[idx][:], label="PCC", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+    plt.plot(facts[pcc_argmax], pccs[pcc_argmax], marker="X", ls="None", label=f"Argmax PCC: {facts[pcc_argmax]:.2f}", color="crimson", alpha=0.6, markersize=4)
     plt.xlabel("$\lambda$")
     plt.ylabel("PCC")
     plt.legend()
@@ -1649,8 +1668,8 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-    plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6)
+    plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+    plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
     plt.xlabel(r"$\lambda$")
     plt.ylabel("DFD Dist")
     plt.legend()
@@ -1832,13 +1851,13 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         corr_a = []
         frechet_a = []
         dtw_a = []
-        lsed_a = []
+        rmse_a = []
         factors = []
 
         vel_corr_a = []
         vel_frechet_a = []
         vel_dtw_a = []
-        vel_lsed_a = []
+        vel_rmse_a = []
         vel_factors = []
 
 
@@ -1849,12 +1868,12 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
 
             theia_ts = np.arange(data.theia_tensor.shape[0]) * (1./120.)
 
-            lsed = 0
+            rmse = 0
             dtwsum = 0
             fr = 0
             corr = 0
 
-            vel_lsed = 0
+            vel_rmse = 0
             vel_dtwsum = 0
             vel_fr = 0
             vel_corr = 0
@@ -1879,10 +1898,10 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
                 vel_corr += (np.corrcoef(vel_d_t[:, 0], vel_d_f[:, 0])[0, 1] + np.corrcoef(vel_d_t[:, 1], vel_d_f[:, 1])[0, 1] + np.corrcoef(vel_d_t[:, 2], vel_d_f[:, 2])[0, 1]) / 3
 
                 diff = np.linalg.norm(d_t - d_f, axis=1)
-                lsed += np.sqrt(np.mean(np.power(diff, 2)))
+                rmse += np.sqrt(np.mean(np.power(diff, 2)))
 
                 vel_diff = np.linalg.norm(vel_d_t - vel_d_f, axis=1)
-                vel_lsed += np.sqrt(np.mean(np.power(vel_diff, 2)))
+                vel_rmse += np.sqrt(np.mean(np.power(vel_diff, 2)))
 
                 ts = np.arange(len(d_t))
                 d_t = np.column_stack((ts, d_t))
@@ -1901,19 +1920,19 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
             corr /= 3
             fr /= 3
             dtwsum /= 3
-            lsed /= 3
+            rmse /= 3
 
             vel_corr /= 3
             vel_fr /= 3
             vel_dtwsum /= 3
-            vel_lsed /= 3
+            vel_rmse /= 3
 
             factor = data.config["measurement_error_factor"]
             pltrecord = (
                 ex_name,
                 FILTER_NAME,
                 factor,
-                lsed,
+                rmse,
                 dtwsum,
                 fr,
                 corr,
@@ -1924,7 +1943,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
                 ex_name,
                 FILTER_NAME,
                 factor,
-                vel_lsed,
+                vel_rmse,
                 vel_dtwsum,
                 vel_fr,
                 vel_corr,
@@ -1934,17 +1953,17 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
             corr_a.append(corr)
             frechet_a.append(fr)
             dtw_a.append(dtwsum)
-            lsed_a.append(lsed)
+            rmse_a.append(rmse)
 
             vel_corr_a.append(vel_corr)
             vel_frechet_a.append(vel_fr)
             vel_dtw_a.append(vel_dtwsum)
-            vel_lsed_a.append(vel_lsed)
+            vel_rmse_a.append(vel_rmse)
 
             factors.append(factor)
 
         facts = np.array(factors)
-        rmses = np.array(lsed_a)
+        rmses = np.array(rmse_a)
         dtw_dists = np.array(dtw_a)
         fr_dists = np.array(frechet_a)
         corrs = np.array(corr_a)
@@ -1956,7 +1975,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
 
         idx = np.argsort(facts)
 
-        vel_rmses = np.array(vel_lsed_a)
+        vel_rmses = np.array(vel_rmse_a)
         vel_dtw_dists = np.array(vel_dtw_a)
         vel_fr_dists = np.array(vel_frechet_a)
         vel_corrs = np.array(vel_corr_a)
@@ -1969,18 +1988,18 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         vel_idx = np.argsort(facts)
 
         plt.cla()
-        plt.plot(facts[idx][:], rmses[idx][:], label="LSED", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-        plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin LSED: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.plot(facts[idx][:], rmses[idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+        plt.plot(facts[rmse_argmin], rmses[rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[rmse_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
         plt.xlabel(r"$\lambda$")
-        plt.ylabel("LSED")
+        plt.ylabel("RMSE")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - LSED pro $\lambda$")
+        plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE pro $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/rmse_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
         plt.cla()
-        plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-        plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+        plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
         plt.xlabel(r"$\lambda$")
         plt.ylabel("Dynamic Time Warp Dist")
         plt.legend()
@@ -1989,8 +2008,8 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.cla()
 
         plt.cla()
-        plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-        plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+        plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
         plt.xlabel(r"$\lambda$")
         plt.ylabel("DFD Dist")
         plt.legend()
@@ -1999,8 +2018,8 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.cla()
 
         plt.cla()
-        plt.plot(facts[idx][:], corrs[idx][:], label="PCC", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-        plt.plot(facts[pcc_argmax], corrs[pcc_argmax], marker="X", ls="None", label=f"Argmax PCC: {facts[pcc_argmax]:.2f}", color="crimson", alpha=0.6)
+        plt.plot(facts[idx][:], corrs[idx][:], label="PCC", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+        plt.plot(facts[pcc_argmax], corrs[pcc_argmax], marker="X", ls="None", label=f"Argmax PCC: {facts[pcc_argmax]:.2f}", color="crimson", alpha=0.6, markersize=4)
         plt.xlabel(r"$\lambda$")
         plt.ylabel("PCC")
         plt.legend()
@@ -2020,18 +2039,18 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         )
 
         plt.cla()
-        plt.plot(facts[vel_idx][:], vel_rmses[vel_idx][:], label="LSED", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-        plt.plot(facts[vel_rmse_argmin], vel_rmses[vel_rmse_argmin], marker="X", ls="None", label=f"Argmin LSED: {facts[vel_rmse_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.plot(facts[vel_idx][:], vel_rmses[vel_idx][:], label="RMSE", color="steelblue", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+        plt.plot(facts[vel_rmse_argmin], vel_rmses[vel_rmse_argmin], marker="X", ls="None", label=f"Argmin RMSE: {facts[vel_rmse_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
         plt.xlabel(r"$\lambda$")
-        plt.ylabel("LSED")
+        plt.ylabel("RMSE")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - LSED pro $\lambda$")
+        plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE pro $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_rmse_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
         plt.cla()
-        plt.plot(facts[vel_idx][:], vel_dtw_dists[vel_idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-        plt.plot(facts[vel_dtw_argmin], vel_dtw_dists[vel_dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[vel_dtw_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.plot(facts[vel_idx][:], vel_dtw_dists[vel_idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+        plt.plot(facts[vel_dtw_argmin], vel_dtw_dists[vel_dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[vel_dtw_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
         plt.xlabel(r"$\lambda$")
         plt.ylabel("Dynamic Time Warp Dist")
         plt.legend()
@@ -2040,8 +2059,8 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.cla()
 
         plt.cla()
-        plt.plot(facts[vel_idx][:], vel_fr_dists[vel_idx][:], label="DFD Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-        plt.plot(facts[vel_fr_argmin], vel_fr_dists[vel_fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[vel_fr_argmin]:.2f}", color="crimson", alpha=0.6)
+        plt.plot(facts[vel_idx][:], vel_fr_dists[vel_idx][:], label="DFD Dist", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+        plt.plot(facts[vel_fr_argmin], vel_fr_dists[vel_fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[vel_fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=4)
         plt.xlabel(r"$\lambda$")
         plt.ylabel("DFD Dist")
         plt.legend()
@@ -2050,8 +2069,8 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.cla()
 
         plt.cla()
-        plt.plot(facts[vel_idx][:], vel_corrs[vel_idx][:], label="PCC", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4)
-        plt.plot(facts[vel_corr_argmax], vel_corrs[vel_corr_argmax], marker="X", ls="None", label=f"Argmax PCC: {facts[vel_corr_argmax]:.2f}", color="crimson", alpha=0.6)
+        plt.plot(facts[vel_idx][:], vel_corrs[vel_idx][:], label="PCC", color="olive", marker='.', markersize=5, markeredgecolor='black', alpha=0.4, linewidth=2)
+        plt.plot(facts[vel_corr_argmax], vel_corrs[vel_corr_argmax], marker="X", ls="None", label=f"Argmax PCC: {facts[vel_corr_argmax]:.2f}", color="crimson", alpha=0.6, markersize=4)
         plt.xlabel(r"$\lambda$")
         plt.ylabel("PCC Correlation")
         plt.legend()
@@ -2087,9 +2106,9 @@ def determine_minimum_against_ground_truth(args):
     dtw_b = []
     dtw_c = []
 
-    lsed_a = []
-    lsed_b = []
-    lsed_c = []
+    rmse_a = []
+    rmse_b = []
+    rmse_c = []
 
     for i in ranges:
         data1 = load_processed_data(find_factor_path(i, Path(args.experiment_folder)))
@@ -2135,9 +2154,9 @@ def determine_minimum_against_ground_truth(args):
         dtw_b.append(dtw.dtw(d_b, d_q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance)
         dtw_c.append(dtw.dtw(d_c, d_q, step_pattern=dtw.rabinerJuangStepPattern(6, "c")).distance)
 
-        lsed_a.append(np.sqrt(np.mean(np.power(d_a[:, 1] - d_q[:, 1], 2), axis=0)))
-        lsed_b.append(np.sqrt(np.mean(np.power(d_b[:, 1] - d_q[:, 1], 2), axis=0)))
-        lsed_c.append(np.sqrt(np.mean(np.power(d_c[:, 1] - d_q[:, 1], 2), axis=0)))
+        rmse_a.append(np.sqrt(np.mean(np.power(d_a[:, 1] - d_q[:, 1], 2), axis=0)))
+        rmse_b.append(np.sqrt(np.mean(np.power(d_b[:, 1] - d_q[:, 1], 2), axis=0)))
+        rmse_c.append(np.sqrt(np.mean(np.power(d_c[:, 1] - d_q[:, 1], 2), axis=0)))
 
     corr_mean = np.array(corr_c).mean()
     plt.plot(corr_a / corr_mean, label="filter with acc correlation")
@@ -2154,10 +2173,10 @@ def determine_minimum_against_ground_truth(args):
     plt.plot(dtw_b / dtw_mean, label="filter wo acc dtw")
     plt.plot(dtw_c / dtw_mean, label="raw dtw")
 
-    lsed_mean = np.array(lsed_c).mean()
-    plt.plot(lsed_a / lsed_mean, label="filter with acc lsed")
-    plt.plot(lsed_b / lsed_mean, label="filter wo acc lsed")
-    plt.plot(lsed_c / lsed_mean, label="raw lsed")
+    rmse_mean = np.array(rmse_c).mean()
+    plt.plot(rmse_a / rmse_mean, label="filter with acc rmse")
+    plt.plot(rmse_b / rmse_mean, label="filter wo acc rmse")
+    plt.plot(rmse_c / rmse_mean, label="raw rmse")
 
     plt.legend()
     plt.show()
@@ -2165,8 +2184,8 @@ def determine_minimum_against_ground_truth(args):
 
 def all_ex_find_best_measurement_error_factor_rmse(path: Path):
     # Against Butterworth Kinect
-    table = GenericTableGeneration(["Filter Name", "LSED", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Positions", "mean-optimal-lambda")
-    vel_table = GenericTableGeneration(["Filter Name", "LSED", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Velocities", "mean-optimal-lambda-vel")
+    table = GenericTableGeneration(["Filter Name", "RMSE", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Positions", "mean-optimal-lambda")
+    vel_table = GenericTableGeneration(["Filter Name", "RMSE", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Velocities", "mean-optimal-lambda-vel")
     plot_records = []
     vel_plot_records = []
     for filter_type in FILTER_TYPES:
@@ -2188,7 +2207,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         mean = generator.mean()
         table.append([
             "\\"+filter_type,
-            str(round(mean.lsed, 1)),
+            str(round(mean.rmse, 1)),
             str(round(mean.dtw, 1)),
             str(round(mean.dfd, 1)),
             str(round(mean.pcc, 1)),
@@ -2199,7 +2218,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         vel_mean = vel_generator.mean()
         vel_table.append([
             "\\"+filter_type,
-            str(round(vel_mean.lsed, 1)),
+            str(round(vel_mean.rmse, 1)),
             str(round(vel_mean.dtw, 1)),
             str(round(vel_mean.dfd, 1)),
             str(round(vel_mean.pcc, 1)),
@@ -2213,8 +2232,8 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
 
 
     # Against Truth
-    table = GenericTableGeneration(["Filter Name", "LSED", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Positions Against Ground Truth", "mean-optimal-lambda-truth")
-    vel_table = GenericTableGeneration(["Filter Name", "LSED", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Velocities Against Ground Truth", "mean-optimal-lambda-vel-truth")
+    table = GenericTableGeneration(["Filter Name", "RMSE", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Positions Against Ground Truth", "mean-optimal-lambda-truth")
+    vel_table = GenericTableGeneration(["Filter Name", "RMSE", "DTW", "DFD", "PCC"], r"Mean Optimal $\lambda$ Evaluated on Joint Velocities Against Ground Truth", "mean-optimal-lambda-vel-truth")
     truth_plot_records = []
     truth_vel_plot_records = []
     for filter_type in FILTER_TYPES:
@@ -2234,7 +2253,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         mean = generator.mean()
         table.append([
             "\\"+filter_type,
-            str(round(mean.lsed, 1)),
+            str(round(mean.rmse, 1)),
             str(round(mean.dtw, 1)),
             str(round(mean.dfd, 1)),
             str(round(mean.pcc, 1)),
@@ -2245,7 +2264,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         vel_mean = vel_generator.mean()
         vel_table.append([
             "\\"+filter_type,
-            str(round(vel_mean.lsed, 1)),
+            str(round(vel_mean.rmse, 1)),
             str(round(vel_mean.dtw, 1)),
             str(round(vel_mean.dfd, 1)),
             str(round(vel_mean.pcc, 1)),
@@ -2263,7 +2282,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
             ("Experiment Name", f"U{len('s30001')}"),
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
             ("Factor", "f"),
-            ("LSED", "f"),
+            ("RMSE", "f"),
             ("DTW", "f"),
             ("DFD", "f"),
             ("PCC", "f"),
@@ -2301,7 +2320,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
             ("Experiment Name", f"U{len('s30001')}"),
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
             ("Factor", "f"),
-            ("LSED", "f"),
+            ("RMSE", "f"),
             ("DTW", "f"),
             ("DFD", "f"),
             ("PCC", "f"),
@@ -2341,7 +2360,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
             ("Experiment Name", f"U{len('s30001')}"),
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
             ("Factor", "f"),
-            ("LSED", "f"),
+            ("RMSE", "f"),
             ("DTW", "f"),
             ("DFD", "f"),
             ("PCC", "f"),
@@ -2379,7 +2398,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
             ("Experiment Name", f"U{len('s30001')}"),
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
             ("Factor", "f"),
-            ("LSED", "f"),
+            ("RMSE", "f"),
             ("DTW", "f"),
             ("DFD", "f"),
             ("PCC", "f"),
@@ -3214,7 +3233,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                 sest, stru = est, tru
 
                 diff = np.linalg.norm(stru - sest, axis=1)
-                truth_to_est_lsed_com = np.sqrt(np.mean(np.power(diff, 2)))
+                truth_to_est_rmse_com = np.sqrt(np.mean(np.power(diff, 2)))
 
                 diff = np.linalg.norm(sutru - sun, axis=1)
                 truth_to_un_com = np.sqrt(np.mean(np.power(diff, 2)))
@@ -3244,10 +3263,10 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                 sest, stru = est, tru
 
                 diff = np.linalg.norm(stru - sest, axis=1)
-                truth_to_est_lsed_xcom = np.sqrt(np.mean(np.power(diff, 2)))
+                truth_to_est_rmse_xcom = np.sqrt(np.mean(np.power(diff, 2)))
 
                 diff = np.linalg.norm(sutru - sun, axis=1)
-                truth_to_un_lsed_xcom = np.sqrt(np.mean(np.power(diff, 2)))
+                truth_to_un_rmse_xcom = np.sqrt(np.mean(np.power(diff, 2)))
 
                 truth_to_un_pcc_xcom = (np.corrcoef(sutru[:, 0], sun[:, 0])[0, 1] + np.corrcoef(sutru[:, 1], sun[:, 1])[0, 1] + np.corrcoef(sutru[:, 2], sun[:, 2])[0, 1]) / 3
                 truth_to_est_pcc_xcom = (np.corrcoef(stru[:, 0], sest[:, 0])[0, 1] + np.corrcoef(stru[:, 1], sest[:, 1])[0, 1] + np.corrcoef(stru[:, 2], sest[:, 2])[0, 1]) / 3
@@ -3266,7 +3285,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                     ex_name,
                     filter_name,
                     best_factor,
-                    truth_to_est_lsed_com,
+                    truth_to_est_rmse_com,
                     truth_to_est_dtw_com,
                     truth_to_est_fr_com,
                     truth_to_est_pcc_com,
@@ -3277,7 +3296,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                     ex_name,
                     filter_name,
                     best_factor,
-                    truth_to_est_lsed_xcom,
+                    truth_to_est_rmse_xcom,
                     truth_to_est_dtw_xcom,
                     truth_to_est_fr_xcom,
                     truth_to_est_pcc_xcom,
@@ -3317,12 +3336,12 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                 print()
 
                 print(f"Filter: {filter_name}")
-                print(f"truth_to_est_lsed_com: {truth_to_est_lsed_com}")
-                print(f"truth_to_un_lsed_com: {truth_to_un_lsed_com}")
+                print(f"truth_to_est_rmse_com: {truth_to_est_rmse_com}")
+                print(f"truth_to_un_rmse_com: {truth_to_un_rmse_com}")
                 print()
 
-                print(f"truth_to_est_lsed_xcom: {truth_to_est_lsed_xcom}")
-                print(f"truth_to_un_lsed_xcom: {truth_to_un_lsed_xcom}")
+                print(f"truth_to_est_rmse_xcom: {truth_to_est_rmse_xcom}")
+                print(f"truth_to_un_rmse_xcom: {truth_to_un_rmse_xcom}")
                 print()
                 '''
 
@@ -3331,7 +3350,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
             ("Joint Name", f"U{len('Right Shoulder')}"),
             ("Factor", "f"),
-            ("LSED", "f"),
+            ("RMSE", "f"),
             ("DTW", "f"),
             ("DFD", "f"),
             ("PCC", "f"),
@@ -3342,7 +3361,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ("Experiment Name", f"U{len('s30001')}"),
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
             ("Factor", "f"),
-            ("LSED", "f"),
+            ("RMSE", "f"),
             ("DTW", "f"),
             ("DFD", "f"),
             ("PCC", "f"),
@@ -3353,7 +3372,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ("Experiment Name", f"U{len('s30001')}"),
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
             ("Factor", "f"),
-            ("LSED", "f"),
+            ("RMSE", "f"),
             ("DTW", "f"),
             ("DFD", "f"),
             ("PCC", "f"),
@@ -3461,7 +3480,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
         ("Joint Name", f"U{len('Right Shoulder')}"),
         ("Factor", "f"),
-        ("LSED", "f"),
+        ("RMSE", "f"),
         ("DTW", "f"),
         ("DFD", "f"),
         ("PCC", "f"),
@@ -3472,7 +3491,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ("Experiment Name", f"U{len('s30001')}"),
         ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
         ("Factor", "f"),
-        ("LSED", "f"),
+        ("RMSE", "f"),
         ("DTW", "f"),
         ("DFD", "f"),
         ("PCC", "f"),
@@ -3483,7 +3502,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ("Experiment Name", f"U{len('s30001')}"),
         ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
         ("Factor", "f"),
-        ("LSED", "f"),
+        ("RMSE", "f"),
         ("DTW", "f"),
         ("DFD", "f"),
         ("PCC", "f"),
@@ -3694,7 +3713,7 @@ def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_pat
 
 
                 diff = np.linalg.norm(stru - sest, axis=1)
-                truth_to_est_lsed_cop = np.sqrt(np.mean(np.power(diff, 2)))
+                truth_to_est_rmse_cop = np.sqrt(np.mean(np.power(diff, 2)))
 
                 diff = np.linalg.norm(sutru - sun, axis=1)
                 truth_to_un_cop = np.sqrt(np.mean(np.power(diff, 2)))
@@ -3716,7 +3735,7 @@ def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_pat
                     ex_name,
                     filter_name,
                     best_factor,
-                    truth_to_est_lsed_cop,
+                    truth_to_est_rmse_cop,
                     truth_to_est_dtw_cop,
                     truth_to_est_fr_cop,
                     truth_to_est_pcc_cop,
@@ -3727,7 +3746,7 @@ def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_pat
         ("Experiment Name", f"U{len('s30001')}"),
         ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
         ("Factor", "f"),
-        ("LSED", "f"),
+        ("RMSE", "f"),
         ("DTW", "f"),
         ("DFD", "f"),
         ("PCC", "f"),
@@ -3794,42 +3813,42 @@ def create_joint_length_plots_and_table(path: Path):
         (r"theiavar", "f"),
     ])
 
-    header_names = ["Experiment Name","Filter Type", "Segment Name", "Factor", r"Filtered\\Length", r"Unfiltered\\Length", r"Theia\\Length"]
+    header_names = [r"Experiment\\Name",r"Filter\\Type", r"Segment\\Name", "Factor", r"Filtered Var", r"Unfiltered Var", r"Theia Var"]
     key, value = ("UP_LEFT", ("Upper Arm Left", "Lower Arm Left"))
     a_name, b_name = value
-    whole_segment_name = f"{a_name} \& {b_name} Length Change"
+    whole_segment_name = rf"{a_name} \& {b_name} Length Change"
     ref = f"{key}-length-change"
-    table = GenericTableGeneration(header_names, whole_segment_name, ref)
-    dataframe = pd.DataFrame.from_records(recorddata)
+    table = GenericTableGeneration(header_names, whole_segment_name, ref, rotation=90)
     for ex_name in focus_ex_names:
+        dataframe = pd.DataFrame.from_records(recorddata)
         sub = dataframe.loc[dataframe["Experiment Name"] == ex_name]
-        for filter_type in FILTER_TYPES:
+        for filter_type in ["SkeletonFilter", "ConstrainedSkeletonFilter"]:
             subsub = sub.loc[sub["Filter Type"] == filter_type]
             sss = subsub.loc[subsub["Segment Name"] == a_name]
-            for factor in factors:
+            for factor in [70]:
                 ssss = sss.loc[sss["Factor"] == factor]
                 row = (
                     map_ex_name(ex_name),
-                    rf"\{filter_type}",
-                    a_name,
+                    short_name(filter_type),
+                    a_name.replace(" ", r"\\"),
                     str(factor),
-                    rf"${round(ssss['filteredmean'].values[0], 4)} \pm {round(ssss['filteredvar'].values[0], 4)}$ m",
-                    rf"${round(ssss['unfilteredmean'].values[0], 4)} \pm {round(ssss['unfilteredvar'].values[0], 4)}$ m",
-                    rf"${round(ssss['theiamean'].values[0], 4)} \pm {round(ssss['theiavar'].values[0], 4)}$ m",
+                    rf"${round(ssss['filteredmean'].values[0], 5):.5e} \pm {round(ssss['filteredvar'].values[0], 5):.5e}$ m",
+                    rf"${round(ssss['unfilteredmean'].values[0], 5):.5e} \pm {round(ssss['unfilteredvar'].values[0], 5):.5e}$ m",
+                    rf"${round(ssss['theiamean'].values[0], 5):.5e} \pm {round(ssss['theiavar'].values[0], 5):.5e}$ m",
                 )
                 table.append(row)
             sss = subsub.loc[subsub["Segment Name"] == b_name]
-            for factor in factors:
+            for factor in [70]:
                 ssss = sss.loc[sss["Factor"] == factor]
 
                 row = (
                     map_ex_name(ex_name),
-                    rf"\{filter_type}",
-                    b_name,
+                    short_name(filter_type),
+                    b_name.replace(" ", r"\\"),
                     str(factor),
-                    rf"${round(ssss['filteredmean'].values[0], 4)}\pm {round(ssss['filteredvar'].values[0], 4)}$ m",
-                    rf"${round(ssss['unfilteredmean'].values[0], 4)}\pm {round(ssss['unfilteredvar'].values[0], 4)}$ m",
-                    rf"${round(ssss['theiamean'].values[0], 4)}\pm {round(ssss['theiavar'].values[0], 4)}$ m",
+                    rf"${round(ssss['filteredmean'].values[0], 5):.5e}\pm {round(ssss['filteredvar'].values[0], 5):.5e}$ m",
+                    rf"${round(ssss['unfilteredmean'].values[0], 5):.5e}\pm {round(ssss['unfilteredvar'].values[0], 5):.5e}$ m",
+                    rf"${round(ssss['theiamean'].values[0], 5):.5e}\pm {round(ssss['theiavar'].values[0], 5):.5e}$ m",
                 )
                 table.append(row)
 
@@ -3842,6 +3861,7 @@ def create_joint_length_plots_and_table(path: Path):
     sub = dataframe.groupby(["Filter Type", "Factor"])["filteredvar"].mean()
 
     markers=["^", "o", "X", "v", "s", "<", ">", "*", "D", "P", "^", "o", "X", "v", "s", "<", ">", "*", "D", "P"] + ["d"]
+    sns.set_style("darkgrid")
     ax = sns.lineplot(
         data=sub.to_frame(),
         x="Factor",
@@ -3850,17 +3870,46 @@ def create_joint_length_plots_and_table(path: Path):
         markers=markers,
         markersize=4,
         linewidth=1,
-        legend=False,
     )
-    ax.axhline(baseline, label="Unfiltered Var")
+    ax.axhline(baseline, xmin=0, xmax=150, label="Unfiltered Var", linestyle="dotted", alpha=0.6)
     # ax.set_xticklabels(rotation=40, ha="right")
     # ticks = ax.ax.get_xticklabels()
     # plt.setp(ax.ax.get_xticklabels(), visible=False)
     # plt.setp(ticks[::6], visible=True)
     plt.xlabel(r"$\lambda$")
     # Otherwise take default
-    plt.ylabel("Variance")
+    plt.ylabel("Variance [m]")
+    plt.legend()
     plt.title("Mean Length Change Variance over all Experiments")
+    os.makedirs(f"./results/experiments/joint_segment_lengths/sx000x", exist_ok=True)
+    plt.savefig(f"./results/experiments/joint_segment_lengths/sx000x/mean_var.pdf", bbox_inches="tight")
+    plt.cla()
+
+
+    sub = dataframe.loc[dataframe["Filter Type"] == "SkeletonFilter"]
+    subsub = sub.groupby(["Segment Name", "Factor"])["filteredvar"].mean()
+
+    markers=["^", "o", "X", "v", "s", "<", ">", "*", "D", "P", "^", "o", "X", "v", "s", "<", ">", "*", "D", "P"] + ["d"]
+    sns.set_style("darkgrid")
+    ax = sns.lineplot(
+        data=subsub.to_frame(),
+        x="Factor",
+        y="filteredvar",
+        hue="Segment Name",
+        markers=markers,
+        markersize=4,
+        linewidth=1,
+    )
+    ax.axhline(baseline, xmin=0, xmax=150, label="Unfiltered Var", linestyle="dotted", alpha=0.6)
+    # ax.set_xticklabels(rotation=40, ha="right")
+    # ticks = ax.ax.get_xticklabels()
+    # plt.setp(ax.ax.get_xticklabels(), visible=False)
+    # plt.setp(ticks[::6], visible=True)
+    plt.xlabel(r"$\lambda$")
+    # Otherwise take default
+    plt.ylabel("Variance [m]")
+    plt.legend()
+    plt.title("Mean Length Change Variance for SkeletonFilter for each Segment over all Experiments")
     os.makedirs(f"./results/experiments/joint_segment_lengths/sx000x", exist_ok=True)
     plt.savefig(f"./results/experiments/joint_segment_lengths/sx000x/mean_var.pdf", bbox_inches="tight")
     plt.cla()
