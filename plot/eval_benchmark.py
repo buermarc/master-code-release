@@ -6,6 +6,27 @@ import numpy as np
 from pprint import pprint as pp
 import matplotlib.pyplot as plt
 from dataclasses import dataclass
+import seaborn as sns
+
+NAME_MAP = {
+    "apply_filter": "Apply Filter",
+    "build_filter": "Build Filter",
+    "camera": "Camera",
+    "detect_floor": "Detect Floor",
+    "extract_stability_metrics": "Extract Stability Metric",
+    "imu": "Extract IMU Data",
+    "measurement_queue_produce": "Produce onto Measurement Queue",
+    "network": "Network Inference",
+    "pointcloud": "Generate Pointcould",
+    "process_queue_produce": "Produce onto Process Queue",
+    "recording_body": "Save Body to Recording",
+    "recording_imu": "Save IMU to Recording",
+    "save_body": "Save Body Information",
+    "save_imu": "Save IMU Inforamtion",
+    "step": "Perform Filter Step",
+    "visualize": "Realtime Data Visualization",
+    "rest": "Later Sections"
+}
 
 @dataclass
 class Metric:
@@ -24,6 +45,10 @@ class Metric:
             self.mean = None
         if self.var == 0:
             self.var = None
+
+    def __add__(self, other) -> Metric:
+        self.add_value(other)
+        return self
 
     def add_value(self, other_metric: Metric) -> None:
         if self.min is not None and other_metric.min is not None:
@@ -69,6 +94,28 @@ class BenchData:
     save_imu: Metric
     step: Metric
     visualize: Metric
+
+    def sub_ordered(self) -> list[Metric]:
+        return [
+            self.imu,
+            self.save_body,
+            self.save_imu,
+            self.pointcloud,
+            self.detect_floor,
+            self.apply_filter,
+            self.build_filter,
+            self.step,
+            self.extract_stability_metrics,
+            self.visualize,
+        ]
+
+    def rest(self) -> list[Metric]:
+        rest = self.imu+ self.save_body+ self.save_imu+ self.pointcloud+ self.measurement_queue_produce+ self.detect_floor+ self.apply_filter+ self.build_filter+ self.step+ self.extract_stability_metrics+ self.process_queue_produce+ self.visualize
+        rest.name = "rest"
+        return [
+            self.network,
+            rest
+        ]
 
     def ordered(self) -> list[Metric]:
         return [
@@ -175,6 +222,7 @@ def load_bench_data(path: Path) -> BenchData:
     """Load bench data."""
     with path.open(mode="r", encoding="UTF-8") as _json:
         bench = json.load(_json)
+        print(path)
         return BenchData(
             apply_filter=Metric("apply_filter", bench["min"]["apply_filter"], bench["max"]["apply_filter"], bench["mean"]["apply_filter"], bench["var"]["apply_filter"]),
             build_filter=Metric("build_filter", bench["min"]["build_filter"], bench["max"]["build_filter"], bench["mean"]["build_filter"], bench["var"]["build_filter"]),
@@ -218,22 +266,48 @@ def main():
     x = 1
     width = 0.5
     total_time = 0
-    for idx, top in enumerate(mean.ordered()):
+    sns.set_style("darkgrid")
+    for idx, top in enumerate(mean.sub_ordered()):
         if top.mean is not None:
-            container = plt.barh(x * idx, top.mean, width, label=top.name, left=total_time)
+            container = plt.barh(x * idx, top.mean, width, label=NAME_MAP[top.name], left=total_time)
             plt.errorbar(total_time + top.mean, x*idx, 0, np.sqrt(top.var), barsabove=True)
-            plt.bar_label(container, labels=[f"{top.mean:.3f} s ± {np.sqrt(top.var):.3f}"], padding=max(np.sqrt(top.var) * 15, 20), label_type="edge")
+            plt.bar_label(container, labels=[f"{top.mean:.3f} ms ± {np.sqrt(top.var):.3f} ms"], padding=min(np.sqrt(top.var) * 45, 100), label_type="edge")
             total_time += top.mean
 
 
 
-    names = ([element.name for element in mean.ordered()])
+    names = ([NAME_MAP[element.name] for element in mean.sub_ordered()])
+    plt.yticks(np.arange(len(names)), names)
+    plt.xlabel("Time [milliseconds]")
+    plt.ylabel("Steps")
+    # plt.legend(bbox_to_anchor=(1.04, 0.5), loc="center left")
+    tdir = Path("results/experiments/benchmark")
+    tdir.mkdir(parents=True, exist_ok=True)
+    plt.savefig(tdir / "benchmark.pdf", bbox_inches="tight")
+    plt.cla()
+
+    x = 1
+    width = 0.5
+    total_time = 0
+    sns.set_style("darkgrid")
+    for idx, top in enumerate(mean.rest()):
+        if top.mean is not None:
+            container = plt.barh(x * idx, top.mean, width, label=NAME_MAP[top.name], left=total_time)
+            plt.errorbar(total_time + top.mean, x*idx, 0, np.sqrt(top.var), barsabove=True)
+            plt.bar_label(container, labels=[f"{top.mean:.3f} ms ± {np.sqrt(top.var):.3f} ms"], padding=min(np.sqrt(top.var) * 15, 50), label_type="edge")
+            total_time += top.mean
+
+
+
+    names = ([NAME_MAP[element.name] for element in mean.rest()])
     plt.yticks(np.arange(len(names)), names)
     plt.xlabel("Time [seconds]")
     plt.ylabel("Steps")
-    plt.legend()
-    plt.show()
-
+    # plt.legend(bbox_to_anchor=(1.04, 0.5), loc="center left")
+    tdir = Path("results/experiments/benchmark")
+    tdir.mkdir(parents=True, exist_ok=True)
+    plt.savefig(tdir / "benchmark-rest.pdf", bbox_inches="tight")
+    plt.cla()
 
 if __name__ == "__main__":
     main()
