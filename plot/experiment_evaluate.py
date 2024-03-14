@@ -61,7 +61,6 @@ def bland_altman(data1: np.ndarray, data2: np.ndarray, path: str) -> None:
         detrend=None,
         percentage=False,
         figureFormat="pdf",
-        title=f"Outlier: {count}",
         savePath=path
     )
 
@@ -191,7 +190,7 @@ def old_main():
     # plt.plot(error_filtered,0], label="error filtered")
     # plt.plot(error_unfiltered, label="unfliltered filtered")
 
-    plt.title("Wrist Z")
+    ##plt.title("Wrist Z")
     plt.plot(truth[:, 2, 2], label="qtm wrist z")
     plt.plot(unfiltered[:, 2, 2], label="unfiltered wrist z")
     plt.plot(filtered[:, 2, 2], label="filtered wrist z")
@@ -816,7 +815,7 @@ def plot_velocities_for_different_factors(ex_name: str, factors: list[float], da
             plt.xlabel("Time [s]")
             plt.ylabel(f"{label} Axis [m]")
 
-            plt.title(rf"Velocity of {j2str(joint)} with different $\lambda$")
+            #plt.title(rf"Velocity of {j2str(joint)} with different $\lambda$")
             plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_velocities/{j2str(joint)}_axis_{label}_{ex_name}_{plotsuffix}.pdf", bbox_inches="tight")
             plt.cla()
 
@@ -844,7 +843,7 @@ def plot_joints_for_different_factors(ex_name: str, factors: list[float], datas:
             plt.xlabel("Time [s]")
             plt.ylabel(f"{label} Axis [m]")
 
-            plt.title(rf"Trajectiories of {j2str(joint)} with different $\lambda$")
+            #plt.title(rf"Trajectiories of {j2str(joint)} with different $\lambda$")
             plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_trajectories/{j2str(joint)}_axis_{label}_{ex_name}_{plotsuffix}.pdf", bbox_inches="tight")
             plt.cla()
 
@@ -945,7 +944,7 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
         plt.xlabel("Time [s]")
         plt.ylabel("Distance [m]")
         plt.legend()
-        plt.title(f"Segment Length Distance over Time for {a_name}")
+        #plt.title(f"Segment Length Distance over Time for {a_name}")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/factor_{factor}_{segment_name}_upper_segment_{ex_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -958,7 +957,7 @@ def plot_constrained_segment_joint_length_change(ex_name: str, data: Data | Thei
         plt.xlabel("Time [s]")
         plt.ylabel("Distance [m]")
         plt.legend()
-        plt.title(f"Segment Length Distance over Time for {b_name}")
+        #plt.title(f"Segment Length Distance over Time for {b_name}")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/joint_segment_lengths/factor_{factor}_{segment_name}_lower_segment_{ex_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -1329,7 +1328,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
             plt.plot(data.down_kinect_ts, b[:, 2], label="butterworth");
             plt.plot(data.down_kinect_ts, data.down_kinect_unfiltered_joints[:, joint, 2], label="raw");
             plt.legend();
-            plt.title(data.config["measurement_error_factor"]);
+            #plt.title(data.config["measurement_error_factor"]);
             plt.show();
             plt.cla();
             '''
@@ -1412,7 +1411,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.xlabel(r"$\lambda$")
     plt.ylabel("RMSE")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
+    #plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_joints_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1424,7 +1423,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.ylabel("PCC")
     plt.legend()
 
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
+    #plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
 
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_pcc_joints_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
@@ -1437,7 +1436,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.xlabel(r"$\lambda$")
     plt.ylabel("DTW")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
+    #plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_dtw_distance_joints_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1449,7 +1448,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.xlabel(r"$\lambda$")
     plt.ylabel("DFD")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
+    #plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_frechet_distance_joints_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1535,7 +1534,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
                 qtm_ts = np.arange(0, d_vel.shape[0]) * (1./15.)
                 plt.plot(qtm_ts, d_vel, label="qtm fd vel")
                 plt.legend()
-                plt.title(f"Error factor: {data.config['measurement_error_factor']}");
+                #plt.title(f"Error factor: {data.config['measurement_error_factor']}");
                 plt.show();
                 plt.cla();
                 result = dtw.dtw(a_vel, b_vel, keep_internals=True, step_pattern=dtw.rabinerJuangStepPattern(6, "c"))
@@ -1623,7 +1622,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.xlabel(r"$\lambda$")
     plt.ylabel("RMSE")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
+    #plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_velocity_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1636,7 +1635,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.legend()
 
     jump_idx = np.argmax(corrs[idx][:] != 0)
-    plt.title(f"{facts[idx][:][jump_idx]}:{factors[rmse_argmin]}- Ex: {map_ex_name(ex_name)} Correlation offset : measurement error factor")
+    #plt.title(f"{facts[idx][:][jump_idx]}:{factors[rmse_argmin]}- Ex: {map_ex_name(ex_name)} Correlation offset : measurement error factor")
     print(f"Correlation jump {facts[idx][:][jump_idx]}:Factor argmin {factors[rmse_argmin]}")
 
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_velocity_correlation_offset_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
@@ -1651,7 +1650,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.xlabel(r"$\lambda$")
     plt.ylabel("DTW")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
+    #plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_dtw_distance_velocity_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1663,7 +1662,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.ylabel("PCC")
     plt.legend()
 
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
+    #plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
 
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_pcc_velocity_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
@@ -1676,7 +1675,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.xlabel(r"$\lambda$")
     plt.ylabel("DFD")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
+    #plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_frechet_distance_velocity_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1741,7 +1740,7 @@ def find_best_measurement_error_factor_corr_on_velocity(experiment_folder: Path,
                     qtm_ts = np.arange(0, d_vel.shape[0]) * (1./15.)
                     plt.plot(qtm_ts, d_vel, label="qtm fd vel")
                     plt.legend()
-                    plt.title(f"Error factor: {data.config['measurement_error_factor']}");
+                    #plt.title(f"Error factor: {data.config['measurement_error_factor']}");
                     plt.show();
 
                 corr = np.max(signal.correlate(a_vel[o:-o], b_vel[o:-o]))
@@ -1757,7 +1756,7 @@ def find_best_measurement_error_factor_corr_on_velocity(experiment_folder: Path,
     plt.xlabel(r"$\lambda$")
     plt.ylabel("Correlation")
     plt.legend()
-    plt.title(f"Ex: {map_ex_name(ex_name)} Correlation per measurement error factor")
+    #plt.title(f"Ex: {map_ex_name(ex_name)} Correlation per measurement error factor")
     # plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_corr_{experiment_type}_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     plt.show()
     plt.cla()
@@ -1798,7 +1797,7 @@ def find_best_measurement_error_factor_corr(experiment_folder: Path, cutoff: flo
     plt.xlabel(r"$\lambda$")
     plt.ylabel("Correlation")
     plt.legend()
-    plt.title(f"Ex: {map_ex_name(ex_name)} Correlation per measurement error factor")
+    #plt.title(f"Ex: {map_ex_name(ex_name)} Correlation per measurement error factor")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_corr_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     plt.cla()
     argmax = np.argmax(corrs)
@@ -1838,7 +1837,7 @@ def compare_velocities(data: Data) -> None:
     plt.plot(data.down_kinect_ts, b_vel, label="butter raw vel")
     plt.xlabel("Time [s]")
     plt.ylabel("Velocity [m/s]")
-    plt.title("Velocity of Joint ? - Axis ?")
+    #plt.title("Velocity of Joint ? - Axis ?")
     plt.legend()
     if SHOW:
         plt.show()
@@ -2000,7 +1999,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("RMSE")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
+        #plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/rmse_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2010,7 +2009,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("DTW")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
+        #plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/dtw_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2020,7 +2019,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("DFD")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
+        #plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/frechet_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2030,7 +2029,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("PCC")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
+        #plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/corr_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2051,7 +2050,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("RMSE")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
+        #plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_rmse_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2061,7 +2060,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("DTW")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
+        #plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_dtw_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2071,7 +2070,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("DFD")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
+        #plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_frechet_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2081,7 +2080,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("PCC Correlation")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
+        #plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_corr_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2319,7 +2318,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         # Otherwise take default
         if ylabel:
             plt.ylabel(ylabel)
-        plt.title(rf"Mean {metric} for different $\lambda$ Evaluated on Joint Position")
+        #plt.title(rf"Mean {metric} for different $\lambda$ Evaluated on Joint Position")
         os.makedirs(f"./results/experiments/determine_factor/sx000x", exist_ok=True)
         plt.savefig(f"./results/experiments/determine_factor/sx000x/{metric}_over_factor.pdf", bbox_inches="tight")
         plt.cla()
@@ -2357,8 +2356,8 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
-            plt.ylabel(ylabel)
-        plt.title(rf"Mean {metric} for different $\lambda$ Evaluated on Joint Velocities")
+            plt.ylabel("RMSE [m/s]")
+        #plt.title(rf"Mean {metric} for different $\lambda$ Evaluated on Joint Velocities")
         os.makedirs(f"./results/experiments/determine_factor/sx000x", exist_ok=True)
         plt.savefig(f"./results/experiments/determine_factor/sx000x/{metric}_over_factor_vel.pdf", bbox_inches="tight")
         plt.cla()
@@ -2398,8 +2397,8 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
-            plt.ylabel(ylabel)
-        plt.title(rf"Mean {metric} for different $\lambda$ Evaluated on Joint Position Against Ground Truth")
+            plt.ylabel("RMSE [m/s]")
+        #plt.title(rf"Mean {metric} for different $\lambda$ Evaluated on Joint Position Against Ground Truth")
         os.makedirs(f"./results/experiments/determine_factor_against_truth/sx000x", exist_ok=True)
         plt.savefig(f"./results/experiments/determine_factor_against_truth/sx000x/{metric}_over_factor.pdf", bbox_inches="tight")
         plt.cla()
@@ -2437,8 +2436,8 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
-            plt.ylabel(ylabel)
-        plt.title(rf"Mean {metric} for different $\lambda$ Evaluated on Joint Velocities Against Ground Truth")
+            plt.ylabel("RMSE [m/s]")
+        #plt.title(rf"Mean {metric} for different $\lambda$ Evaluated on Joint Velocities Against Ground Truth")
         os.makedirs(f"./results/experiments/determine_factor_against_truth/sx000x", exist_ok=True)
         plt.savefig(f"./results/experiments/determine_factor_against_truth/sx000x/{metric}_over_factor_vel.pdf", bbox_inches="tight")
         plt.cla()
@@ -2552,7 +2551,7 @@ def main():
 
         plt.xlabel("Time [s]")
         plt.ylabel(f"Axis {axss[idx]} [m]")
-        plt.title(j2str(joint))
+        #plt.title(j2str(joint))
         plt.legend()
         plt.show()
 
@@ -2709,7 +2708,7 @@ def main():
         plt.plot(data.down_kinect_ts[o:-o], double_butter(data.down_kinect_unfiltered_joints[:, int(Joint.ELBOW_LEFT), 2])[o:-o], label="Double Butterworth Filtered")
         plt.plot(data.down_kinect_ts[o:-o], data.down_kinect_unfiltered_joints[:, int(Joint.ELBOW_LEFT), 2][o:-o], label="Raw Data")
         plt.legend()
-        plt.title("Compare Joint Position ELBOW_LEFT for Z Axis")
+        #plt.title("Compare Joint Position ELBOW_LEFT for Z Axis")
         plt.show()
 
     print(f"experiment type: {args.experiment_type}")
@@ -3161,7 +3160,7 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                     estimate = data.down_kinect_joints[:length][o:-o]
                 else:
                     estimate = data.down_kinect_velocities[:length][o:-o]
-                unfiltered = data.down_kinect_unfiltered_joints[:length][o:-o]
+                unfiltered = double_butter(data.down_kinect_unfiltered_joints)[:length][o:-o]
                 truth = downsample(double_butter(data.theia_tensor, 120), np.arange(data.theia_tensor.shape[0]) * (1./120.), 15)[:length][o:-o]
 
                 l_pred_to_est_rmse = []
@@ -3270,6 +3269,18 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                     )
                     records.append(record)
 
+                    record = (
+                        ex_name,
+                        "BW" if not vel else r"BW\&CD",
+                        joint_name,
+                        best_factor,
+                        truth_to_un_rmse,
+                        truth_to_un_dtw,
+                        truth_to_un_fr,
+                        truth_to_un_pcc,
+                    )
+                    records.append(record)
+
                 record = (
                     ex_name,
                     short_name(filter_name),
@@ -3279,6 +3290,18 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                     np.array(l_truth_to_est_dtw).mean(),
                     np.array(l_truth_to_est_fr).mean(),
                     np.array(l_truth_to_est_pcc).mean(),
+                )
+                records.append(record)
+
+                record = (
+                    ex_name,
+                    "BW" if not vel else r"BW\&CD",
+                    "Mean",
+                    best_factor,
+                    np.array(l_truth_to_unfiltered_rmse).mean(),
+                    np.array(l_truth_to_un_dtw).mean(),
+                    np.array(l_truth_to_un_fr).mean(),
+                    np.array(l_truth_to_un_pcc).mean(),
                 )
                 records.append(record)
 
@@ -3480,8 +3503,11 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                 plt.xlabel(r"$\lambda$")
                 # Otherwise take default
                 if ylabel:
-                    plt.ylabel(ylabel)
-                plt.title(rf"Ex: {map_ex_name(ex_name)} - {filter_name} {metric} for different $\lambda$ for each joint")
+                    if vel:
+                        plt.ylabel("RMSE [m/s]")
+                    else:
+                        plt.ylabel(ylabel)
+                #plt.title(rf"Ex: {map_ex_name(ex_name)} - {filter_name} {metric} for different $\lambda$ for each joint")
                 os.makedirs(f"./results/experiments/{filter_name}/over_factor/{ex_name}/", exist_ok=True)
                 if vel:
                     plt.savefig(f"./results/experiments/{filter_name}/over_factor/{ex_name}/{metric}_over_factor_vel.pdf", bbox_inches='tight')
@@ -3511,8 +3537,11 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                 plt.xlabel(r"$\lambda$")
                 # Otherwise take default
                 if ylabel:
-                    plt.ylabel(ylabel)
-                plt.title(rf"Ex: {map_ex_name(ex_name)} - {filter_name} {metric} for CoM")
+                    if vel:
+                        plt.ylabel("RMSE [m/s]")
+                    else:
+                        plt.ylabel(ylabel)
+                #plt.title(rf"Ex: {map_ex_name(ex_name)} - {filter_name} {metric} for CoM")
                 os.makedirs(f"./results/experiments/{filter_name}/over_factor/{ex_name}/", exist_ok=True)
                 if vel:
                     plt.savefig(f"./results/experiments/{filter_name}/over_factor/{ex_name}/{metric}_over_factor_vel_com.pdf", bbox_inches="tight")
@@ -3540,8 +3569,11 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                 plt.xlabel(r"$\lambda$")
                 # Otherwise take default
                 if ylabel:
-                    plt.ylabel(ylabel)
-                plt.title(rf"Ex: {map_ex_name(ex_name)} - {filter_name} {metric} for XcoM")
+                    if vel:
+                        plt.ylabel("RMSE [m/s]")
+                    else:
+                        plt.ylabel(ylabel)
+                #plt.title(rf"Ex: {map_ex_name(ex_name)} - {filter_name} {metric} for XcoM")
                 os.makedirs(f"./results/experiments/{filter_name}/over_factor/{ex_name}/", exist_ok=True)
                 if vel:
                     plt.savefig(f"./results/experiments/{filter_name}/over_factor/{ex_name}/{metric}_over_factor_vel_xcom.pdf", bbox_inches="tight")
@@ -3613,8 +3645,11 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             plt.xlabel(r"$\lambda$")
             # Otherwise take default
             if ylabel:
-                plt.ylabel(ylabel)
-            plt.title(rf"Ex: Mean 2a\&b - {filter_name} {metric} for different $\lambda$ for each joint")
+                if vel:
+                    plt.ylabel("RMSE [m/s]")
+                else:
+                    plt.ylabel(ylabel)
+            #plt.title(rf"Ex: Mean 2a\&b - {filter_name} {metric} for different $\lambda$ for each joint")
             os.makedirs(f"./results/experiments/{filter_name}/over_factor/s3000x", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/over_factor/s3000x/{metric}_over_factor_vel.pdf", bbox_inches="tight")
@@ -3644,8 +3679,11 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             plt.xlabel(r"$\lambda$")
             # Otherwise take default
             if ylabel:
-                plt.ylabel(ylabel)
-            plt.title(rf"Ex: Mean 2a\&b - {filter_name} {metric} for CoM")
+                if vel:
+                    plt.ylabel("RMSE [m/s]")
+                else:
+                    plt.ylabel(ylabel)
+            #plt.title(rf"Ex: Mean 2a\&b - {filter_name} {metric} for CoM")
             os.makedirs(f"./results/experiments/{filter_name}/over_factor/s3000x", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/over_factor/s3000x/{metric}_over_factor_vel_com.pdf", bbox_inches="tight")
@@ -3673,8 +3711,11 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             plt.xlabel(r"$\lambda$")
             # Otherwise take default
             if ylabel:
-                plt.ylabel(ylabel)
-            plt.title(rf"Ex: Mean 2a\&b - {filter_name} {metric} for XcoM")
+                if vel:
+                    plt.ylabel("RMSE [m/s]")
+                else:
+                    plt.ylabel(ylabel)
+            #plt.title(rf"Ex: Mean 2a\&b - {filter_name} {metric} for XcoM")
             os.makedirs(f"./results/experiments/{filter_name}/over_factor/s3000x", exist_ok=True)
             if vel:
                 plt.savefig(f"./results/experiments/{filter_name}/over_factor/s3000x/{metric}_over_factor_vel_xcom.pdf", bbox_inches="tight")
@@ -3707,8 +3748,11 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
-            plt.ylabel(ylabel)
-        plt.title(rf"Ex: Mean 2a\&b - All Filters {metric} for different $\lambda$ for each joint")
+            if vel:
+                plt.ylabel("RMSE [m/s]")
+            else:
+                plt.ylabel(ylabel)
+        #plt.title(rf"Ex: Mean 2a\&b - All Filters {metric} for different $\lambda$ for each joint")
         os.makedirs(f"./results/experiments/over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/s3000x/{metric}_over_factor_vel.pdf", bbox_inches="tight")
@@ -3738,8 +3782,11 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
-            plt.ylabel(ylabel)
-        plt.title(rf"Ex: Mean 2a\&b - All Filters {metric} for CoM")
+            if vel:
+                plt.ylabel("RMSE [m/s]")
+            else:
+                plt.ylabel(ylabel)
+        #plt.title(rf"Ex: Mean 2a\&b - All Filters {metric} for CoM")
         os.makedirs(f"./results/experiments/over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/s3000x/{metric}_over_factor_vel_com.pdf", bbox_inches="tight")
@@ -3767,8 +3814,11 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
-            plt.ylabel(ylabel)
-        plt.title(rf"Ex: Mean 2a\&b - All Filters {metric} for XcoM")
+            if vel:
+                plt.ylabel("RMSE [m/s]")
+            else:
+                plt.ylabel(ylabel)
+        #plt.title(rf"Ex: Mean 2a\&b - All Filters {metric} for XcoM")
         os.makedirs(f"./results/experiments/over_factor/s3000x", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/s3000x/{metric}_over_factor_vel_xcom.pdf", bbox_inches="tight")
@@ -3863,8 +3913,11 @@ def compare_prediction_vs_truth_for_different_filters_qtm_for_com(experiment_pat
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
-            plt.ylabel(ylabel)
-        plt.title(rf"Ex: Mean 1a\&b - All Filters {metric} for CoM/CoP")
+            if vel:
+                plt.ylabel("RMSE [m/s]")
+            else:
+                plt.ylabel(ylabel)
+        #plt.title(rf"Ex: Mean 1a\&b - All Filters {metric} for CoM/CoP")
         os.makedirs(f"./results/experiments/over_factor/s1000x/", exist_ok=True)
         if vel:
             plt.savefig(f"./results/experiments/over_factor/s1000x/{metric}_over_factor_vel_cop.pdf", bbox_inches="tight")
@@ -3968,9 +4021,9 @@ def create_joint_length_plots_and_table(path: Path):
     # plt.setp(ticks[::6], visible=True)
     plt.xlabel(r"$\lambda$")
     # Otherwise take default
-    plt.ylabel(rf"Variance [m^{2}]")
+    plt.ylabel(rf"Variance [$m^{2}$]")
     plt.legend()
-    plt.title("Mean Length Change Variance over All Experiments")
+    #plt.title("Mean Length Change Variance over All Experiments")
     sns.set_style("darkgrid")
     os.makedirs(f"./results/experiments/joint_segment_lengths/sx000x", exist_ok=True)
     plt.savefig(f"./results/experiments/joint_segment_lengths/sx000x/mean_var.pdf", bbox_inches="tight")
@@ -4000,8 +4053,8 @@ def create_joint_length_plots_and_table(path: Path):
     # plt.setp(ticks[::6], visible=True)
     plt.xlabel(r"$\lambda$")
     # Otherwise take default
-    plt.ylabel(rf"Variance [m^{2}]")
-    plt.title("Mean Length Change Variance for SkeletonFilter for each Segment over all Experiments")
+    plt.ylabel(rf"Variance [$m^{2}$]")
+    #plt.title("Mean Length Change Variance for SkeletonFilter for each Segment over all Experiments")
     sns.set_style("darkgrid")
     os.makedirs(f"./results/experiments/joint_segment_lengths/sx000x", exist_ok=True)
     plt.savefig(f"./results/experiments/joint_segment_lengths/sx000x/mean_var_segments.pdf", bbox_inches="tight")

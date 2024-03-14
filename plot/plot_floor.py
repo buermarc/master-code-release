@@ -22,17 +22,17 @@ def main():
         plt.plot(normal[:, 0], label="X")
         plt.plot(normal[:, 1], label="Y")
         plt.plot(normal[:, 2], label="Z")
-        plt.title("floor normal")
         plt.legend()
-        plt.show()
+        plt.savefig("./results/experiments/floorpoint.pdf", bbox_inches='tight')
         plt.cla()
 
         plt.plot(point[:, 0], label="X")
         plt.plot(point[:, 1], label="Y")
         plt.plot(point[:, 2], label="Z")
-        plt.title("floor point")
+        plt.xlabel("Frame")
+        plt.ylabel("Axis [mm]")
         plt.legend()
-        plt.show()
+        plt.savefig("./results/experiments/floorpoint.pdf", bbox_inches='tight')
         plt.cla()
 
 

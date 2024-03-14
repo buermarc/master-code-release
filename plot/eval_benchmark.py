@@ -9,7 +9,7 @@ from dataclasses import dataclass
 import seaborn as sns
 
 NAME_MAP = {
-    "apply_filter": "Apply Filter",
+    "apply_filter": "Prepare, Setup, and Execute Filter",
     "build_filter": "Build Filter",
     "camera": "Camera",
     "detect_floor": "Detect Floor",
@@ -103,8 +103,6 @@ class BenchData:
             self.pointcloud,
             self.detect_floor,
             self.apply_filter,
-            self.build_filter,
-            self.step,
             self.extract_stability_metrics,
             self.visualize,
         ]
@@ -278,7 +276,7 @@ def main():
 
     names = ([NAME_MAP[element.name] for element in mean.sub_ordered()])
     plt.yticks(np.arange(len(names)), names)
-    plt.xlabel("Time [milliseconds]")
+    plt.xlabel("Time [ms]")
     plt.ylabel("Steps")
     # plt.legend(bbox_to_anchor=(1.04, 0.5), loc="center left")
     tdir = Path("results/experiments/benchmark")
@@ -301,7 +299,7 @@ def main():
 
     names = ([NAME_MAP[element.name] for element in mean.rest()])
     plt.yticks(np.arange(len(names)), names)
-    plt.xlabel("Time [seconds]")
+    plt.xlabel("Time [ms]")
     plt.ylabel("Steps")
     # plt.legend(bbox_to_anchor=(1.04, 0.5), loc="center left")
     tdir = Path("results/experiments/benchmark")
