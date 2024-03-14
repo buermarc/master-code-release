@@ -229,6 +229,7 @@ class DetermineFactorGenerateTable:
     filter_type: str
     eval_type: str
     records: list[DetermineFactorRecord] = field(default_factory=list)
+    vel: bool = False
 
     def append(self, record: DetermineFactorRecord) -> None:
         self.records.append(record)
@@ -265,7 +266,7 @@ class DetermineFactorGenerateTable:
 \end{{tabular}}
 \end{{center}}
 \caption{{Optimal $\lambda$ for \{self.filter_type}\ Evaluated on {self.eval_type}}}
-\label{{tab:determine-factor-{self.filter_type}}}
+\label{{tab:{"vel-" if self.vel else ""}determine-factor-{self.filter_type}}}
 \end{{table}}
 '''
 
@@ -508,8 +509,8 @@ METRIC_NAMES = ["RMSE", "DTW", "DFD", "PCC"]
 
 EX_NAMES = [
     "s10001",
-    "s10002",
     "s10003",
+    "s10002",
     "s10004",
     "s30001",
     "s30002",
@@ -521,8 +522,8 @@ EX_NAMES = [
 
 EX_NAMES_WITH_BETTER = [
     "s10001",
-    "s10002",
     "s10003",
+    "s10002",
     "s10004",
     "s30001",
     "s30002",
@@ -540,8 +541,8 @@ EX_NAMES_WITH_BETTER = [
 
 THEIA_EX_NAMES = [
     "s30001",
-    "s30002",
     "s30003",
+    "s30002",
     "s30004",
     "s30005",
     "s30006",
@@ -549,18 +550,18 @@ THEIA_EX_NAMES = [
 
 EX_NAMES_WITH_BETTER_AND_SMOOTHED = [
     "s10001",
-    "s10002",
     "s10003",
+    "s10002",
     "s10004",
     "s30001",
-    "s30002",
     "s30003",
+    "s30002",
     "s30004",
     "s30005",
     "s30006",
     "b_s30001",
-    "b_s30002",
     "b_s30003",
+    "b_s30002",
     "b_s30004",
     "b_s30005",
     "b_s30006",
@@ -573,40 +574,40 @@ EX_NAMES_WITH_BETTER_AND_SMOOTHED = [
 ]
 
 EX_NAME_MAPPING = {
-        "s10001": "1a@1 +NN",
-        "s10002": "1b@1 +NN",
-        "s10003": "1a@2 +NN",
-        "s10004": "1b@2 +NN",
+        "s10001": "1a@2 +NN",
+        "s10002": "1b@2 +NN",
+        "s10003": "1a@3 +NN",
+        "s10004": "1b@3 +NN",
         "s30001": "2b@1",
-        "s30002": "2b@1",
-        "s30003": "2a@1",
-        "s30004": "2a@2",
+        "s30003": "2a@2",
+        "s30002": "2b@2",
+        "s30004": "2a@3",
         "s30005": "2b@3",
-        "s30006": "3@1",
+        "s30006": "3@2",
         "b_s30001": "2b@1 +NN",
-        "b_s30002": "2b@1 +NN",
-        "b_s30003": "2a@1 +NN",
-        "b_s30004": "2a@2 +NN",
+        "b_s30003": "2a@2 +NN",
+        "b_s30002": "2b@2 +NN",
+        "b_s30004": "2a@3 +NN",
         "b_s30005": "2b@3 +NN",
-        "b_s30006": "3@1 +NN",
+        "b_s30006": "3@2 +NN",
         "sb_s30001": "2b@1 +S(0.5) +NN",
-        "sb_s30002": "2b@1 +S(0.5) +NN",
-        "sb_s30003": "2a@1 +S(0.5) +NN",
-        "sb_s30004": "2a@2 +S(0.5) +NN",
+        "sb_s30003": "2a@2 +S(0.5) +NN",
+        "sb_s30002": "2b@2 +S(0.5) +NN",
+        "sb_s30004": "2a@3 +S(0.5) +NN",
         "sb_s30005": "2b@3 +S(0.5) +NN",
-        "sb_s30006": "3@1 +S(0.5) +NN",
+        "sb_s30006": "3@2 +S(0.5) +NN",
         "b\\_s30001": "2b@1 +NN",
-        "b\\_s30002": "2b@1 +NN",
-        "b\\_s30003": "2a@1 +NN",
-        "b\\_s30004": "2a@2 +NN",
+        "b\\_s30003": "2a@2 +NN",
+        "b\\_s30002": "2b@2 +NN",
+        "b\\_s30004": "2a@3 +NN",
         "b\\_s30005": "2b@3 +NN",
-        "b\\_s30006": "3@1 +NN",
+        "b\\_s30006": "3@2 +NN",
         "sb\\_s30001": "2b@1 +S(0.5) +NN",
-        "sb\\_s30002": "2b@1 +S(0.5) +NN",
-        "sb\\_s30003": "2a@1 +S(0.5) +NN",
-        "sb\\_s30004": "2a@2 +S(0.5) +NN",
+        "sb\\_s30003": "2a@2 +S(0.5) +NN",
+        "sb\\_s30002": "2b@2 +S(0.5) +NN",
+        "sb\\_s30004": "2a@3 +S(0.5) +NN",
         "sb\\_s30005": "2b@3 +S(0.5) +NN",
-        "sb\\_s30006": "3@1 +S(0.5) +NN",
+        "sb\\_s30006": "3@2 +S(0.5) +NN",
 }
 
 def map_ex_name(ex_name: str) -> str:
@@ -1378,6 +1379,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
         pltrecord = (
             ex_name,
             short_name(FILTER_NAME),
+            "Up Right",
             factor,
             rmse,
             dtw_distance,
@@ -1410,7 +1412,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.xlabel(r"$\lambda$")
     plt.ylabel("RMSE")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE pro $\lambda$")
+    plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_joints_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1422,7 +1424,7 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.ylabel("PCC")
     plt.legend()
 
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC pro $\lambda$")
+    plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
 
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_pcc_joints_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
@@ -1430,24 +1432,24 @@ def find_best_measurement_error_factor_rmse(experiment_folder: Path, ex_name: st
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
+    plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW", color="darkorange", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
     plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
     plt.xlabel(r"$\lambda$")
-    plt.ylabel("Dynamic Time Warp Dist")
+    plt.ylabel("DTW")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW Dist. pro $\lambda$")
+    plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_dtw_distance_joints_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD Dist", color="olive", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
-    plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
+    plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD", color="olive", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
+    plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
     plt.xlabel(r"$\lambda$")
-    plt.ylabel("DFD Dist")
+    plt.ylabel("DFD")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD Dist. pro $\lambda$")
+    plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_frechet_distance_joints_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1587,6 +1589,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
         pltrecord = (
             ex_name,
             FILTER_NAME,
+            "Up Right",
             factor,
             rmse,
             dtw_distance,
@@ -1620,7 +1623,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.xlabel(r"$\lambda$")
     plt.ylabel("RMSE")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE pro $\lambda$")
+    plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_rmse_velocity_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1643,12 +1646,12 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     '''
 
     plt.cla()
-    plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
+    plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW", color="darkorange", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
     plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
     plt.xlabel(r"$\lambda$")
-    plt.ylabel("Dynamic Time Warp Dist")
+    plt.ylabel("DTW")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW Dist. pro $\lambda$")
+    plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_dtw_distance_velocity_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1660,7 +1663,7 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.ylabel("PCC")
     plt.legend()
 
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC pro $\lambda$")
+    plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
 
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_pcc_velocity_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
@@ -1668,12 +1671,12 @@ def find_best_measurement_error_factor_rmse_on_velocity(experiment_folder: Path,
     plt.cla()
 
     plt.cla()
-    plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD Dist", color="olive", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
-    plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
+    plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD", color="olive", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
+    plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
     plt.xlabel(r"$\lambda$")
-    plt.ylabel("DFD Dist")
+    plt.ylabel("DFD")
     plt.legend()
-    plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD Dist. pro $\lambda$")
+    plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
     plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor/factors_frechet_distance_velocity_{os.path.basename(experiment_folder)}.pdf", bbox_inches="tight")
     if SHOW:
         plt.show()
@@ -1847,7 +1850,9 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
     os.makedirs(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}", exist_ok=True)
     pltrecords = []
     vel_pltrecords = []
-    for (kinect_joints, theia_joints, segment_name) in JOINT_SEGMENTS:
+    over_ride = [([Joint.SHOULDER_RIGHT, Joint.ELBOW_RIGHT, Joint.WRIST_RIGHT], [TheiaJoint.SHOULDER_RIGHT, TheiaJoint.ELBOW_RIGHT, TheiaJoint.WRIST_RIGHT], "UP_RIGHT")]
+    # for (kinect_joints, theia_joints, segment_name) in JOINT_SEGMENTS:
+    for (kinect_joints, theia_joints, segment_name) in over_ride:
         corr_a = []
         frechet_a = []
         dtw_a = []
@@ -1995,27 +2000,27 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("RMSE")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE pro $\lambda$")
+        plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/rmse_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
         plt.cla()
-        plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
+        plt.plot(facts[idx][:], dtw_dists[idx][:], label="DTW", color="darkorange", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
         plt.plot(facts[dtw_argmin], dtw_dists[dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[dtw_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
         plt.xlabel(r"$\lambda$")
-        plt.ylabel("Dynamic Time Warp Dist")
+        plt.ylabel("DTW")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW Dist. pro $\lambda$")
+        plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/dtw_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
         plt.cla()
-        plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD Dist", color="olive", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
-        plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
+        plt.plot(facts[idx][:], fr_dists[idx][:], label="DFD", color="olive", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
+        plt.plot(facts[fr_argmin], fr_dists[fr_argmin], marker="X", ls="None", label=f"Argmin DFD: {facts[fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
         plt.xlabel(r"$\lambda$")
-        plt.ylabel("DFD Dist")
+        plt.ylabel("DFD")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD Dist. pro $\lambda$")
+        plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/frechet_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2025,7 +2030,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("PCC")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC pro $\lambda$")
+        plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/corr_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2046,27 +2051,27 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("RMSE")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE pro $\lambda$")
+        plt.title(rf"Ex: {map_ex_name(ex_name)} - RMSE per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_rmse_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
         plt.cla()
-        plt.plot(facts[vel_idx][:], vel_dtw_dists[vel_idx][:], label="DTW Dist", color="darkorange", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
+        plt.plot(facts[vel_idx][:], vel_dtw_dists[vel_idx][:], label="DTW", color="darkorange", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
         plt.plot(facts[vel_dtw_argmin], vel_dtw_dists[vel_dtw_argmin], marker="X", ls="None", label=f"Argmin DTW: {facts[vel_dtw_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
         plt.xlabel(r"$\lambda$")
-        plt.ylabel("Dynamic Time Warp Dist")
+        plt.ylabel("DTW")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW Dist. pro $\lambda$")
+        plt.title(rf"Ex: {map_ex_name(ex_name)} - DTW per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_dtw_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
         plt.cla()
-        plt.plot(facts[vel_idx][:], vel_fr_dists[vel_idx][:], label="DFD Dist", color="olive", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
-        plt.plot(facts[vel_fr_argmin], vel_fr_dists[vel_fr_argmin], marker="X", ls="None", label=f"Argmin DFD Dist: {facts[vel_fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
+        plt.plot(facts[vel_idx][:], vel_fr_dists[vel_idx][:], label="DFD", color="olive", marker='.', markersize=8, markeredgecolor='black', alpha=0.4, linewidth=4)
+        plt.plot(facts[vel_fr_argmin], vel_fr_dists[vel_fr_argmin], marker="X", ls="None", label=f"Argmin DFD: {facts[vel_fr_argmin]:.2f}", color="crimson", alpha=0.6, markersize=8)
         plt.xlabel(r"$\lambda$")
-        plt.ylabel("DFD Dist")
+        plt.ylabel("DFD")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD Dist. pro $\lambda$")
+        plt.title(rf"Ex: {map_ex_name(ex_name)} - DFD per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_frechet_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2076,7 +2081,7 @@ def determine_minimum_against_ground_truth_theia(experiment_folder: Path, ex_nam
         plt.xlabel(r"$\lambda$")
         plt.ylabel("PCC Correlation")
         plt.legend()
-        plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC pro $\lambda$")
+        plt.title(rf"Ex: {map_ex_name(ex_name)} - PCC per $\lambda$")
         plt.savefig(f"./results/experiments/{FILTER_NAME}/determine_factor_against_truth/{ex_name}/vel_corr_{segment_name}.pdf", bbox_inches="tight")
         plt.cla()
 
@@ -2194,7 +2199,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         global FILTER_NAME
         FILTER_NAME = filter_type
         generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Positions", records=[])
-        vel_generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Velocities", records=[])
+        vel_generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Velocities", records=[], vel=True)
         for ex_name in EX_NAMES:
             ex_path = path / filter_type / ex_name
             _, _, _, _, _, record, pltrecords = find_best_measurement_error_factor_rmse(ex_path, ex_name, 0.1)
@@ -2241,7 +2246,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
     for filter_type in FILTER_TYPES:
         FILTER_NAME = filter_type
         generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Positions Against Ground Truth", records=[])
-        vel_generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Velocities Against Ground Truth", records=[])
+        vel_generator = DetermineFactorGenerateTable(filter_type=filter_type, eval_type="Joint Velocities Against Ground Truth", records=[], vel=True)
         for ex_name in THEIA_EX_NAMES:
             ex_path = path / filter_type / ex_name
             record, vel_record, pltrecords, vel_pltrecords = determine_minimum_against_ground_truth_theia(ex_path, ex_name, 0.1)
@@ -2363,6 +2368,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         recorddata = np.array(truth_plot_records, dtype=[
             ("Experiment Name", f"U{len('s30001')}"),
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
+            ("Segment Name", f"U{len('Upper Arm Right')}"),
             ("Factor", "f"),
             ("RMSE", "f"),
             ("DTW", "f"),
@@ -2401,6 +2407,7 @@ def all_ex_find_best_measurement_error_factor_rmse(path: Path):
         recorddata = np.array(truth_vel_plot_records, dtype=[
             ("Experiment Name", f"U{len('s30001')}"),
             ("Filter Name", f"U{len('SimpleConstrainedSkeletonFilter')}"),
+            ("Segment Name", f"U{len('Upper Arm Right')}"),
             ("Factor", "f"),
             ("RMSE", "f"),
             ("DTW", "f"),
@@ -2454,6 +2461,7 @@ def main():
     parser.add_argument("-l", "--latex", dest="latextables", action="store_true", default=False)
     parser.add_argument("-j", "--jointlenght", dest="jointlength", action="store_true", default=False)
     parser.add_argument("-b", "--blandaltman", dest="blandaltman", action="store_true", default=False)
+    parser.add_argument("-z", "--benchmark", dest="benchmark", action="store_true", default=False)
 
     args = parser.parse_args()
 
@@ -2495,10 +2503,25 @@ def main():
         return
 
     if args.blandaltman:
-        best_factor = 45
-        theia_data = load_processed_theia_data(find_factor_path(best_factor, Path(args.experiment_folder)))
-        bland_altman_plots(theia_data, ex_name)
-        plot_subparts_of_trajectories(theia_data, ex_name)
+        for filter_type in tqdm(FILTER_TYPES):
+            for ex_name in tqdm(EX_NAMES):
+                best_factor = 35
+                FILTER_NAME = filter_type
+                path = Path(args.experiment_folder) / filter_type / ex_name
+                if "s3" in ex_name:
+                    theia_data = load_processed_theia_data(find_factor_path(best_factor, path))
+                    bland_altman_plots(theia_data, ex_name)
+                    plot_subparts_of_trajectories(theia_data, ex_name)
+                elif "s1" in ex_name:
+                    qtm_data = load_processed_data(find_factor_path(best_factor, path))
+                    bland_altman_plots_qtm(qtm_data, ex_name)
+                else:
+                    raise ValueError(f"Unknown experiment_name: {ex_name}")
+
+        return
+
+    if args.benchmark:
+        compare_frames(Path(args.experiment_folder))
         return
 
     #if args.second_folder:
@@ -3033,6 +3056,30 @@ def plot_subparts_of_trajectories(theia_data: TheiaData, ex_name: str) -> None:
             plt.savefig(f"./results/experiments/{FILTER_NAME}/subplots/{ex_name}/{joint_name}/{ax_name}/vel/{slot[0]}-{slot[1]}.pdf", bbox_inches="tight")
             plt.cla()
 
+def bland_altman_plots_qtm(qtm_data: Data, ex_name: str, cutoff: float = 0.20) -> None:
+    joint_name = "CoP"
+    os.makedirs(f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/", exist_ok=True)
+
+    unfiltered = qtm_data.down_kinect_unfiltered_com
+    filtered = qtm_data.down_kinect_com
+    truth = downsample(qtm_data.qtm_cop, qtm_data.qtm_cop_ts, 15)
+    length = min(len(unfiltered), len(filtered), len(truth))
+
+    o = max(int(length * cutoff), 1)
+
+    unfiltered = unfiltered[:length][o:-o]
+    filtered = filtered[:length][o:-o]
+    truth = truth[:length][o:-o]
+
+    for ax_idx, ax_name in enumerate(["X", "Y"]):
+        path = f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/{joint_name}_{ax_name}_filtered.pdf"
+        with Path(path).open(mode="wb+") as _f:
+            bland_altman(filtered[:, ax_idx], truth[:, ax_idx], _f)
+        path = f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/{joint_name}_{ax_name}_unfiltered.pdf"
+        with Path(path).open(mode="wb+") as _f:
+            bland_altman(unfiltered[:, ax_idx], truth[:, ax_idx], _f)
+
+
 
 def bland_altman_plots(theia_data: TheiaData, ex_name: str, cutoff: float = 0.20) -> None:
     length = theia_data.min_joint_length_at_15hz
@@ -3066,6 +3113,19 @@ def bland_altman_plots(theia_data: TheiaData, ex_name: str, cutoff: float = 0.20
         path = f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/{joint_name}_{ax_name}_unfiltered.pdf"
         with Path(path).open(mode="wb+") as _f:
             bland_altman(unfiltered[:, ax_idx], truth[:, ax_idx], _f)
+
+    # XCOM
+    joint_name = "XcoM"
+    est = theia_data.down_kinect_xcom[:length][o:-o]
+    un = theia_data.down_kinect_unfiltered_xcom[:length][o:-o]
+    tru = theia_data.down_theia_xcom_15_hz[:length][o:-o]
+    for ax_idx, ax_name in enumerate(["X", "Y"]):
+        path = f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/{joint_name}_{ax_name}_filtered.pdf"
+        with Path(path).open(mode="wb+") as _f:
+            bland_altman(est[:, ax_idx], tru[:, ax_idx], _f)
+        path = f"./results/experiments/{FILTER_NAME}/bland_altman/{ex_name}/{joint_name}_{ax_name}_unfiltered.pdf"
+        with Path(path).open(mode="wb+") as _f:
+            bland_altman(un[:, ax_idx], tru[:, ax_idx], _f)
 
 
 def compare_filter_type(experiment_path_a: Path, experiment_path_b: Path) -> None:
@@ -3477,7 +3537,6 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
                 ticks = ax.ax.get_xticklabels()
                 plt.setp(ax.ax.get_xticklabels(), visible=False)
                 plt.setp(ticks[::2], visible=True)
-                plt.yscale("log")
                 plt.xlabel(r"$\lambda$")
                 # Otherwise take default
                 if ylabel:
@@ -3611,7 +3670,6 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
             ticks = ax.ax.get_xticklabels()
             plt.setp(ax.ax.get_xticklabels(), visible=False)
             plt.setp(ticks[::2], visible=True)
-            plt.yscale("log")
             plt.xlabel(r"$\lambda$")
             # Otherwise take default
             if ylabel:
@@ -3659,6 +3717,8 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         plt.cla()
 
         # com
+        if vel:
+            com_dataframe = com_dataframe.loc[com_dataframe["Factor"] > 9]
         sns.set_style("darkgrid")
         ax = sns.catplot(
             data=com_dataframe,
@@ -3704,7 +3764,6 @@ def compare_prediction_vs_truth_for_different_filters(experiment_path: Path, cut
         ticks = ax.ax.get_xticklabels()
         plt.setp(ax.ax.get_xticklabels(), visible=False)
         plt.setp(ticks[::2], visible=True)
-        plt.yscale("log")
         plt.xlabel(r"$\lambda$")
         # Otherwise take default
         if ylabel:
@@ -3843,47 +3902,48 @@ def create_joint_length_plots_and_table(path: Path):
     ])
 
     # header_names = [r"Experiment\\Name",r"Filter\\Type", r"Segment\\Name", "Factor", r"Filtered Var", r"Unfiltered Var", r"Theia Var"]
-    header_names = [r"Experiment\\Name",r"Filter\\Type", r"Segment Name", "Factor", r"Filtered Var", r"Unfiltered Var"]
-    key, value = ("UP_LEFT", ("Upper Arm Left", "Lower Arm Left"))
-    a_name, b_name = value
-    whole_segment_name = rf"{a_name} \& {b_name} Length Change"
-    ref = f"{key}-length-change"
-    table = GenericTableGeneration(header_names, whole_segment_name, ref)
-    for ex_name in focus_ex_names:
-        dataframe = pd.DataFrame.from_records(recorddata)
-        sub = dataframe.loc[dataframe["Experiment Name"] == ex_name]
-        for factor in [70]:
-            for filter_type in ["SkeletonFilter", "ConstrainedSkeletonFilter"]:
-                subsub = sub.loc[sub["Filter Type"] == filter_type]
-                sss = subsub.loc[subsub["Segment Name"] == a_name]
-                ssss = sss.loc[sss["Factor"] == factor]
-                row = (
-                    map_ex_name(ex_name),
-                    rf"\{short_name(filter_type)}",
-                    a_name,
-                    str(factor),
-                    rf"\SI{{{round(ssss['filteredvar'].values[0], 9):.5e}}}{{\meter}}",
-                    rf"\SI{{{round(ssss['unfilteredvar'].values[0], 9):.5e}}}{{\meter}}",
-                    # rf"${round(ssss['theiavar'].values[0], 9):.5e}$ m",
-                )
-                table.append(row)
-                sss = subsub.loc[subsub["Segment Name"] == b_name]
-                ssss = sss.loc[sss["Factor"] == factor]
+    header_names = [r"Experiment\\Name",r"Filter\\Type", r"Segment Name", r"$\lambda$", r"Filtered Var", r"Unfiltered Var"]
+    some = [("UP_LEFT", ("Upper Arm Left", "Lower Arm Left")), ("DOWN_RIGHT", ("Thigh Right", "Shank Right"))]
+    for key, value in some:
+        a_name, b_name = value
+        whole_segment_name = rf"{a_name} \& {b_name} Length Change"
+        ref = f"{key}-length-change"
+        table = GenericTableGeneration(header_names, whole_segment_name, ref)
+        for ex_name in focus_ex_names:
+            dataframe = pd.DataFrame.from_records(recorddata)
+            sub = dataframe.loc[dataframe["Experiment Name"] == ex_name]
+            for factor in [5, 35]:
+                for filter_type in ["SkeletonFilter", "ConstrainedSkeletonFilter"]:
+                    subsub = sub.loc[sub["Filter Type"] == filter_type]
+                    sss = subsub.loc[subsub["Segment Name"] == a_name]
+                    ssss = sss.loc[sss["Factor"] == factor]
+                    row = (
+                        map_ex_name(ex_name),
+                        rf"\{short_name(filter_type)}",
+                        a_name,
+                        str(factor),
+                        rf"\SI{{{round(ssss['filteredvar'].values[0], 9):.5e}}}{{\meter}}",
+                        rf"\SI{{{round(ssss['unfilteredvar'].values[0], 9):.5e}}}{{\meter}}",
+                        # rf"${round(ssss['theiavar'].values[0], 9):.5e}$ m",
+                    )
+                    table.append(row)
+                    sss = subsub.loc[subsub["Segment Name"] == b_name]
+                    ssss = sss.loc[sss["Factor"] == factor]
 
-                row = (
-                    map_ex_name(ex_name),
-                    rf"\{short_name(filter_type)}",
-                    b_name,
-                    str(factor),
-                    rf"\SI{{{round(ssss['filteredvar'].values[0], 9):.5e}}}{{\meter}}",
-                    rf"\SI{{{round(ssss['unfilteredvar'].values[0], 9):.5e}}}{{\meter}}",
-                    # rf"${round(ssss['theiavar'].values[0], 9):.5e}$ m",
-                )
-                table.append(row)
+                    row = (
+                        map_ex_name(ex_name),
+                        rf"\{short_name(filter_type)}",
+                        b_name,
+                        str(factor),
+                        rf"\SI{{{round(ssss['filteredvar'].values[0], 9):.5e}}}{{\meter}}",
+                        rf"\SI{{{round(ssss['unfilteredvar'].values[0], 9):.5e}}}{{\meter}}",
+                        # rf"${round(ssss['theiavar'].values[0], 9):.5e}$ m",
+                    )
+                    table.append(row)
 
-    end_path = f"{a_name.replace(' ', '-')}_{b_name.replace(' ', '-')}"
-    out_path = Path(f"./results/experiments/joint_segment_lengths/{end_path}.tex")
-    table.generate_table(out_path)
+        end_path = f"{a_name.replace(' ', '-')}_{b_name.replace(' ', '-')}"
+        out_path = Path(f"./results/experiments/joint_segment_lengths/{end_path}.tex")
+        table.generate_table(out_path)
 
     baseline = dataframe.groupby(["Filter Type", "Factor"]).mean("unfilteredvar")["unfilteredvar"].values[0]
 
@@ -3900,17 +3960,17 @@ def create_joint_length_plots_and_table(path: Path):
         markersize=4,
         linewidth=1,
     )
-    ax.axhline(baseline, xmin=0, xmax=150, label="Unfiltered Var", linestyle="dotted", alpha=0.6)
-    sns.move_legend(ax, "upper left", bbox_to_anchor=(1, 1))
+    ax.axhline(baseline, xmin=0, xmax=150, label="Unfiltered Variance", linestyle="dotted", alpha=0.6)
+    plt.legend(bbox_to_anchor=(1.04, 0.5), loc="center left")
     # ax.set_xticklabels(rotation=40, ha="right")
     # ticks = ax.ax.get_xticklabels()
     # plt.setp(ax.ax.get_xticklabels(), visible=False)
     # plt.setp(ticks[::6], visible=True)
     plt.xlabel(r"$\lambda$")
     # Otherwise take default
-    plt.ylabel("Variance [m]")
+    plt.ylabel(rf"Variance [m^{2}]")
     plt.legend()
-    plt.title("Mean Length Change Variance over all Experiments")
+    plt.title("Mean Length Change Variance over All Experiments")
     sns.set_style("darkgrid")
     os.makedirs(f"./results/experiments/joint_segment_lengths/sx000x", exist_ok=True)
     plt.savefig(f"./results/experiments/joint_segment_lengths/sx000x/mean_var.pdf", bbox_inches="tight")
@@ -3940,12 +4000,74 @@ def create_joint_length_plots_and_table(path: Path):
     # plt.setp(ticks[::6], visible=True)
     plt.xlabel(r"$\lambda$")
     # Otherwise take default
-    plt.ylabel("Variance [m]")
+    plt.ylabel(rf"Variance [m^{2}]")
     plt.title("Mean Length Change Variance for SkeletonFilter for each Segment over all Experiments")
     sns.set_style("darkgrid")
     os.makedirs(f"./results/experiments/joint_segment_lengths/sx000x", exist_ok=True)
     plt.savefig(f"./results/experiments/joint_segment_lengths/sx000x/mean_var_segments.pdf", bbox_inches="tight")
     plt.cla()
+
+
+def compare_frames(path: Path) -> None:
+
+    d = {"Type": [], "FPS": [],  "Percentage": [], "Experiment Name": []}
+    total_dataframe = pd.DataFrame(data=d)
+    for ex_name in THEIA_EX_NAMES:
+        fast_name = ex_name
+        slow_name = "b_"  + ex_name
+
+        p = path / "SimpleSkeletonFilter"
+
+        fast = cond_load_data(find_factor_path(0, p / fast_name))
+        slow = cond_load_data(find_factor_path(0, p / slow_name))
+
+        ts_fast = 1./ (fast.kinect_ts[1:] - fast.kinect_ts[:-1])
+        ts_slow = 1./ (slow.kinect_ts[1:] - slow.kinect_ts[:-1])
+
+        f = np.round(ts_fast)
+        s = np.round(ts_slow)
+
+        bin_f, count_f = np.unique(f, return_counts=True)
+        bin_s, count_s = np.unique(s, return_counts=True)
+
+        count_f = np.divide(count_f, len(ts_fast)) * 100
+        count_s = np.divide(count_s, len(ts_fast)) * 100
+
+        normed_f = np.zeros_like(bin_s)
+        lf = len(bin_f)
+        ls = len(bin_s)
+        normed_f[ls - lf:] = count_f
+
+        d = {"Type": ["Lean NN"] * ls + ["Normal NN"] * ls, "FPS": np.hstack((bin_s, bin_s)), "Percentage": np.hstack((normed_f, count_s)), "Experiment Name": [fast_name] * 2 * ls}
+
+        data = pd.DataFrame(data=d)
+        total_dataframe = pd.concat([total_dataframe, data])
+
+    sns.set_style("darkgrid")
+    ax = sns.barplot(
+        x="Percentage",
+        y="FPS",
+        hue="Type",
+        data=total_dataframe,
+        orient='h'
+    )
+    plt.xscale("log")
+    plt.xlim(right=130)
+    '''
+    ax = plt.gca()
+    y_max = data['Percentage'].value_counts().max()
+    ax.set_ylim(1)
+    for p in ax.patches:
+        ax.text(p.get_x() + p.get_width()/2., p.get_height(), '{0:.2f}'.format(p.get_height()),
+            fontsize=12, color='red', ha='center', va='bottom')
+    '''
+    for container in ax.containers:
+        ax.bar_label(container, fmt=lambda value: rf"{value:.3f}\%" if value != 0 else "", padding=25)
+        # ax.bar_label(container, fmt='%.2f\%')
+    plt.legend()
+    plt.savefig(f"./results/experiments/benchmark/fps-mean.pdf", bbox_inches="tight")
+    plt.cla()
+
 
 if __name__ == "__main__":
     main()
